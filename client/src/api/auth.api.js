@@ -8,4 +8,5 @@ export const authApi = {
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   resetPassword: (data) => api.post('/auth/reset-password', data),
   register: (data) => api.post('/auth/register', data),
+  changePassword: (data) => api.put('/auth/change-password', data),
 };

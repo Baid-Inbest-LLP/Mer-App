@@ -22,8 +22,8 @@ function StatItem({ iconBg, iconColor, icon, label, value }) {
     <div className="flex items-start gap-3">
       <div className={`detail-stat-icon detail-stat-icon-lg w-12 h-12 rounded-xl ${iconBg} ${iconColor}`}>{icon}</div>
       <div>
-        <p className="text-[11px] text-gray-400 uppercase font-semibold tracking-wider">{label}</p>
-        <p className="text-sm text-gray-900 font-semibold mt-0.5">{value ?? '—'}</p>
+        <p className="expense-stat-label text-[11px] uppercase font-semibold tracking-wider">{label}</p>
+        <p className="expense-stat-value text-sm font-semibold mt-0.5">{value ?? '—'}</p>
       </div>
     </div>
   );
@@ -36,7 +36,7 @@ function DetailCard({ title, iconBg, iconColor, icon, children }) {
         <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
           <div className={iconColor}>{icon}</div>
         </div>
-        <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">{title}</h3>
+        <h3 className="detail-card-title text-sm font-bold uppercase tracking-wide">{title}</h3>
       </div>
       {children}
     </div>
@@ -45,9 +45,9 @@ function DetailCard({ title, iconBg, iconColor, icon, children }) {
 
 function DetailRow({ label, value }) {
   return (
-    <div className="flex justify-between gap-4 py-2 border-b border-gray-50 last:border-0">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-medium text-gray-900 text-right">{value ?? '—'}</span>
+    <div className="detail-row flex justify-between gap-4 py-2 last:border-0">
+      <span className="detail-row-label text-sm">{label}</span>
+      <span className="detail-row-value text-sm font-medium text-right">{value ?? '—'}</span>
     </div>
   );
 }
@@ -126,24 +126,24 @@ function ActivityTimelineSidebar({ expense }) {
 
   return (
     <aside className="expense-timeline-sidebar card p-5 w-full">
-      <div className="flex items-center justify-between gap-2 pb-4 mb-1 border-b border-gray-100">
+      <div className="expense-timeline-header flex items-center justify-between gap-2 pb-4 mb-1">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-9 h-9 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center flex-shrink-0">
+          <div className="expense-timeline-header-icon w-9 h-9 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center flex-shrink-0">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-bold text-gray-900">Activity</h2>
+            <h2 className="expense-timeline-title text-sm font-bold">Activity</h2>
           </div>
         </div>
       </div>
 
-      <ol className="relative ml-3 border-l-2 border-gray-200">
+      <ol className="expense-timeline-line relative ml-3 border-l-2">
         {events.map((event, index) => (
           <li key={event.key} className={`relative pl-6 ${index < events.length - 1 ? 'pb-5' : ''}`}>
             <span
-              className={`absolute -left-[7px] top-1 h-3 w-3 rounded-full ring-4 ring-white ${event.dotClass}`}
+              className={`expense-timeline-dot absolute -left-[7px] top-1 h-3 w-3 rounded-full ring-4 ${event.dotClass}`}
               aria-hidden="true"
             />
             <div
@@ -151,11 +151,11 @@ function ActivityTimelineSidebar({ expense }) {
             >
               {event.icon}
             </div>
-            <p className="text-sm font-semibold text-gray-900 leading-tight">{event.label}</p>
-            <p className="text-xs text-gray-500 mt-1">{formatDate(event.date)}</p>
-            <p className="text-xs text-gray-600 mt-1.5 leading-snug">
-              <span className="text-gray-400">By</span>{' '}
-              <span className="font-medium text-gray-800">{event.actor || '—'}</span>
+            <p className="expense-timeline-event-title text-sm font-semibold leading-tight">{event.label}</p>
+            <p className="expense-timeline-event-date text-xs mt-1">{formatDate(event.date)}</p>
+            <p className="expense-timeline-event-by text-xs mt-1.5 leading-snug">
+              <span className="expense-timeline-event-actor-label">By</span>{' '}
+              <span className="expense-timeline-event-actor font-medium">{event.actor || '—'}</span>
             </p>
           </li>
         ))}
@@ -211,11 +211,11 @@ export default function ExpenseViewPage() {
   const gradient = e.isDraft ? 'from-slate-400 to-slate-600' : getApprovalStatusGradient(e.approvalStatus);
 
   return (
-    <div className="w-full max-w-[90rem] mx-auto space-y-6">
+    <div className="expense-view-page w-full max-w-[90rem] mx-auto space-y-6">
       <button
         type="button"
         onClick={() => navigate(backNav.to)}
-        className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 hover:bg-primary-100 hover:border-primary-400 hover:text-primary-900 active:scale-95 transition-all duration-150"
+        className="expense-view-back-btn group"
       >
         <svg
           className="w-4 h-4 transition-transform duration-150 group-hover:-translate-x-0.5"
@@ -237,7 +237,7 @@ export default function ExpenseViewPage() {
               <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
                 <div>
                   <div className="flex flex-wrap items-center gap-3 mb-1">
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">{serial || 'Expense Entry'}</h1>
+                    <h1 className="expense-view-title text-2xl font-bold tracking-tight">{serial || 'Expense Entry'}</h1>
                     <span className={`${getEntryApprovalBadge(e)} !text-xs`}>
                       {getEntryApprovalLabel(e)}
                     </span>
@@ -268,7 +268,7 @@ export default function ExpenseViewPage() {
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 pt-5">
+              <div className="expense-section-divider">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
                   <StatItem
                     iconBg="bg-blue-50"
@@ -369,7 +369,7 @@ export default function ExpenseViewPage() {
           <div className="card overflow-hidden">
             <div className="p-6">
               <div className="flex items-center gap-2 mb-6">
-                <div className="detail-stat-icon w-8 h-8 rounded-lg bg-primary-100 text-primary-700">
+                <div className="expense-summary-icon detail-stat-icon w-8 h-8 rounded-lg bg-primary-100 text-primary-700">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path
                       strokeLinecap="round"
@@ -378,66 +378,66 @@ export default function ExpenseViewPage() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">Expense Summary</h3>
+                <h3 className="expense-summary-title text-sm font-bold text-gray-800 uppercase tracking-wide">Expense Summary</h3>
               </div>
 
               <div className="flex gap-4">
                 <div className="flex lg:flex-col items-stretch gap-4 w-full">
                   <div className="flex-1 min-w-0">
                     <div className="px-4 py-2 relative overflow-hidden rounded-lg">
-                      <div className="absolute -top-8 -right-8 w-28 h-28 bg-primary-100/40 rounded-full" />
+                      <div className="absolute -top-8 -right-8 w-28 h-28 bg-primary-100/40 rounded-full expense-summary-decor" />
                       <div className="relative">
-                        <ul className="divide-y divide-primary-100/70">
+                        <ul className="divide-y divide-primary-100/70 expense-summary-list">
                           <li className="flex items-center justify-between gap-4 py-2.5">
-                            <span className="text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
+                            <span className="expense-summary-list-label text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
                               Head of Expense:
                             </span>
-                            <span className="text-gray-700 text-md capitalize font-semibold">{e.headOfExpense ? e.headOfExpense : '—'}</span>
+                            <span className="expense-summary-list-value text-gray-700 text-md capitalize font-semibold">{e.headOfExpense ? e.headOfExpense : '—'}</span>
                           </li>
                           <li className="flex items-center justify-between gap-4 py-2.5">
-                            <span className="text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
+                            <span className="expense-summary-list-label text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
                               Particulars:
                             </span>
-                            <span className="text-gray-700 text-md capitalize font-semibold">{e.particulars ? e.particulars : '—'}</span>
+                            <span className="expense-summary-list-value text-gray-700 text-md capitalize font-semibold">{e.particulars ? e.particulars : '—'}</span>
                           </li>
                           <li className="flex items-center justify-between gap-4 py-2.5">
-                            <span className="text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
+                            <span className="expense-summary-list-label text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
                               Co / Payee Name:
                             </span>
-                            <span className="text-gray-700 text-md capitalize font-semibold">{e.coNames ? e.coNames : '—'}</span>
+                            <span className="expense-summary-list-value text-gray-700 text-md capitalize font-semibold">{e.coNames ? e.coNames : '—'}</span>
                           </li>
                         </ul>
                       </div>
                     </div>
                   </div>
 
-                  <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-2">
-                    <p className="text-[14px] text-gray-500 uppercase font-semibold tracking-wider">
+                  <div className="expense-amount-words-box rounded-lg border border-gray-200 bg-gray-50/80 p-2">
+                    <p className="expense-amount-words-label text-[14px] text-gray-500 uppercase font-semibold tracking-wider">
                       Amount in Words
                     </p>
-                    <p className="text-lg text-primary-700  font-bold leading-relaxed mt-1">
+                    <p className="expense-amount-words-value text-lg text-primary-700 font-bold leading-relaxed mt-1">
                       {formatAmountInWords(e.grossAmount)}
                     </p>
                   </div>
                 </div>
-                <div className="w-full lg:w-1/3 flex-shrink-0 rounded-2xl border border-gray-200 bg-gray-50/80 p-5 space-y-3">
+                <div className="expense-totals-box w-full lg:w-1/3 flex-shrink-0 rounded-2xl border border-gray-200 bg-gray-50/80 p-5 space-y-3">
                   <div className="flex justify-between items-center text-sm py-1">
-                    <span className="text-gray-500 font-medium">Net Amount</span>
-                    <span className="font-bold text-gray-800 text-base">{formatCurrency(e.netAmount)}</span>
+                    <span className="expense-totals-row-label text-gray-500 font-medium">Net Amount</span>
+                    <span className="expense-totals-row-value font-bold text-gray-800 text-base">{formatCurrency(e.netAmount)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm py-1">
-                    <span className="text-gray-500 font-medium">Total GST</span>
-                    <span className="font-bold text-emerald-700 text-base">{formatCurrency(e.totalGST)}</span>
+                    <span className="expense-totals-row-label text-gray-500 font-medium">Total GST</span>
+                    <span className="expense-totals-row-value-gst font-bold text-emerald-700 text-base">{formatCurrency(e.totalGST)}</span>
                   </div>
                   {Number(e.tds) > 0 && (
                     <div className="flex justify-between items-center text-sm py-1">
-                      <span className="text-gray-500 font-medium">TDS</span>
-                      <span className="font-bold text-red-700 text-base">{formatCurrency(e.tds)}</span>
+                      <span className="expense-totals-row-label text-gray-500 font-medium">TDS</span>
+                      <span className="expense-totals-row-value-tds font-bold text-red-700 text-base">{formatCurrency(e.tds)}</span>
                     </div>
                   )}
-                  <div className="border-t-2 border-gray-900 pt-4 mt-2 flex justify-between items-baseline">
-                    <span className="font-bold text-gray-900 text-lg">Gross Total</span>
-                    <span className="text-2xl font-bold text-primary-700 tracking-tight">
+                  <div className="expense-totals-gross-divider border-t-2 border-gray-900 pt-4 mt-2 flex justify-between items-baseline">
+                    <span className="expense-totals-gross-label font-bold text-gray-900 text-lg">Gross Total</span>
+                    <span className="expense-totals-gross-value text-2xl font-bold text-primary-700 tracking-tight">
                       {formatCurrency(e.grossAmount)}
                     </span>
                   </div>

@@ -96,17 +96,62 @@ export const getFinancialYears = asyncHandler(async (_req, res) => {
   ApiResponse.success(res, years);
 });
 
-export const listUsers = asyncHandler(async (_req, res) => {
-  const users = await User.find().select('-password').sort({ name: 1 });
+const canManageUser = (actorRole, targetRole) => {
+  if (actorRole === 'superadmin') return targetRole !== 'superadmin';
+  if (actorRole === 'admin') return targetRole === 'user';
+  return false;
+};
+
+export const listUsers = asyncHandler(async (req, res) => {
+  const filter = {};
+  if (req.user.role === 'admin') {
+    filter.role = { $in: ['admin', 'user'] };
+  }
+  const users = await User.find(filter).select('-password').sort({ name: 1 });
   ApiResponse.success(res, users);
 });
 
 export const updateUser = asyncHandler(async (req, res) => {
-  const { password, ...updates } = req.body;
+  const actor = req.user;
   const user = await User.findById(req.params.id);
   if (!user) throw ApiError.notFound('User not found');
-  Object.assign(user, updates);
-  if (password) user.password = password;
+
+  if (user._id.equals(actor._id) && actor.role === 'admin') {
+    throw ApiError.forbidden('You cannot edit your own account here');
+  }
+  if (!canManageUser(actor.role, user.role)) {
+    throw ApiError.forbidden('You do not have permission to manage this user');
+  }
+
+  const { name, email, isActive } = req.body;
+  if (name !== undefined) user.name = name;
+  if (email !== undefined) {
+    const normalized = String(email).trim().toLowerCase();
+    const existing = await User.findOne({ email: normalized, _id: { $ne: user._id } });
+    if (existing) throw ApiError.conflict('Email already in use');
+    user.email = normalized;
+  }
+  if (isActive !== undefined) user.isActive = Boolean(isActive);
+
   await user.save();
   ApiResponse.success(res, user, 'User updated');
+});
+
+export const deleteUser = asyncHandler(async (req, res) => {
+  const actor = req.user;
+  const user = await User.findById(req.params.id);
+  if (!user) throw ApiError.notFound('User not found');
+
+  if (user._id.equals(actor._id)) {
+    throw ApiError.forbidden('You cannot delete your own account');
+  }
+  if (user.role === 'superadmin') {
+    throw ApiError.forbidden('Superadmin users cannot be deleted');
+  }
+  if (!canManageUser(actor.role, user.role)) {
+    throw ApiError.forbidden('You do not have permission to delete this user');
+  }
+
+  await User.findByIdAndDelete(req.params.id);
+  ApiResponse.success(res, null, 'User deleted');
 });

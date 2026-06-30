@@ -1,6 +1,37 @@
 /**
  * Builds MongoDB query from request query params for expenses
  */
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const buildSearchConditions = (rawSearch) => {
+  const term = String(rawSearch || '').trim();
+  if (!term) return null;
+
+  const searchRegex = new RegExp(escapeRegex(term), 'i');
+  const conditions = [
+    { invoiceNo: searchRegex },
+    { coNames: searchRegex },
+    { particulars: searchRegex },
+    { company: searchRegex },
+    { monthlyInvoiceNumber: searchRegex },
+    { slNo: searchRegex },
+    { headOfExpense: searchRegex },
+    { location: searchRegex },
+  ];
+
+  const serialAlias = term.replace(/^exp\//i, 'EXP/').replace(/^mer\//i, 'MER/');
+  if (serialAlias !== term) {
+    conditions.push({ slNo: new RegExp(escapeRegex(serialAlias), 'i') });
+  }
+
+  const legacySerial = term.replace(/^exp\//i, 'MER/');
+  if (legacySerial !== term && legacySerial !== serialAlias) {
+    conditions.push({ slNo: new RegExp(escapeRegex(legacySerial), 'i') });
+  }
+
+  return conditions;
+};
+
 export const buildExpenseQuery = (query) => {
   const filter = { isDraft: { $ne: true } };
 
@@ -102,14 +133,10 @@ export const buildExpenseQuery = (query) => {
   }
 
   if (query.search) {
-    const searchRegex = new RegExp(query.search, 'i');
-    filter.$or = [
-      { invoiceNo: searchRegex },
-      { coNames: searchRegex },
-      { particulars: searchRegex },
-      { company: searchRegex },
-      { monthlyInvoiceNumber: searchRegex },
-    ];
+    const searchConditions = buildSearchConditions(query.search);
+    if (searchConditions) {
+      filter.$or = searchConditions;
+    }
   }
 
   return filter;

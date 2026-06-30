@@ -179,7 +179,7 @@ export default function FinancialYearDetailPage() {
 
       <div className="card">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
-          <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+          <h3 className="report-table-title text-sm font-bold text-gray-800 uppercase tracking-wide">
             Expense Entries
           </h3>
         </div>
@@ -196,6 +196,7 @@ export default function FinancialYearDetailPage() {
             <table>
               <thead className="sticky top-0 z-10">
                 <tr>
+                  <th className="text-center w-14">S.No</th>
                   <th className="text-left">Expense No</th>
                   <th className="text-center">Date</th>
                   <th className="text-center">Company</th>
@@ -211,13 +212,14 @@ export default function FinancialYearDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {entries.map((e) => (
+                {entries.map((e, index) => (
                   <tr key={e._id}>
+                    <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
                     <td className="text-left">
                       <Link
                         to={`/entries/${e._id}`}
                         state={{ from: returnTo }}
-                        className="font-medium text-primary-700 hover:text-primary-900 hover:underline"
+                        className="table-serial-link font-medium text-primary-700 hover:text-primary-900 hover:underline"
                         title="View expense details"
                       >
                         {e.slNo || '—'}

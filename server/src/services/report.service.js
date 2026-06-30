@@ -161,7 +161,8 @@ export const generateMonthlyExcel = async (query) => {
   sheet.addRow([]);
 
   const headerRow = sheet.addRow([
-    'Sl No',
+    'S.No',
+    'MER No',
     'Invoice Date',
     'Month',
     'Company',
@@ -179,12 +180,13 @@ export const generateMonthlyExcel = async (query) => {
 
   const totals = { net: 0, gst: 0, tds: 0, gross: 0 };
 
-  entries.forEach((e) => {
+  entries.forEach((e, index) => {
     totals.net += e.netAmount || 0;
     totals.gst += e.totalGST || 0;
     totals.tds += e.tds || 0;
     totals.gross += e.grossAmount || 0;
     sheet.addRow([
+      index + 1,
       e.slNo || '',
       e.invoiceDate ? new Date(e.invoiceDate).toLocaleDateString('en-IN') : '',
       e.month || '',
@@ -204,6 +206,7 @@ export const generateMonthlyExcel = async (query) => {
 
   const totalRow = sheet.addRow([
     'TOTAL',
+    '',
     '',
     '',
     '',

@@ -8,28 +8,28 @@ export default function Pagination({ page, pages, total, pageSize = TABLE_PAGE_S
 
   return (
     <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-gray-100 bg-gray-50/50 pagination-bar">
-      <p className="text-sm text-gray-600">
-        Showing <span className="font-semibold text-gray-800">{start}</span>–
-        <span className="font-semibold text-gray-800">{end}</span> of{' '}
-        <span className="font-semibold text-gray-800">{total}</span>
+      <p className="text-sm pagination-summary">
+        Showing <span className="font-semibold pagination-summary-strong">{start}</span>–
+        <span className="font-semibold pagination-summary-strong">{end}</span> of{' '}
+        <span className="font-semibold pagination-summary-strong">{total}</span>
       </p>
       <div className="flex items-center gap-2">
         <button
           type="button"
           disabled={page <= 1 || loading}
           onClick={() => onPageChange(page - 1)}
-          className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="pagination-btn"
         >
           Previous
         </button>
-        <span className="text-sm text-gray-600 tabular-nums px-2">
+        <span className="text-sm pagination-page-label tabular-nums px-2">
           Page {page} of {Math.max(1, pages)}
         </span>
         <button
           type="button"
           disabled={page >= pages || loading}
           onClick={() => onPageChange(page + 1)}
-          className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="pagination-btn"
         >
           Next
         </button>

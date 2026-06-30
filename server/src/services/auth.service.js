@@ -94,3 +94,13 @@ export const registerUser = async (data, requestedBy) => {
 
   return User.create({ ...data, role });
 };
+
+export const changePassword = async (userId, currentPassword, newPassword) => {
+  const user = await User.findById(userId).select('+password');
+  if (!user) throw ApiError.notFound('User not found');
+  if (!(await user.comparePassword(currentPassword))) {
+    throw ApiError.badRequest('Current password is incorrect');
+  }
+  user.password = newPassword;
+  await user.save();
+};

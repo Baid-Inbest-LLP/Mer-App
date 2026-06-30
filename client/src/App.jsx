@@ -14,6 +14,7 @@ import MonthlyReportPage from './pages/reports/MonthlyReportPage';
 import MonthlyDetailPage from './pages/reports/MonthlyDetailPage';
 import FinancialYearReportPage from './pages/reports/FinancialYearReportPage';
 import FinancialYearDetailPage from './pages/reports/FinancialYearDetailPage';
+import CustomizedReportPage from './pages/reports/CustomizedReportPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import CompanyListPage from './pages/companies/CompanyListPage';
 
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="entries/:id" element={<ExpenseViewPage />} />
           <Route path="entries/:id/edit" element={<ExpenseFormPage />} />
           <Route path="reports/summary" element={<SummaryReportPage />} />
+          <Route path="reports/customized" element={<CustomizedReportPage />} />
           <Route path="reports/monthly" element={<MonthlyReportPage />} />
           <Route path="reports/monthly/detail" element={<MonthlyDetailPage />} />
           <Route path="reports/financial-year" element={<FinancialYearReportPage />} />

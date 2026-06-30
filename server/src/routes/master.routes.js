@@ -31,5 +31,6 @@ router.delete('/expense-heads/:id', authorize('superadmin', 'admin'), master.exp
 
 router.get('/users', authorize('superadmin', 'admin'), master.listUsers);
 router.put('/users/:id', authorize('superadmin', 'admin'), master.updateUser);
+router.delete('/users/:id', authorize('superadmin', 'admin'), master.deleteUser);
 
 export default router;

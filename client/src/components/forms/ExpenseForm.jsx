@@ -37,8 +37,14 @@ const formatSummaryAmount = (value) => `₹${formatNumber(value, 2)}`;
 function SummaryRow({ label, value, bold = false, large = false }) {
   return (
     <div className="flex justify-between items-center text-sm">
-      <span className={bold ? 'font-bold text-gray-900' : 'text-gray-600'}>{label}</span>
-      <span className={`${large ? 'text-xl' : ''} ${bold ? 'font-bold text-primary-800' : 'font-medium text-gray-900'}`}>
+      <span
+        className={`expense-form-summary-row-label ${bold ? 'expense-form-summary-row-label-bold font-bold text-gray-900' : 'text-gray-600'}`}
+      >
+        {label}
+      </span>
+      <span
+        className={`expense-form-summary-row-value ${large ? 'text-xl' : ''} ${bold ? 'expense-form-summary-row-value-bold font-bold text-primary-800' : 'font-medium text-gray-900'}`}
+      >
         {formatSummaryAmount(value)}
       </span>
     </div>
@@ -654,8 +660,10 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
             />
           </div>
         </Paper>
-        <Paper withBorder p="md" mb="sm" className="flex flex-col justify-between" >
-          <Text fw={600} mb="xs">Entry Summary</Text>
+        <Paper withBorder p="md" mb="sm" className="expense-form-summary flex flex-col justify-between">
+          <Text fw={600} mb="xs" className="expense-form-summary-title">
+            Entry Summary
+          </Text>
           <div className="space-y-3">
             <SummaryRow label="Net Amount" value={netAmount || 0} large />
 
@@ -671,13 +679,15 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
             <SummaryRow label="Total GST" value={totalGST} />
             <SummaryRow label="TDS" value={tds || 0} />
 
-            <div className="border-t border-gray-200 pt-3">
+            <div className="expense-form-summary-gross-divider border-t border-gray-200 pt-3">
               <SummaryRow label="Gross" value={grossAmount} bold large />
             </div>
 
-            <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 mt-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-700 mb-1">Amount in Words :</p>
-              <p className="text-lg sm:text-xl font-semibold leading-snug text-primary-700">
+            <div className="expense-amount-words-box rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 mt-1">
+              <p className="expense-amount-words-label text-xs font-semibold uppercase tracking-wide text-gray-700 mb-1">
+                Amount in Words :
+              </p>
+              <p className="expense-amount-words-value text-lg sm:text-xl font-semibold leading-snug text-primary-700">
                 {formatAmountInWords(grossAmount)}
               </p>
             </div>

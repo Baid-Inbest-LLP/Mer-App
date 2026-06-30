@@ -41,3 +41,9 @@ export const register = asyncHandler(async (req, res) => {
   const user = await authService.registerUser(req.body, req.user);
   ApiResponse.created(res, user, 'User registered');
 });
+
+export const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  await authService.changePassword(req.user._id, currentPassword, newPassword);
+  ApiResponse.success(res, null, 'Password updated successfully');
+});

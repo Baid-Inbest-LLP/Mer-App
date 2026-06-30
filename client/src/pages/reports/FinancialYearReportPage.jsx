@@ -216,7 +216,7 @@ export default function FinancialYearReportPage() {
         className="mb-4"
         title={`FY Report`}
         subtitle={`FY Overview ${currentFY}`}
-        action={{ to: `/reports/financial-year/detail?fy=${encodeURIComponent(currentFY)}`, label: 'View FY Report' }}
+        action={{ to: `/reports/financial-year/detail?fy=${encodeURIComponent(currentFY)}`, label: 'View FY Report', icon: false }}
       />
       <div className="dashboard-grid-4 mb-4">
         <StatCard
@@ -295,7 +295,7 @@ export default function FinancialYearReportPage() {
 
           <div className="card mt-4">
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+              <h3 className="report-table-title text-sm font-bold text-gray-800 uppercase tracking-wide">
                 Overall Expenses by Financial Year
               </h3>
               {tableYearOptions.length > 0 && (
@@ -320,6 +320,7 @@ export default function FinancialYearReportPage() {
                 <table>
                   <thead>
                     <tr>
+                      <th className="text-center w-14">S.No</th>
                       <th className="text-center">MER No</th>
                       <th className="text-center">Financial Year</th>
                       <th className="text-right">Net</th>
@@ -331,12 +332,13 @@ export default function FinancialYearReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleFyYears.map((row) => (
+                    {visibleFyYears.map((row, index) => (
                       <tr key={row.name}>
+                        <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
                         <td className="text-center font-semibold whitespace-nowrap">
                           <Link
                             to={`/reports/financial-year/detail?fy=${encodeURIComponent(row.name)}`}
-                            className="text-primary-700 hover:text-primary-900 hover:underline"
+                            className="table-serial-link text-primary-700 hover:text-primary-900 hover:underline"
                             title={`View ${row.name} expense report`}
                           >
                             {row.reportNo || '—'}

@@ -74,7 +74,7 @@ export default function CompanyListPage() {
       </div>
 
       {error && (
-        <div className="card p-4 mb-4 border border-red-200 bg-red-50 text-red-700 text-sm">
+        <div className="card p-4 mb-4 company-error-alert">
           {error}
         </div>
       )}
@@ -104,7 +104,7 @@ export default function CompanyListPage() {
                 <Skeleton className="h-3 w-32 mb-3" />
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {[0, 1, 2].map((loc) => (
-                    <div key={loc} className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    <div key={loc} className="company-location-card">
                       <div className="flex items-center justify-between mb-2">
                         <Skeleton className="h-3 w-24" />
                         <Skeleton className="h-4 w-12 rounded-full" />
@@ -119,11 +119,11 @@ export default function CompanyListPage() {
         </div>
       ) : companies.length === 0 ? (
         <div className="card text-center py-16">
-          <svg className="w-12 h-12 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-12 h-12 company-empty-icon mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
-          <p className="text-gray-500 font-medium">No companies yet</p>
-          <p className="text-sm text-gray-400 mt-1">Add your first company for expense entries</p>
+          <p className="company-empty-title">No companies yet</p>
+          <p className="company-empty-desc">Add your first company for expense entries</p>
           {canManage && (
             <button type="button" onClick={() => setShowForm(true)} className="btn-primary mt-4">
               Add Company
@@ -136,42 +136,40 @@ export default function CompanyListPage() {
             <div key={company._id} className="card p-5">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-5 h-5 text-primary-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="company-card-icon">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
                   </div>
                   <div>
                     <div className="flex flex-wrap items-center gap-2.5 mb-1.5">
-                      <h3 className="font-bold text-gray-900 text-base">{company.name}</h3>
+                      <h3 className="company-card-title">{company.name}</h3>
                       {company.companyCode && (
-                        <span className="font-mono bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded-md text-xs font-semibold tracking-wide">
+                        <span className="company-code-badge">
                           {company.companyCode}
                         </span>
                       )}
                       <span
-                        className={`text-xs font-medium px-2 py-0.5 rounded-md ${
-                          company.hasStamp
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-gray-50 text-gray-500 border border-gray-200'
-                        }`}
+                        className={
+                          company.hasStamp ? 'company-stamp-badge--yes' : 'company-stamp-badge--no'
+                        }
                       >
                         {company.hasStamp ? 'Stamp on file' : 'No stamp'}
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
                       {company.email && (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
+                        <span className="company-meta-chip">
                           {company.email}
                         </span>
                       )}
                       {company.phone && (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
+                        <span className="company-meta-chip">
                           {company.phone}
                         </span>
                       )}
                       {company.taxId && (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1">
+                        <span className="company-gst-chip">
                           GST: {company.taxId}
                         </span>
                       )}
@@ -179,7 +177,7 @@ export default function CompanyListPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={`badge ${company.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  <span className={company.isActive ? 'company-status-active' : 'company-status-inactive'}>
                     {company.isActive ? 'Active' : 'Inactive'}
                   </span>
                   {canManage && (
@@ -187,7 +185,7 @@ export default function CompanyListPage() {
                       <button
                         type="button"
                         onClick={() => handleEdit(company)}
-                        className="text-gray-400 hover:text-primary-700 rounded transition-colors"
+                        className="company-action-btn company-action-btn--edit"
                         title="Edit"
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -197,7 +195,7 @@ export default function CompanyListPage() {
                       <button
                         type="button"
                         onClick={() => setConfirmDelete({ id: company._id, name: company.name })}
-                        className="text-gray-400 hover:text-red-600 rounded transition-colors"
+                        className="company-action-btn company-action-btn--delete"
                         title="Delete"
                       >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -210,31 +208,31 @@ export default function CompanyListPage() {
               </div>
 
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Locations</p>
+                <p className="company-section-label">Locations</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {company.locations?.map((loc) => (
                     <div
                       key={loc._id}
-                      className={`rounded-lg border p-3 text-sm ${
-                        loc.isDefault ? 'border-primary-300 bg-primary-50' : 'border-gray-200 bg-gray-50'
+                      className={`company-location-card ${
+                        loc.isDefault ? 'company-location-card--default' : ''
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="font-semibold text-gray-800">{loc.label?.toUpperCase?.() || ''}</span>
+                        <span className="company-location-name">{loc.label?.toUpperCase?.() || ''}</span>
                         {loc.isDefault && (
-                          <span className="text-xs bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded font-medium">
+                          <span className="company-location-default-badge">
                             Default
                           </span>
                         )}
                       </div>
-                      {loc.street && <p className="text-gray-600">{loc.street}</p>}
+                      {loc.street && <p className="company-location-text">{loc.street}</p>}
                       {loc.city && (
-                        <p className="text-gray-600">
+                        <p className="company-location-text">
                           {loc.city}
                           {loc.state ? `, ${loc.state}` : ''} {loc.zipCode}
                         </p>
                       )}
-                      {loc.country && <p className="text-gray-500">{loc.country}</p>}
+                      {loc.country && <p className="company-location-text-muted">{loc.country}</p>}
                     </div>
                   ))}
                 </div>

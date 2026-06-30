@@ -8,6 +8,7 @@ import {
   forgotPasswordValidator,
   resetPasswordValidator,
   refreshTokenValidator,
+  changePasswordValidator,
 } from '../validators/auth.validator.js';
 
 const router = Router();
@@ -26,5 +27,12 @@ router.post(
 );
 router.post('/logout', authenticate, authController.logout);
 router.get('/me', authenticate, authController.getMe);
+router.put(
+  '/change-password',
+  authenticate,
+  changePasswordValidator,
+  validate,
+  authController.changePassword,
+);
 
 export default router;

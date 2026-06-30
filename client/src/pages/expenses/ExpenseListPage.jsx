@@ -17,7 +17,7 @@ import {
   getEntryApprovalLabel,
 } from '../../utils/format';
 import { canDeleteExpense, canEditExpense } from '../../utils/permissions';
-import { omitPaymentFilters } from '../../utils/filters';
+import { omitPaymentFilters, cleanFilterParams, stripExpenseListHiddenFilters } from '../../utils/filters';
 
 const PAGE_SIZE = 6;
 
@@ -34,7 +34,9 @@ export default function ExpenseListPage() {
   const [deleting, setDeleting] = useState(false);
 
   const load = (params = queryParams) => {
-    const cleaned = omitPaymentFilters({ limit: PAGE_SIZE, includeDrafts: true, ...params });
+    const cleaned = cleanFilterParams(
+      omitPaymentFilters({ limit: PAGE_SIZE, includeDrafts: true, ...params }),
+    );
     dispatch(setQueryParams(cleaned));
     dispatch(fetchExpenses(cleaned));
   };
@@ -43,7 +45,8 @@ export default function ExpenseListPage() {
     load();
   }, []);
 
-  const handleApply = () => load({ ...omitPaymentFilters(filters), page: 1 });
+  const handleApply = () =>
+    load({ ...stripExpenseListHiddenFilters(omitPaymentFilters(filters)), page: 1 });
   const handleClear = () => {
     setFilters({});
     load({ page: 1, limit: PAGE_SIZE });
@@ -75,9 +78,10 @@ export default function ExpenseListPage() {
         onApply={handleApply}
         onClear={handleClear}
         compact
+        hide={['timeframe', 'quarter', 'coNames']}
       />
 
-      <div className="card">
+      <div className="card overflow-hidden">
         {loading ? (
           <div className="table-wrapper">
             <table>
@@ -144,14 +148,14 @@ export default function ExpenseListPage() {
                         {e.isDraft ? (
                           <Link
                             to={`/entries/${e._id}/edit`}
-                            className="font-semibold text-slate-600 hover:underline"
+                            className="expense-list-draft-link font-semibold text-slate-600 hover:underline"
                           >
                             Draft
                           </Link>
                         ) : e.slNo ? (
                           <Link
                             to={`/entries/${e._id}`}
-                            className="font-semibold text-primary-700 hover:underline"
+                            className="table-serial-link font-semibold text-primary-700 hover:underline"
                           >
                             {formatMerSerial(e.slNo)}
                           </Link>

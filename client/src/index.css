@@ -97,6 +97,10 @@
     @apply bg-white rounded-xl border border-gray-200 shadow-sm;
   }
 
+  .card:has(.table-wrapper) {
+    @apply overflow-hidden;
+  }
+
   .page-header {
     @apply flex items-center justify-between mb-6 flex-wrap gap-4;
   }
@@ -271,12 +275,470 @@
     @apply px-4 py-3 text-gray-700;
   }
 
+  .table-wrapper tbody td.summary-head-report-value-gst,
+  .table-wrapper tbody td.text-emerald-700 {
+    color: #047857;
+  }
+
+  .table-wrapper tbody td.summary-head-report-value-tds,
+  .table-wrapper tbody td.text-orange-700 {
+    color: #c2410c;
+  }
+
   .form-date-dropdown {
     border: 1px solid #e5e7eb !important;
     border-radius: 0.75rem !important;
     box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
     padding: 0.5rem !important;
     background-color: #fff !important;
+  }
+
+  .recent-entries-list {
+    @apply divide-y divide-gray-50;
+  }
+
+  .recent-entries-row {
+    @apply flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors;
+  }
+
+  .recent-entries-row-icon {
+    @apply w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-primary-100 transition-colors flex items-center justify-center flex-shrink-0;
+  }
+
+  .recent-entries-row-title {
+    @apply text-sm font-bold text-gray-800 truncate;
+  }
+
+  .recent-entries-row-meta {
+    @apply text-xs text-gray-500 truncate;
+  }
+
+  .recent-entries-amount {
+    @apply text-sm font-bold text-gray-800;
+  }
+
+  .recent-entries-chevron {
+    @apply w-4 h-4 text-gray-300 group-hover:text-primary-500 transition-colors;
+  }
+
+  .recent-entries-view-all {
+    @apply text-primary-700;
+  }
+
+  .recent-entries-empty-icon {
+    @apply text-gray-200;
+  }
+
+  .recent-entries-empty-text {
+    @apply text-gray-400;
+  }
+
+  .expense-view-back-btn {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 hover:bg-primary-100 hover:border-primary-400 hover:text-primary-900 active:scale-95 transition-all duration-150;
+  }
+
+  .expense-view-title {
+    @apply text-gray-900;
+  }
+
+  .expense-section-divider {
+    @apply border-t border-gray-100 pt-5;
+  }
+
+  .expense-stat-label {
+    @apply text-gray-400;
+  }
+
+  .expense-stat-value {
+    @apply text-gray-900;
+  }
+
+  .detail-card-title {
+    @apply text-gray-800;
+  }
+
+  .detail-row {
+    @apply border-b border-gray-50;
+  }
+
+  .detail-row-label {
+    @apply text-gray-500;
+  }
+
+  .detail-row-value {
+    @apply text-gray-900;
+  }
+
+  .expense-timeline-header {
+    @apply border-b border-gray-100;
+  }
+
+  .expense-timeline-title {
+    @apply text-gray-900;
+  }
+
+  .expense-timeline-line {
+    @apply border-gray-200;
+  }
+
+  .expense-timeline-dot {
+    @apply ring-white;
+  }
+
+  .expense-timeline-event-title {
+    @apply text-gray-900;
+  }
+
+  .expense-timeline-event-date {
+    @apply text-gray-500;
+  }
+
+  .expense-timeline-event-by {
+    @apply text-gray-600;
+  }
+
+  .expense-timeline-event-actor-label {
+    @apply text-gray-400;
+  }
+
+  .expense-timeline-event-actor {
+    @apply text-gray-800;
+  }
+
+  .expense-summary-title {
+    @apply text-gray-800;
+  }
+
+  .report-table-title {
+    @apply text-gray-800;
+  }
+
+  .summary-head-report-subtitle {
+    @apply text-gray-500;
+  }
+
+  .summary-head-report-pill {
+    @apply text-primary-700 bg-primary-50 border-primary-200;
+  }
+
+  .summary-head-report-pill-muted {
+    @apply text-gray-600 bg-gray-50 border-gray-200;
+  }
+
+  .summary-head-report-index {
+    @apply text-gray-400;
+  }
+
+  .summary-head-report-name {
+    @apply text-gray-800;
+  }
+
+  .summary-head-share-label {
+    @apply text-primary-700;
+  }
+
+  .summary-head-report-value-gst {
+    @apply text-emerald-700;
+  }
+
+  .summary-head-report-value-tds {
+    @apply text-orange-700;
+  }
+
+  .summary-head-report-count-badge {
+    @apply bg-primary-50 text-primary-700 border-primary-200;
+  }
+
+  .summary-head-report-total-row {
+    @apply bg-gray-50 border-t-2 border-gray-200;
+  }
+
+  .pagination-summary {
+    @apply text-gray-600;
+  }
+
+  .pagination-summary-strong {
+    @apply text-gray-800;
+  }
+
+  .pagination-page-label {
+    @apply text-gray-600;
+  }
+
+  .pagination-btn {
+    @apply inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors;
+  }
+
+  .company-error-alert {
+    @apply border border-red-200 bg-red-50 text-red-700 text-sm;
+  }
+
+  .company-empty-icon {
+    @apply text-gray-300;
+  }
+
+  .company-empty-title {
+    @apply text-gray-500 font-medium;
+  }
+
+  .company-empty-desc {
+    @apply text-sm text-gray-400 mt-1;
+  }
+
+  .company-card-icon {
+    @apply w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center text-primary-700;
+  }
+
+  .company-card-title {
+    @apply font-bold text-gray-900 text-base;
+  }
+
+  .company-code-badge {
+    @apply font-mono bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded-md text-xs font-semibold tracking-wide;
+  }
+
+  .company-stamp-badge--yes {
+    @apply text-xs font-medium px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200;
+  }
+
+  .company-stamp-badge--no {
+    @apply text-xs font-medium px-2 py-0.5 rounded-md bg-gray-50 text-gray-500 border border-gray-200;
+  }
+
+  .company-meta-chip {
+    @apply inline-flex items-center gap-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1;
+  }
+
+  .company-gst-chip {
+    @apply inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1;
+  }
+
+  .company-status-active {
+    @apply badge bg-green-100 text-green-700;
+  }
+
+  .company-status-inactive {
+    @apply badge bg-gray-100 text-gray-500;
+  }
+
+  .company-action-btn {
+    @apply rounded transition-colors;
+  }
+
+  .company-action-btn--edit {
+    @apply text-gray-400 hover:text-primary-700;
+  }
+
+  .company-action-btn--delete {
+    @apply text-gray-400 hover:text-red-600;
+  }
+
+  .company-section-label {
+    @apply text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2;
+  }
+
+  .company-location-card {
+    @apply rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm;
+  }
+
+  .company-location-card--default {
+    @apply border-primary-300 bg-primary-50;
+  }
+
+  .company-location-name {
+    @apply font-semibold text-gray-800;
+  }
+
+  .company-location-default-badge {
+    @apply text-xs bg-primary-100 text-primary-700 px-1.5 py-0.5 rounded font-medium;
+  }
+
+  .company-location-text {
+    @apply text-gray-600;
+  }
+
+  .company-location-text-muted {
+    @apply text-gray-500;
+  }
+
+  .company-form-panel {
+    @apply bg-white rounded-2xl shadow-2xl w-full max-w-2xl mb-10;
+  }
+
+  .company-form-header {
+    @apply flex items-center justify-between p-6 border-b border-gray-100;
+  }
+
+  .company-form-title {
+    @apply text-lg font-bold text-gray-900;
+  }
+
+  .company-form-subtitle {
+    @apply text-sm text-gray-500 mt-0.5;
+  }
+
+  .company-form-close-btn {
+    @apply text-gray-400 hover:text-gray-600 transition-colors;
+  }
+
+  .company-form-section-title {
+    @apply text-xs font-semibold text-gray-400 uppercase tracking-wide;
+  }
+
+  .company-form-section-hint {
+    @apply text-xs text-gray-400 mt-0.5;
+  }
+
+  .company-form-field-label {
+    @apply block text-xs font-medium text-gray-600 mb-1;
+  }
+
+  .company-form-checkbox-label {
+    @apply text-sm text-gray-700;
+  }
+
+  .company-form-divider {
+    @apply border-t border-gray-100;
+  }
+
+  .company-form-stamp-preview {
+    @apply mb-2 p-3 border border-gray-200 rounded-lg bg-gray-50;
+  }
+
+  .company-form-stamp-empty {
+    @apply text-sm text-amber-600 mb-2;
+  }
+
+  .company-form-stamp-remove {
+    @apply text-sm text-red-600 hover:text-red-700 mt-2;
+  }
+
+  .company-form-stamp-hint {
+    @apply text-gray-400 font-normal;
+  }
+
+  .company-form-stamp-loading {
+    @apply text-sm text-gray-500;
+  }
+
+  .company-location-form-card {
+    @apply rounded-xl border-2 p-4 transition-colors border-gray-200 bg-gray-50/50;
+  }
+
+  .company-location-form-card--default {
+    @apply border-primary-400 bg-primary-50/50;
+  }
+
+  .company-location-index {
+    @apply w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold bg-gray-300 text-gray-600;
+  }
+
+  .company-location-index--default {
+    @apply bg-primary-600 text-white;
+  }
+
+  .company-location-form-title {
+    @apply text-sm font-semibold text-gray-700;
+  }
+
+  .company-location-default-pill {
+    @apply text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded-full font-medium;
+  }
+
+  .company-location-set-default {
+    @apply text-xs text-primary-600 hover:text-primary-800 font-medium transition-colors;
+  }
+
+  .company-location-remove-btn {
+    @apply p-1 text-gray-400 hover:text-red-500 transition-colors;
+  }
+
+  .company-form-footer {
+    @apply flex justify-end gap-3 pt-2 border-t border-gray-100;
+  }
+
+  .settings-role-badge {
+    @apply text-xs font-semibold px-2 py-0.5 rounded border border-gray-200 bg-gray-50;
+  }
+
+  .settings-user-name {
+    @apply text-left font-semibold text-gray-800;
+  }
+
+  .settings-user-email {
+    @apply text-center text-gray-600;
+  }
+
+  .settings-action-btn {
+    @apply p-1.5 rounded transition-colors;
+  }
+
+  .settings-action-btn--enabled {
+    @apply text-gray-400 hover:text-primary-600;
+  }
+
+  .settings-action-btn--delete-enabled {
+    @apply text-gray-400 hover:text-red-600;
+  }
+
+  .settings-action-btn--disabled {
+    @apply text-gray-300 cursor-not-allowed;
+  }
+
+  .settings-readonly-role {
+    @apply input-field bg-gray-50;
+  }
+
+  .summary-head-report-total-row td {
+    @apply px-4 py-3 text-gray-900;
+  }
+
+  .report-preview-header {
+    @apply border-b border-gray-100 bg-gradient-to-r from-primary-50 via-blue-50 to-indigo-50;
+  }
+
+  .report-preview-report-no {
+    @apply text-primary-700;
+  }
+
+  .report-preview-stat-tile {
+    @apply border border-gray-100;
+  }
+
+  .report-preview-stat-tile-net {
+    @apply bg-blue-50;
+  }
+
+  .report-preview-stat-tile-gst {
+    @apply bg-emerald-50;
+  }
+
+  .report-preview-stat-tile-tds {
+    @apply bg-orange-50;
+  }
+
+  .report-preview-stat-tile-gross {
+    @apply bg-indigo-50;
+  }
+
+  .report-preview-stat-value-net {
+    @apply text-blue-700;
+  }
+
+  .report-preview-stat-value-gst {
+    @apply text-emerald-700;
+  }
+
+  .report-preview-stat-value-tds {
+    @apply text-orange-700;
+  }
+
+  .report-preview-stat-value-gross {
+    @apply text-indigo-700;
+  }
+
+  .report-preview-table-divider {
+    @apply border-t border-gray-100;
   }
 }
 
@@ -525,8 +987,13 @@
   border-bottom-color: #373a40;
 }
 
+[data-theme='dark'] #root .table-wrapper thead.sticky,
+[data-theme='dark'] #root .table-wrapper thead[class*='sticky'] {
+  background-color: #2c2e33;
+}
+
 [data-theme='dark'] #root .table-wrapper thead th {
-  color: #909296;
+  color: #91a7ff !important;
 }
 
 [data-theme='dark'] #root .table-wrapper tbody tr {
@@ -541,14 +1008,328 @@
   color: #c1c2c5;
 }
 
+[data-theme='dark'] #root .table-wrapper tbody td.summary-head-report-value-gst,
+[data-theme='dark'] #root .table-wrapper tbody td.text-emerald-700 {
+  color: #34d399 !important;
+}
+
+[data-theme='dark'] #root .table-wrapper tbody td.summary-head-report-value-tds,
+[data-theme='dark'] #root .table-wrapper tbody td.text-orange-700 {
+  color: #fb923c !important;
+}
+
+[data-theme='dark'] #root .table-serial-link,
+[data-theme='dark'] #root .expense-list-serial-link {
+  color: #60a5fa !important;
+}
+
+[data-theme='dark'] #root .table-serial-link:hover,
+[data-theme='dark'] #root .expense-list-serial-link:hover {
+  color: #93c5fd !important;
+}
+
+[data-theme='dark'] #root .expense-list-draft-link {
+  color: #91a7ff !important;
+}
+
+[data-theme='dark'] #root .expense-list-draft-link:hover {
+  color: #bac8ff !important;
+}
+
 [data-theme='dark'] #root .chart-card-header,
 [data-theme='dark'] #root .pagination-bar {
   background-color: #2c2e33;
   border-color: #373a40;
 }
 
+[data-theme='dark'] #root .pagination-summary {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .pagination-summary-strong {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .pagination-page-label {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .pagination-btn {
+  background-color: #25262b !important;
+  border-color: #373a40 !important;
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .pagination-btn:hover:not(:disabled) {
+  background-color: #2c2e33 !important;
+}
+
 [data-theme='dark'] #root .chart-card-header h3 {
   color: #c1c2c5;
+}
+
+[data-theme='dark'] #root .recent-entries-list > :not([hidden]) ~ :not([hidden]) {
+  border-color: #373a40;
+}
+
+[data-theme='dark'] #root .recent-entries-row:hover {
+  background-color: #2c2e33;
+}
+
+[data-theme='dark'] #root .recent-entries-row-title,
+[data-theme='dark'] #root .recent-entries-amount {
+  color: #c1c2c5;
+}
+
+[data-theme='dark'] #root .recent-entries-row-meta {
+  color: #909296;
+}
+
+[data-theme='dark'] #root .recent-entries-row-icon {
+  background-color: #373a40;
+}
+
+[data-theme='dark'] #root .recent-entries-row:hover .recent-entries-row-icon {
+  background-color: #1e3a5f;
+}
+
+[data-theme='dark'] #root .recent-entries-row:hover .recent-entries-row-icon svg {
+  color: #60a5fa;
+}
+
+[data-theme='dark'] #root .recent-entries-chevron {
+  color: #495057;
+}
+
+[data-theme='dark'] #root .recent-entries-row:hover .recent-entries-chevron {
+  color: #60a5fa;
+}
+
+[data-theme='dark'] #root .recent-entries-view-all {
+  color: #60a5fa;
+}
+
+[data-theme='dark'] #root .recent-entries-view-all:hover {
+  color: #93c5fd;
+}
+
+[data-theme='dark'] #root .recent-entries-empty-icon {
+  color: #495057;
+}
+
+[data-theme='dark'] #root .recent-entries-empty-text {
+  color: #909296;
+}
+
+[data-theme='dark'] #root .recent-entries-header-icon {
+  background-color: #373a40;
+}
+
+[data-theme='dark'] #root .recent-entries-header-icon svg {
+  color: #a5b4fc;
+}
+
+[data-theme='dark'] #root .expense-view-back-btn {
+  color: #93c5fd;
+  background-color: #1e3a5f;
+  border-color: #373a40;
+}
+
+[data-theme='dark'] #root .expense-view-back-btn:hover {
+  color: #bfdbfe;
+  background-color: #1e40af;
+  border-color: #4dabf7;
+}
+
+[data-theme='dark'] #root .expense-view-title,
+[data-theme='dark'] #root .expense-stat-value,
+[data-theme='dark'] #root .detail-row-value,
+[data-theme='dark'] #root .expense-timeline-title,
+[data-theme='dark'] #root .expense-timeline-event-title,
+[data-theme='dark'] #root .expense-timeline-event-actor,
+[data-theme='dark'] #root .detail-card-title,
+[data-theme='dark'] #root .expense-summary-title,
+[data-theme='dark'] #root .report-table-title {
+  color: #c1c2c5;
+}
+
+[data-theme='dark'] #root .summary-head-report-subtitle {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .summary-head-report-pill {
+  background-color: #1e3a5f !important;
+  border-color: #373a40 !important;
+  color: #74c0fc !important;
+}
+
+[data-theme='dark'] #root .summary-head-report-pill-muted {
+  background-color: #2c2e33 !important;
+  border-color: #373a40 !important;
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .summary-head-report-index {
+  color: #868e96 !important;
+}
+
+[data-theme='dark'] #root .summary-head-report-name {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .summary-head-share-label {
+  color: #74c0fc !important;
+}
+
+[data-theme='dark'] #root .summary-head-report-count-badge {
+  background-color: #1e3a5f !important;
+  border-color: #373a40 !important;
+  color: #74c0fc !important;
+}
+
+[data-theme='dark'] #root .summary-head-report-total-row {
+  background-color: #2c2e33 !important;
+  border-top-color: #495057 !important;
+}
+
+[data-theme='dark'] #root .summary-head-report-total-row td {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .report-preview-header {
+  background: linear-gradient(90deg, #1e3a5f 0%, #25262b 50%, #2c2e33 100%) !important;
+  border-color: #373a40 !important;
+}
+
+[data-theme='dark'] #root .report-preview-report-no {
+  color: #74c0fc !important;
+}
+
+[data-theme='dark'] #root .report-preview-stat-tile {
+  background-color: #2c2e33 !important;
+  border-color: #373a40 !important;
+}
+
+[data-theme='dark'] #root .report-preview-stat-value-net {
+  color: #60a5fa !important;
+}
+
+[data-theme='dark'] #root .report-preview-stat-value-gst {
+  color: #34d399 !important;
+}
+
+[data-theme='dark'] #root .report-preview-stat-value-tds {
+  color: #fb923c !important;
+}
+
+[data-theme='dark'] #root .report-preview-stat-value-gross {
+  color: #a5b4fc !important;
+}
+
+[data-theme='dark'] #root .report-preview-table-divider {
+  border-color: #373a40 !important;
+}
+
+[data-theme='dark'] #root .expense-stat-label,
+[data-theme='dark'] #root .detail-row-label,
+[data-theme='dark'] #root .expense-timeline-event-date,
+[data-theme='dark'] #root .expense-timeline-event-by,
+[data-theme='dark'] #root .expense-timeline-event-actor-label {
+  color: #909296;
+}
+
+[data-theme='dark'] #root .expense-section-divider,
+[data-theme='dark'] #root .detail-row,
+[data-theme='dark'] #root .expense-timeline-header {
+  border-color: #373a40;
+}
+
+[data-theme='dark'] #root .expense-timeline-line {
+  border-color: #373a40;
+}
+
+[data-theme='dark'] #root .expense-timeline-dot {
+  --tw-ring-color: #25262b;
+}
+
+[data-theme='dark'] #root .expense-summary-list > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgb(59 130 246 / 0.22);
+}
+
+[data-theme='dark'] #root .expense-amount-words-box,
+[data-theme='dark'] #root .expense-totals-box {
+  background-color: rgb(255 255 255 / 0.04);
+  border-color: rgb(255 255 255 / 0.1);
+}
+
+[data-theme='dark'] #root .expense-summary-list-label,
+[data-theme='dark'] #root .expense-amount-words-label,
+[data-theme='dark'] #root .expense-totals-row-label {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .expense-summary-list-value,
+[data-theme='dark'] #root .expense-totals-row-value {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .expense-amount-words-value,
+[data-theme='dark'] #root .expense-totals-gross-value {
+  color: #74c0fc !important;
+}
+
+[data-theme='dark'] #root .expense-totals-row-value-gst {
+  color: #34d399 !important;
+}
+
+[data-theme='dark'] #root .expense-totals-row-value-tds {
+  color: #f87171 !important;
+}
+
+[data-theme='dark'] #root .expense-totals-gross-divider {
+  border-color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .expense-totals-gross-label {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .expense-summary-decor {
+  background-color: rgb(59 130 246 / 0.12) !important;
+}
+
+[data-theme='dark'] #root .expense-form-summary-title {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .expense-form-summary-row-label {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .expense-form-summary-row-label-bold {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .expense-form-summary-row-value {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .expense-form-summary-row-value-bold {
+  color: #74c0fc !important;
+}
+
+[data-theme='dark'] #root .expense-form-summary-gross-divider {
+  border-color: rgb(255 255 255 / 0.1) !important;
+}
+
+[data-theme='dark'] #root .expense-timeline-header-icon {
+  background-color: #1e3a5f;
+  color: #60a5fa;
+}
+
+[data-theme='dark'] #root .expense-summary-icon {
+  background-color: #1e3a5f;
+  color: #60a5fa;
 }
 
 [data-theme='dark'] #root .input-field {
@@ -565,6 +1346,238 @@
 
 [data-theme='dark'] #root .btn-secondary:hover {
   background-color: #2c2e33;
+}
+
+[data-theme='dark'] #root .company-error-alert {
+  background-color: rgb(248 113 113 / 0.12) !important;
+  border-color: rgb(248 113 113 / 0.35) !important;
+  color: #fca5a5 !important;
+}
+
+[data-theme='dark'] #root .company-empty-icon {
+  color: #495057 !important;
+}
+
+[data-theme='dark'] #root .company-empty-title {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .company-empty-desc {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-card-icon {
+  background-color: #1e3a5f !important;
+  color: #60a5fa !important;
+}
+
+[data-theme='dark'] #root .company-card-title {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .company-code-badge {
+  background-color: rgb(59 130 246 / 0.15) !important;
+  border-color: rgb(59 130 246 / 0.35) !important;
+  color: #74c0fc !important;
+}
+
+[data-theme='dark'] #root .company-stamp-badge--yes {
+  background-color: rgb(52 211 153 / 0.12) !important;
+  border-color: rgb(52 211 153 / 0.35) !important;
+  color: #6ee7b7 !important;
+}
+
+[data-theme='dark'] #root .company-stamp-badge--no {
+  background-color: #2c2e33 !important;
+  border-color: #373a40 !important;
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-meta-chip {
+  background-color: #2c2e33 !important;
+  border-color: #373a40 !important;
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .company-gst-chip {
+  background-color: rgb(251 191 36 / 0.12) !important;
+  border-color: rgb(251 191 36 / 0.35) !important;
+  color: #fcd34d !important;
+}
+
+[data-theme='dark'] #root .company-status-active {
+  background-color: rgb(52 211 153 / 0.15) !important;
+  color: #6ee7b7 !important;
+}
+
+[data-theme='dark'] #root .company-status-inactive {
+  background-color: #373a40 !important;
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-action-btn--edit {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-action-btn--edit:hover {
+  color: #60a5fa !important;
+}
+
+[data-theme='dark'] #root .company-action-btn--delete {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-action-btn--delete:hover {
+  color: #f87171 !important;
+}
+
+[data-theme='dark'] #root .company-section-label,
+[data-theme='dark'] #root .company-form-section-title,
+[data-theme='dark'] #root .company-form-section-hint,
+[data-theme='dark'] #root .company-form-stamp-hint,
+[data-theme='dark'] #root .company-form-stamp-loading {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-location-card {
+  background-color: #2c2e33 !important;
+  border-color: #373a40 !important;
+}
+
+[data-theme='dark'] #root .company-location-card--default {
+  background-color: rgb(59 130 246 / 0.1) !important;
+  border-color: rgb(59 130 246 / 0.35) !important;
+}
+
+[data-theme='dark'] #root .company-location-name,
+[data-theme='dark'] #root .company-location-form-title,
+[data-theme='dark'] #root .company-form-title {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .company-location-default-badge,
+[data-theme='dark'] #root .company-location-default-pill {
+  background-color: rgb(59 130 246 / 0.2) !important;
+  color: #74c0fc !important;
+}
+
+[data-theme='dark'] #root .company-location-text {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .company-location-text-muted {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-form-panel {
+  background-color: #25262b !important;
+}
+
+[data-theme='dark'] #root .company-form-header,
+[data-theme='dark'] #root .company-form-divider,
+[data-theme='dark'] #root .company-form-footer {
+  border-color: #373a40 !important;
+}
+
+[data-theme='dark'] #root .company-form-subtitle {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-form-close-btn {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-form-close-btn:hover {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .company-form-field-label,
+[data-theme='dark'] #root .company-form-checkbox-label {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .company-form-stamp-preview {
+  background-color: #2c2e33 !important;
+  border-color: #373a40 !important;
+}
+
+[data-theme='dark'] #root .company-form-stamp-empty {
+  color: #fcd34d !important;
+}
+
+[data-theme='dark'] #root .company-form-stamp-remove {
+  color: #f87171 !important;
+}
+
+[data-theme='dark'] #root .company-form-stamp-remove:hover {
+  color: #fca5a5 !important;
+}
+
+[data-theme='dark'] #root .company-location-form-card {
+  background-color: rgb(255 255 255 / 0.03) !important;
+  border-color: #373a40 !important;
+}
+
+[data-theme='dark'] #root .company-location-form-card--default {
+  background-color: rgb(59 130 246 / 0.1) !important;
+  border-color: rgb(59 130 246 / 0.4) !important;
+}
+
+[data-theme='dark'] #root .company-location-index {
+  background-color: #495057 !important;
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .company-location-index--default {
+  background-color: #2563eb !important;
+  color: #fff !important;
+}
+
+[data-theme='dark'] #root .company-location-set-default {
+  color: #60a5fa !important;
+}
+
+[data-theme='dark'] #root .company-location-set-default:hover {
+  color: #93c5fd !important;
+}
+
+[data-theme='dark'] #root .company-location-remove-btn {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .company-location-remove-btn:hover {
+  color: #f87171 !important;
+}
+
+[data-theme='dark'] #root .settings-role-badge {
+  background-color: #2c2e33 !important;
+  border-color: #373a40 !important;
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .settings-user-name {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .settings-user-email {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .settings-action-btn--enabled:hover {
+  color: #60a5fa !important;
+}
+
+[data-theme='dark'] #root .settings-action-btn--delete-enabled:hover {
+  color: #f87171 !important;
+}
+
+[data-theme='dark'] #root .settings-action-btn--disabled {
+  color: #495057 !important;
+}
+
+[data-theme='dark'] #root .settings-readonly-role {
+  background-color: #2c2e33 !important;
+  color: #909296 !important;
 }
 
 [data-theme='dark'] ::-webkit-scrollbar-track {

@@ -6,6 +6,44 @@ const plusIcon = (
   </svg>
 );
 
+const arrowRightIcon = (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+const keyIcon = (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+  </svg>
+);
+
+const resolveActionIcon = (icon) => {
+  if (icon === false || icon === 'none') return null;
+  if (icon === 'arrow') return arrowRightIcon;
+  if (icon === 'key') return keyIcon;
+  return plusIcon;
+};
+
+const renderActionContent = (act) => {
+  const icon = resolveActionIcon(act.icon);
+  if (!icon) return act.label;
+  if (act.icon === 'arrow') {
+    return (
+      <>
+        {act.label}
+        {icon}
+      </>
+    );
+  }
+  return (
+    <>
+      {icon}
+      {act.label}
+    </>
+  );
+};
+
 const actionClassName =
   'inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary-800 rounded-xl text-sm font-bold hover:bg-primary-50 active:scale-95 transition-all duration-150 shadow-lg shadow-primary-900/30 flex-shrink-0';
 
@@ -28,8 +66,7 @@ export default function PageBanner({ title, subtitle, action = null, className =
             {actionsList.map((act) =>
               act.to ? (
                 <Link key={`${act.to}-${act.label}`} to={act.to} className={actionClassName}>
-                  {plusIcon}
-                  {act.label}
+                  {renderActionContent(act)}
                 </Link>
               ) : (
                 <button
@@ -38,8 +75,7 @@ export default function PageBanner({ title, subtitle, action = null, className =
                   onClick={act.onClick}
                   className={actionClassName}
                 >
-                  {plusIcon}
-                  {act.label}
+                  {renderActionContent(act)}
                 </button>
               ),
             )}

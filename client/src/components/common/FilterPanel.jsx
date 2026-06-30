@@ -49,18 +49,23 @@ export default function FilterPanel({ filters, onChange, onApply, onClear, compa
       <SimpleGrid key={resetKey} cols={{ base: 1, sm: 2, md: compact ? 3 : 4, lg: compact ? 4 : 6 }} spacing="sm">
         {!isHidden('search') && (
           <TextInput
-            placeholder="Search invoice, co name, company..."
+            placeholder="Search expense no, invoice, company, co name..."
             value={filters.search || ''}
             onChange={(e) => update('search', e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onApply?.();
+            }}
           />
         )}
-        <FilterSelect
-          placeholder="Timeframe"
-          clearable
-          data={TIMEFRAMES}
-          value={selectValue('timeframe')}
-          onChange={(v) => update('timeframe', v)}
-        />
+        {!isHidden('timeframe') && (
+          <FilterSelect
+            placeholder="Timeframe"
+            clearable
+            data={TIMEFRAMES}
+            value={selectValue('timeframe')}
+            onChange={(v) => update('timeframe', v)}
+          />
+        )}
         <FilterSelect
           placeholder="Financial year"
           clearable
@@ -77,13 +82,15 @@ export default function FilterPanel({ filters, onChange, onApply, onClear, compa
           value={selectValue('month')}
           onChange={(v) => update('month', v)}
         />
-        <FilterSelect
-          placeholder="Quarter"
-          clearable
-          data={selectData(lookups?.quarters)}
-          value={selectValue('quarter')}
-          onChange={(v) => update('quarter', v)}
-        />
+        {!isHidden('quarter') && (
+          <FilterSelect
+            placeholder="Quarter"
+            clearable
+            data={selectData(lookups?.quarters)}
+            value={selectValue('quarter')}
+            onChange={(v) => update('quarter', v)}
+          />
+        )}
         {!isHidden('approvalStatus') && (
           <FilterSelect
             placeholder="Approval status"

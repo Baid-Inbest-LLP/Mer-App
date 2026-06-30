@@ -212,7 +212,7 @@ export default function MonthlyReportPage() {
         className="mb-4"
         title={`Monthly Report`}
         subtitle={`${lookups?.currentFinancialYear || ''} · ${CURRENT_MONTH}`}
-        action={{ to: `/reports/monthly/detail?fy=${encodeURIComponent(activeTableFY || '')}&month=${encodeURIComponent(CURRENT_MONTH)}`, label: 'View Monthly Report' }}
+        action={{ to: `/reports/monthly/detail?fy=${encodeURIComponent(activeTableFY || '')}&month=${encodeURIComponent(CURRENT_MONTH)}`, label: 'View Monthly Report', icon: false }}
       />
 
       <div className="dashboard-grid-4 mb-4">
@@ -294,7 +294,7 @@ export default function MonthlyReportPage() {
 
           <div className="card">
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
-              <h3 className="text-sm font-bold text-gray-800 uppercase tracking-wide">
+              <h3 className="report-table-title text-sm font-bold text-gray-800 uppercase tracking-wide">
                 Overall Expenses Monthly
               </h3>
               <div className="w-44">
@@ -319,6 +319,7 @@ export default function MonthlyReportPage() {
                 <table>
                   <thead>
                     <tr>
+                      <th className="text-center w-14">S.No</th>
                       <th className="text-center">MER No</th>
                       <th className="text-center">Month</th>
                       <th className="text-right">Net</th>
@@ -330,12 +331,13 @@ export default function MonthlyReportPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {visibleMonthly.map((m) => (
+                    {visibleMonthly.map((m, index) => (
                       <tr key={m._id}>
+                        <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
                         <td className="text-center font-semibold whitespace-nowrap">
                           <Link
                             to={`/reports/monthly/detail?fy=${encodeURIComponent(activeTableFY || '')}&month=${encodeURIComponent(m._id)}`}
-                            className="text-primary-700 hover:text-primary-900 hover:underline"
+                            className="table-serial-link text-primary-700 hover:text-primary-900 hover:underline"
                             title={`View ${m._id} expense report`}
                           >
                             {m.reportNo || buildMonthlyReportNo(activeTableFY, m._id) || '—'}

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Paper, Text, Table, Loader, Center, SimpleGrid } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
+import { Loader, Center } from '@mantine/core';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchReportSummary,
@@ -8,165 +7,45 @@ import {
 } from '../../store/slices/reportSlice';
 import PageBanner from '../../components/common/PageBanner';
 import FilterPanel from '../../components/common/FilterPanel';
-import FilterSelect from '../../components/common/FilterSelect';
 import StatCard from '../../components/common/StatCard';
 import EmptyState from '../../components/common/EmptyState';
-import { formatCurrency, formatDate, buildCustomizedReportFilename } from '../../utils/format';
-import { getRecentFinancialYearOptions } from '../../utils/financialYear';
-import { omitPaymentFilters } from '../../utils/filters';
-import { reportApi } from '../../api/report.api';
-import { downloadBlob } from '../../utils/download';
+import { formatCurrency } from '../../utils/format';
+import { omitPaymentFilters, cleanFilterParams, stripSummaryReportHiddenFilters } from '../../utils/filters';
 
 const iconClass =
   'w-5 h-5 sm:w-6 sm:h-6 xl:w-7 xl:h-7 max-[1660px]:w-6 max-[1660px]:h-6 max-[1536px]:w-5 max-[1536px]:h-5 max-[1366px]:w-[18px] max-[1366px]:h-[18px] max-[1280px]:w-4 max-[1280px]:h-4';
 
-const MER_TYPE_OPTIONS = [
-  { value: 'BANK', label: 'Bank' },
-  { value: 'CASH', label: 'Cash' },
-  { value: 'UPI', label: 'UPI' },
-  { value: 'CARD', label: 'Debit/Credit Card' },
-];
-
-const MER_TYPE_LABEL = { BANK: 'Bank', CASH: 'Cash', UPI: 'UPI', CARD: 'Debit/Credit Card' };
-
-const FILTER_LABELS = {
-  financialYear: 'FY',
-  month: 'Month',
-  company: 'Company',
-  location: 'Location',
-  expenseType: 'Expense Type',
-  merType: 'MER Type',
-};
-
-const filterChipValue = (key, value) => (key === 'merType' ? MER_TYPE_LABEL[value] || value : value);
-
-const downloadIcon = (
-  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-  </svg>
-);
-
-const cleanParams = (params) => {
-  const out = {};
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') out[key] = value;
-  });
-  return out;
-};
-
 export default function SummaryReportPage() {
   const dispatch = useDispatch();
-  const { lookups } = useSelector((state) => state.common);
   const { summary, headSummary, loading } = useSelector((state) => state.report);
   const [filters, setFilters] = useState({});
-  const [exportingSummary, setExportingSummary] = useState(false);
-  const [downloadFilters, setDownloadFilters] = useState({});
-  const [exportingReport, setExportingReport] = useState(false);
-  const [filtersKey, setFiltersKey] = useState(0);
-  const [preview, setPreview] = useState(null);
-  const [generating, setGenerating] = useState(false);
-
-  const companyCodeByName = lookups?.companyCodeByName || {};
-  const hasSelectedFY = Boolean(downloadFilters.financialYear);
-  const optionalFiltersEnabled = hasSelectedFY;
 
   const load = useCallback((f) => {
-    const params = omitPaymentFilters(f ?? filters);
+    const params = cleanFilterParams(stripSummaryReportHiddenFilters(omitPaymentFilters(f ?? filters)));
     dispatch(fetchReportSummary(params));
     dispatch(fetchHeadSummary(params));
   }, [dispatch, filters]);
 
   useEffect(() => {
-    dispatch(fetchReportSummary(omitPaymentFilters({})));
-    dispatch(fetchHeadSummary(omitPaymentFilters({})));
+    dispatch(fetchReportSummary(cleanFilterParams(omitPaymentFilters({}))));
+    dispatch(fetchHeadSummary(cleanFilterParams(omitPaymentFilters({}))));
   }, [dispatch]);
 
-  const monthOptions = useMemo(
-    () => (lookups?.months || []).map((m) => ({ value: m, label: m })),
-    [lookups?.months],
-  );
-  const companyOptions = useMemo(
-    () => (lookups?.companies || []).map((c) => ({ value: c, label: c })),
-    [lookups?.companies],
-  );
-  const fyOptions = useMemo(
-    () => getRecentFinancialYearOptions(lookups?.currentFinancialYear, 2),
-    [lookups?.currentFinancialYear],
-  );
-  const companyLocations = lookups?.companyLocations;
-  const allLocations = lookups?.locations;
-  const locationOptions = useMemo(() => {
-    const scoped = downloadFilters.company && companyLocations?.[downloadFilters.company];
-    const list = scoped || allLocations;
-    return (list || []).map((l) => ({ value: l, label: l }));
-  }, [downloadFilters.company, companyLocations, allLocations]);
-  const expenseTypeOptions = useMemo(
-    () => (lookups?.expenseTypes || []).map((t) => ({ value: t, label: t })),
-    [lookups?.expenseTypes],
+  const headTotals = useMemo(
+    () => headSummary.reduce(
+      (acc, row) => ({
+        net: acc.net + (row.net || 0),
+        gst: acc.gst + (row.gst || 0),
+        tds: acc.tds + (row.tds || 0),
+        gross: acc.gross + (row.gross || 0),
+        count: acc.count + (row.count || 0),
+      }),
+      { net: 0, gst: 0, tds: 0, gross: 0, count: 0 },
+    ),
+    [headSummary],
   );
 
-  const updateFilter = (key, value) => {
-    setDownloadFilters((prev) => {
-      const next = { ...prev, [key]: value || undefined };
-      if (key === 'company' && value !== prev.company) {
-        const valid = lookups?.companyLocations?.[value];
-        if (valid && prev.location && !valid.includes(prev.location)) {
-          next.location = undefined;
-        }
-      }
-      return next;
-    });
-  };
-
-  const resetFilters = () => {
-    setDownloadFilters({});
-    setFiltersKey((k) => k + 1);
-    setPreview(null);
-  };
-
-  const exportExcel = async () => {
-    if (exportingSummary) return;
-    setExportingSummary(true);
-    try {
-      const { data } = await reportApi.exportSummaryExcel(omitPaymentFilters(filters));
-      downloadBlob(data, 'mer-summary-report.xlsx');
-      notifications.show({ message: 'Excel download started', color: 'green' });
-    } catch {
-      notifications.show({ message: 'Failed to download Excel', color: 'red' });
-    } finally {
-      setExportingSummary(false);
-    }
-  };
-
-  const runExport = async (params, filenameHint) => {
-    if (exportingReport) return;
-    setExportingReport(true);
-    try {
-      const { data } = await reportApi.exportMonthlyExcel(params);
-      const filename = filenameHint
-        || buildCustomizedReportFilename(params, companyCodeByName);
-      downloadBlob(data, filename);
-      notifications.show({ message: 'Excel download started', color: 'green' });
-    } catch {
-      notifications.show({ message: 'Failed to download Excel', color: 'red' });
-    } finally {
-      setExportingReport(false);
-    }
-  };
-
-  const generatePreview = async () => {
-    if (generating || !downloadFilters.financialYear) return;
-    setGenerating(true);
-    try {
-      const params = cleanParams({ ...downloadFilters });
-      const { data } = await reportApi.monthlyDetailed(params);
-      setPreview({ ...data.data, params });
-    } catch {
-      notifications.show({ message: 'Failed to generate report', color: 'red' });
-    } finally {
-      setGenerating(false);
-    }
-  };
+  const grossBase = summary?.grossAmount || headTotals.gross || 0;
 
   return (
     <div>
@@ -174,7 +53,7 @@ export default function SummaryReportPage() {
         className="mb-4"
         title="Summary Report"
         subtitle={`Total Entries · ${summary?.entryCount ?? 0}`}
-        action={{ onClick: exportExcel, label: 'Download Excel' }}
+        action={{ to: '/reports/customized', label: 'Customized Report', icon: 'arrow' }}
       />
       <div className="dashboard-grid-4 mb-4">
         <StatCard
@@ -226,221 +105,107 @@ export default function SummaryReportPage() {
           }
         />
       </div>
-      <FilterPanel filters={filters} onChange={setFilters} onApply={() => load()} onClear={() => { setFilters({}); load({}); }} hide={['search', 'approvalStatus', 'coNames']} />
+      <FilterPanel
+        filters={filters}
+        onChange={setFilters}
+        onApply={() => load()}
+        onClear={() => {
+          setFilters({});
+          load({});
+        }}
+        hide={['search', 'approvalStatus', 'coNames', 'timeframe']}
+      />
       {loading && !summary ? (
         <Center py="xl"><Loader /></Center>
       ) : (
-        <>
-          <Paper withBorder p="md" radius="md" mb="lg">
-            <Text fw={600} mb="md">Expense Summary</Text>
-            <Table size="sm">
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th ta="left">SL No</Table.Th>
-                  <Table.Th ta="center">Head</Table.Th>
-                  <Table.Th ta="right">Net</Table.Th>
-                  <Table.Th ta="right">GST</Table.Th>
-                  <Table.Th ta="right">TDS</Table.Th>
-                  <Table.Th ta="right">Gross</Table.Th>
-                  <Table.Th ta="center">Count</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {headSummary.map((h, index) => (
-                  <Table.Tr key={h._id}>
-                    <Table.Td ta="left">{index + 1}</Table.Td>
-                    <Table.Td ta="center">{h._id}</Table.Td>
-                    <Table.Td ta="right">{formatCurrency(h.net)}</Table.Td>
-                    <Table.Td ta="right">{formatCurrency(h.gst)}</Table.Td>
-                    <Table.Td ta="right">{formatCurrency(h.tds)}</Table.Td>
-                    <Table.Td ta="right">{formatCurrency(h.gross)}</Table.Td>
-                    <Table.Td ta="center">{h.count}</Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Paper>
-
-          <div className="card p-4 mb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div>
-                <h3 className="text-md font-bold text-gray-800">Month-wise Customized Reports</h3>
-                <p className="text-sm text-gray-500">
-                  Select a financial year (required), then optionally filter by month, company, location, expense type, or MER type.
-                </p>
+        <div className="card overflow-hidden mb-4 summary-head-report">
+          <div className="summary-head-report-header px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-100 bg-gray-50 chart-card-header flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="expense-summary-icon w-10 h-10 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <h3 className="report-table-title text-sm font-bold text-gray-800 uppercase tracking-wide">
+                  Expense Head Summary
+                </h3>
               </div>
             </div>
-            <SimpleGrid key={filtersKey} cols={{ base: 1, sm: 2, md: 3, lg: 4 }} spacing="sm">
-              <FilterSelect
-                placeholder="Financial year *"
-                searchable
-                data={fyOptions}
-                value={downloadFilters.financialYear || ''}
-                onChange={(v) => updateFilter('financialYear', v)}
-              />
-              <FilterSelect
-                placeholder="Month"
-                clearable
-                searchable
-                disabled={!optionalFiltersEnabled}
-                data={monthOptions}
-                value={downloadFilters.month || ''}
-                onChange={(v) => updateFilter('month', v)}
-              />
-              <FilterSelect
-                placeholder="Company"
-                clearable
-                searchable
-                disabled={!optionalFiltersEnabled}
-                data={companyOptions}
-                value={downloadFilters.company || ''}
-                onChange={(v) => updateFilter('company', v)}
-              />
-              <FilterSelect
-                placeholder="Location / Branch"
-                clearable
-                searchable
-                disabled={!optionalFiltersEnabled}
-                data={locationOptions}
-                value={downloadFilters.location || ''}
-                onChange={(v) => updateFilter('location', v)}
-              />
-              <FilterSelect
-                placeholder="Expense type"
-                clearable
-                disabled={!optionalFiltersEnabled}
-                data={expenseTypeOptions}
-                value={downloadFilters.expenseType || ''}
-                onChange={(v) => updateFilter('expenseType', v)}
-              />
-              <FilterSelect
-                placeholder="MER type"
-                clearable
-                disabled={!optionalFiltersEnabled}
-                data={MER_TYPE_OPTIONS}
-                value={downloadFilters.merType || ''}
-                onChange={(v) => updateFilter('merType', v)}
-              />
-            </SimpleGrid>
-            <div className="flex items-center justify-end gap-2 mt-4">
-              <button
-                type="button"
-                disabled={generating || (!hasSelectedFY && !preview)}
-                onClick={resetFilters}
-                title="Clear filters"
-                className="inline-flex items-center justify-center px-5 py-2.5 rounded-lg border border-gray-200 bg-white text-sm font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                disabled={generating || !hasSelectedFY}
-                onClick={generatePreview}
-                className="btn-primary inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                {generating ? 'Generating...' : 'Generate Report'}
-              </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="summary-head-report-pill text-xs font-semibold text-primary-700 bg-primary-50 border border-primary-200 px-2.5 py-1 rounded-full">
+                Gross {formatCurrency(grossBase)}
+              </span>
+              <span className="summary-head-report-pill-muted text-xs font-semibold text-gray-600 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
+                {headTotals.count} line items
+              </span>
             </div>
           </div>
 
-          {preview && (
-            <div className="card p-0 overflow-hidden">
-              <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-gradient-to-r from-primary-50 via-blue-50 to-indigo-50 border-b border-gray-100">
-                <div className="min-w-0">
-                  <h3 className="text-md font-bold text-gray-800">Report Preview</h3>
-                  {preview.reportNo && (
-                    <p className="text-sm font-semibold text-primary-700 mt-0.5">{preview.reportNo}</p>
-                  )}
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-                    {Object.entries(preview.params)
-                      .filter(([key]) => FILTER_LABELS[key])
-                      .map(([key, value]) => (
-                        <span
-                          key={key}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-primary-200 text-primary-700 text-[11px] font-semibold"
-                        >
-                          {FILTER_LABELS[key]}: {filterChipValue(key, value)}
-                        </span>
-                      ))}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={exportingReport || preview.count === 0}
-                  onClick={() => runExport(preview.params, preview.filename)}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {downloadIcon}
-                  {exportingReport ? 'Preparing...' : 'Download Report'}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-5">
-                {[
-                  { label: 'Total Net', value: preview.totals?.net, color: 'text-blue-700', bg: 'bg-blue-50' },
-                  { label: 'Total GST', value: preview.totals?.gst, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-                  { label: 'Total TDS', value: preview.totals?.tds, color: 'text-orange-700', bg: 'bg-orange-50' },
-                  { label: 'Gross Amount', value: preview.totals?.gross, color: 'text-indigo-700', bg: 'bg-indigo-50' },
-                ].map((tile) => (
-                  <div key={tile.label} className={`rounded-xl border border-gray-100 ${tile.bg} px-4 py-3`}>
-                    <p className={`text-xl font-bold tracking-tight ${tile.color}`}>{formatCurrency(tile.value)}</p>
-                    <p className="text-xs text-gray-500 font-semibold mt-0.5">{tile.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              {preview.count === 0 ? (
-                <EmptyState
-                  title="No matching entries"
-                  description="No completed entries match the selected filters. Try adjusting them."
-                />
-              ) : (
-                <div className="table-wrapper max-h-[460px] overflow-auto border-t border-gray-100">
-                  <table>
-                    <thead className="sticky top-0 z-10">
-                      <tr>
-                        <th className="text-left">Expense No</th>
-                        <th className="text-center">Date</th>
-                        <th className="text-left">Company</th>
-                        <th className="text-left">Co Name</th>
-                        <th className="text-left">Head</th>
-                        <th className="text-left">Particulars</th>
-                        <th className="text-center">Type</th>
-                        <th className="text-right">Net</th>
-                        <th className="text-right">GST</th>
-                        <th className="text-right">TDS</th>
-                        <th className="text-right">Gross</th>
-                        <th className="text-center">Payment</th>
+          {headSummary.length === 0 ? (
+            <EmptyState
+              title="No head summary"
+              description="No completed entries match the selected filters."
+            />
+          ) : (
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th className="text-center w-14">#</th>
+                    <th className="text-left">Expense Head</th>
+                    <th className="text-right">Net</th>
+                    <th className="text-right">GST</th>
+                    <th className="text-right">TDS</th>
+                    <th className="text-right">Gross</th>
+                    <th className="text-center w-20">Share</th>
+                    <th className="text-center w-16">Count</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {headSummary.map((h, index) => {
+                    const sharePercent = grossBase > 0 ? (h.gross / grossBase) * 100 : 0;
+                    return (
+                      <tr key={h._id}>
+                        <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
+                        <td className="text-left">
+                          <p className="summary-head-report-name font-semibold">{h._id}</p>
+                        </td>
+                        <td className="text-right">{formatCurrency(h.net)}</td>
+                        <td className="text-right summary-head-report-value-gst">{formatCurrency(h.gst)}</td>
+                        <td className="text-right summary-head-report-value-tds">{formatCurrency(h.tds)}</td>
+                        <td className="text-right font-semibold">{formatCurrency(h.gross)}</td>
+                        <td className="text-center">
+                          <span className="summary-head-share-label text-xs font-semibold">
+                            {sharePercent.toFixed(1)}%
+                          </span>
+                        </td>
+                        <td className="text-center">
+                          <span className="summary-head-report-count-badge inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 text-xs font-bold border border-primary-200">
+                            {h.count}
+                          </span>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {preview.entries.map((e) => (
-                        <tr key={e._id}>
-                          <td className="text-left font-medium text-gray-700">{e.slNo || '—'}</td>
-                          <td className="text-center whitespace-nowrap">{formatDate(e.invoiceDate)}</td>
-                          <td className="text-left">{e.company || '—'}</td>
-                          <td className="text-left">{e.coNames || '—'}</td>
-                          <td className="text-left">{e.headOfExpense || '—'}</td>
-                          <td className="text-left max-w-[220px] truncate" title={e.particulars}>{e.particulars || '—'}</td>
-                          <td className="text-center">{e.expenseType || '—'}</td>
-                          <td className="text-right">{formatCurrency(e.netAmount)}</td>
-                          <td className="text-right text-emerald-700">{formatCurrency(e.totalGST)}</td>
-                          <td className="text-right text-orange-700">{formatCurrency(e.tds)}</td>
-                          <td className="text-right font-semibold">{formatCurrency(e.grossAmount)}</td>
-                          <td className="text-center">{e.paymentMethod || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="summary-head-report-total-row">
+                    <td colSpan={2} className="text-left font-bold uppercase tracking-wide text-xs">
+                      Total
+                    </td>
+                    <td className="text-right font-bold">{formatCurrency(headTotals.net)}</td>
+                    <td className="text-right font-bold summary-head-report-value-gst">{formatCurrency(headTotals.gst)}</td>
+                    <td className="text-right font-bold summary-head-report-value-tds">{formatCurrency(headTotals.tds)}</td>
+                    <td className="text-right font-bold">{formatCurrency(headTotals.gross)}</td>
+                    <td className="text-center font-bold">100%</td>
+                    <td className="text-center font-bold">{headTotals.count}</td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );

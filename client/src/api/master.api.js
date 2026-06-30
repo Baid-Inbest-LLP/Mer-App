@@ -12,4 +12,5 @@ export const masterApi = {
   createCompany: (data) => api.post('/masters/companies', data),
   createLocation: (data) => api.post('/masters/locations', data),
   updateUser: (id, data) => api.put(`/masters/users/${id}`, data),
+  deleteUser: (id) => api.delete(`/masters/users/${id}`),
 };

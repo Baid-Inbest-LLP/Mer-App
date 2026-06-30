@@ -93,7 +93,6 @@ const navItems = [
   {
     to: '/settings',
     label: 'Settings',
-    adminOnly: true,
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path

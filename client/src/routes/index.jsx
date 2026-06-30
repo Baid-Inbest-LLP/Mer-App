@@ -9,6 +9,7 @@ import ExpenseListPage from '../pages/expenses/ExpenseListPage';
 import ExpenseFormPage from '../pages/expenses/ExpenseFormPage';
 import ExpenseViewPage from '../pages/expenses/ExpenseViewPage';
 import SummaryReportPage from '../pages/reports/SummaryReportPage';
+import CustomizedReportPage from '../pages/reports/CustomizedReportPage';
 import MonthlyReportPage from '../pages/reports/MonthlyReportPage';
 import FinancialYearReportPage from '../pages/reports/FinancialYearReportPage';
 import FinancialYearDetailPage from '../pages/reports/FinancialYearDetailPage';
@@ -35,6 +36,7 @@ export default function AppRoutes() {
         <Route path="entries/:id/edit" element={<ExpenseFormPage />} />
         <Route path="entries/:id" element={<ExpenseViewPage />} />
         <Route path="reports/summary" element={<SummaryReportPage />} />
+        <Route path="reports/customized" element={<CustomizedReportPage />} />
         <Route path="reports/monthly" element={<MonthlyReportPage />} />
         <Route path="reports/financial-year" element={<FinancialYearReportPage />} />
         <Route path="reports/financial-year/detail" element={<FinancialYearDetailPage />} />
