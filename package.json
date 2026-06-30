@@ -1,0 +1,21 @@
+{
+  "name": "mer-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MER - Monthly Expense Report System",
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "dev:server": "pnpm --filter server dev",
+    "dev:client": "pnpm --filter client dev",
+    "build": "pnpm run --filter client build && pnpm run --filter server build",
+    "lint": "pnpm run -r lint",
+    "format": "prettier --write \"**/*.{js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "prettier": "^3.5.3"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

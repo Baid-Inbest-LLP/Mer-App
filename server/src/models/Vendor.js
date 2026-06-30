@@ -1,0 +1,16 @@
+import mongoose from 'mongoose';
+
+const vendorSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true, unique: true },
+    contactPerson: { type: String, trim: true },
+    email: { type: String, trim: true, lowercase: true },
+    phone: { type: String, trim: true },
+    gstin: { type: String, trim: true },
+    address: { type: String, trim: true },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true },
+);
+
+export const Vendor = mongoose.model('Vendor', vendorSchema);
