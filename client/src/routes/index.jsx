@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import AppLayout from '../components/layout/AppLayout';
@@ -7,14 +8,17 @@ import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import ExpenseListPage from '../pages/expenses/ExpenseListPage';
 import ExpenseFormPage from '../pages/expenses/ExpenseFormPage';
-import ExpenseViewPage from '../pages/expenses/ExpenseViewPage';
 import SummaryReportPage from '../pages/reports/SummaryReportPage';
 import CustomizedReportPage from '../pages/reports/CustomizedReportPage';
 import MonthlyReportPage from '../pages/reports/MonthlyReportPage';
 import FinancialYearReportPage from '../pages/reports/FinancialYearReportPage';
-import FinancialYearDetailPage from '../pages/reports/FinancialYearDetailPage';
 import SettingsPage from '../pages/settings/SettingsPage';
 import CompanyListPage from '../pages/companies/CompanyListPage';
+import ExpenseViewSkeleton from '../components/common/ExpenseViewSkeleton';
+import ReportDetailSkeleton from '../components/common/ReportDetailSkeleton';
+
+const ExpenseViewPage = lazy(() => import('../pages/expenses/ExpenseViewPage'));
+const FinancialYearDetailPage = lazy(() => import('../pages/reports/FinancialYearDetailPage'));
 
 export default function AppRoutes() {
   return (
@@ -34,12 +38,20 @@ export default function AppRoutes() {
         <Route path="entries" element={<ExpenseListPage />} />
         <Route path="entries/new" element={<ExpenseFormPage />} />
         <Route path="entries/:id/edit" element={<ExpenseFormPage />} />
-        <Route path="entries/:id" element={<ExpenseViewPage />} />
+        <Route path="entries/:id" element={
+          <Suspense fallback={<ExpenseViewSkeleton />}>
+            <ExpenseViewPage />
+          </Suspense>
+        } />
         <Route path="reports/summary" element={<SummaryReportPage />} />
         <Route path="reports/customized" element={<CustomizedReportPage />} />
         <Route path="reports/monthly" element={<MonthlyReportPage />} />
         <Route path="reports/financial-year" element={<FinancialYearReportPage />} />
-        <Route path="reports/financial-year/detail" element={<FinancialYearDetailPage />} />
+        <Route path="reports/financial-year/detail" element={
+          <Suspense fallback={<ReportDetailSkeleton />}>
+            <FinancialYearDetailPage />
+          </Suspense>
+        } />
         <Route path="companies" element={<CompanyListPage />} />
         <Route
           path="settings"

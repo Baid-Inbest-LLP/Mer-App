@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Loader, Center } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import PageBanner from '../../components/common/PageBanner';
 import StatCard from '../../components/common/StatCard';
 import EmptyState from '../../components/common/EmptyState';
+import ReportDetailSkeleton from '../../components/common/ReportDetailSkeleton';
 import { formatCurrency, formatDate, buildMonthlyReportNo, buildCustomizedReportFilename } from '../../utils/format';
 import { reportApi } from '../../api/report.api';
 import { downloadBlob } from '../../utils/download';
@@ -93,6 +93,10 @@ export default function MonthlyDetailPage() {
   const count = data?.count ?? 0;
   const reportNo = data?.reportNo || buildMonthlyReportNo(financialYear, month);
 
+  if (loading && !data) {
+    return <ReportDetailSkeleton />;
+  }
+
   return (
     <div className="w-full max-w-[90rem] mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -179,9 +183,7 @@ export default function MonthlyDetailPage() {
           </h3>
         </div>
 
-        {loading ? (
-          <Center py="xl"><Loader color="blue" /></Center>
-        ) : count === 0 ? (
+        {count === 0 ? (
           <EmptyState
             title="No entries"
             description="No completed entries are available for this month."

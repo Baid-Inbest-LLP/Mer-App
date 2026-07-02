@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Loader, Center } from '@mantine/core';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchExpense, clearCurrent } from '../../store/slices/expenseSlice';
 import ApprovalActions from '../../components/expenses/ApprovalActions';
+import ExpenseViewSkeleton from '../../components/common/ExpenseViewSkeleton';
 import {
   formatAmountInWords,
   formatCurrency,
@@ -197,11 +197,7 @@ export default function ExpenseViewPage() {
   }, [dispatch, id]);
 
   if (loading || !current) {
-    return (
-      <Center py="xl">
-        <Loader color="blue" />
-      </Center>
-    );
+    return <ExpenseViewSkeleton />;
   }
 
   const e = current;

@@ -9,7 +9,7 @@ import {
   Tooltip,
 } from 'recharts';
 import ChartCard from '../common/ChartCard';
-import Skeleton from '../common/Skeleton';
+import ChartSkeleton from '../common/ChartSkeleton';
 import ChartMonthSelect from './ChartMonthSelect';
 import ChartFySelect from './ChartFySelect';
 import ChartLoadingOverlay from './ChartLoadingOverlay';
@@ -31,12 +31,7 @@ export default function BarChartCard({
   onFyChange,
 }) {
   if (loading && !(data || []).length) {
-    return (
-      <div className="card p-4">
-        <Skeleton className="h-6 w-48 mb-4" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
+    return <ChartSkeleton />;
   }
 
   return (

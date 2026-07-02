@@ -28,6 +28,8 @@ const initialState = {
   headSummary: [],
   monthlyReport: [],
   loading: false,
+  monthlyReportLoading: false,
+  headSummaryLoading: false,
   error: null,
 };
 
@@ -54,11 +56,25 @@ const reportSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
+      .addCase(fetchHeadSummary.pending, (state) => {
+        state.headSummaryLoading = true;
+      })
       .addCase(fetchHeadSummary.fulfilled, (state, action) => {
+        state.headSummaryLoading = false;
         state.headSummary = action.payload;
       })
+      .addCase(fetchHeadSummary.rejected, (state) => {
+        state.headSummaryLoading = false;
+      })
+      .addCase(fetchMonthlyReport.pending, (state) => {
+        state.monthlyReportLoading = true;
+      })
       .addCase(fetchMonthlyReport.fulfilled, (state, action) => {
+        state.monthlyReportLoading = false;
         state.monthlyReport = action.payload;
+      })
+      .addCase(fetchMonthlyReport.rejected, (state) => {
+        state.monthlyReportLoading = false;
       });
   },
 });

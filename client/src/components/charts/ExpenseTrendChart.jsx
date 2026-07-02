@@ -8,19 +8,14 @@ import {
   Tooltip,
 } from 'recharts';
 import ChartCard from '../common/ChartCard';
-import Skeleton from '../common/Skeleton';
+import ChartSkeleton from '../common/ChartSkeleton';
 import { formatCurrency } from '../../utils/format';
 
 const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4'];
 
 export default function ExpenseTrendChart({ data, loading, title = 'Monthly Expense Trend' }) {
   if (loading) {
-    return (
-      <div className="card p-4">
-        <Skeleton className="h-6 w-48 mb-4" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
+    return <ChartSkeleton />;
   }
 
   return (

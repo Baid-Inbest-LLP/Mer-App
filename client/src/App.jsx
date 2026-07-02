@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import AppLayout from './components/layout/AppLayout';
@@ -8,15 +9,18 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ExpenseListPage from './pages/expenses/ExpenseListPage';
 import ExpenseFormPage from './pages/expenses/ExpenseFormPage';
-import ExpenseViewPage from './pages/expenses/ExpenseViewPage';
 import SummaryReportPage from './pages/reports/SummaryReportPage';
 import MonthlyReportPage from './pages/reports/MonthlyReportPage';
-import MonthlyDetailPage from './pages/reports/MonthlyDetailPage';
 import FinancialYearReportPage from './pages/reports/FinancialYearReportPage';
-import FinancialYearDetailPage from './pages/reports/FinancialYearDetailPage';
 import CustomizedReportPage from './pages/reports/CustomizedReportPage';
 import SettingsPage from './pages/settings/SettingsPage';
 import CompanyListPage from './pages/companies/CompanyListPage';
+import ExpenseViewSkeleton from './components/common/ExpenseViewSkeleton';
+import ReportDetailSkeleton from './components/common/ReportDetailSkeleton';
+
+const ExpenseViewPage = lazy(() => import('./pages/expenses/ExpenseViewPage'));
+const MonthlyDetailPage = lazy(() => import('./pages/reports/MonthlyDetailPage'));
+const FinancialYearDetailPage = lazy(() => import('./pages/reports/FinancialYearDetailPage'));
 
 function PublicOnly({ children }) {
   const { isAuthenticated } = useSelector((state) => state.auth);
@@ -55,14 +59,26 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="entries" element={<ExpenseListPage />} />
           <Route path="entries/new" element={<ExpenseFormPage />} />
-          <Route path="entries/:id" element={<ExpenseViewPage />} />
+          <Route path="entries/:id" element={
+            <Suspense fallback={<ExpenseViewSkeleton />}>
+              <ExpenseViewPage />
+            </Suspense>
+          } />
           <Route path="entries/:id/edit" element={<ExpenseFormPage />} />
           <Route path="reports/summary" element={<SummaryReportPage />} />
           <Route path="reports/customized" element={<CustomizedReportPage />} />
           <Route path="reports/monthly" element={<MonthlyReportPage />} />
-          <Route path="reports/monthly/detail" element={<MonthlyDetailPage />} />
+          <Route path="reports/monthly/detail" element={
+            <Suspense fallback={<ReportDetailSkeleton />}>
+              <MonthlyDetailPage />
+            </Suspense>
+          } />
           <Route path="reports/financial-year" element={<FinancialYearReportPage />} />
-          <Route path="reports/financial-year/detail" element={<FinancialYearDetailPage />} />
+          <Route path="reports/financial-year/detail" element={
+            <Suspense fallback={<ReportDetailSkeleton />}>
+              <FinancialYearDetailPage />
+            </Suspense>
+          } />
           <Route path="companies" element={<CompanyListPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

@@ -1,6 +1,6 @@
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import ChartCard from '../common/ChartCard';
-import Skeleton from '../common/Skeleton';
+import ChartSkeleton from '../common/ChartSkeleton';
 import ChartMonthSelect from './ChartMonthSelect';
 import ChartLoadingOverlay from './ChartLoadingOverlay';
 import { formatCurrency } from '../../utils/format';
@@ -18,12 +18,7 @@ export default function PieChartCard({
   onMonthChange,
 }) {
   if (loading && !(data || []).length) {
-    return (
-      <div className="card p-4">
-        <Skeleton className="h-6 w-48 mb-4" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
+    return <ChartSkeleton />;
   }
 
   const chartData = (data || []).map((d) => ({

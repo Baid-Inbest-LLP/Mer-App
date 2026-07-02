@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDashboard, chartThunkByKey } from '../../store/slices/dashboardSlice';
 import StatCard from '../../components/common/StatCard';
-import Skeleton from '../../components/common/Skeleton';
-import ExpenseTrendChart from '../../components/charts/ExpenseTrendChart';
-import CompanyWiseChart from '../../components/charts/CompanyWiseChart';
-import PieChartCard from '../../components/charts/PieChartCard';
-import BarChartCard from '../../components/charts/BarChartCard';
+import DashboardPageSkeleton from '../../components/dashboard/DashboardPageSkeleton';
+import {
+  ExpenseTrendChart,
+  CompanyWiseChart,
+  PieChartCard,
+  BarChartCard,
+} from '../../components/charts/lazyCharts';
 import RecentMerEntries from '../../components/dashboard/RecentMerEntries';
 import { formatCurrency, formatPercent } from '../../utils/format';
 
@@ -43,21 +45,7 @@ export default function DashboardPage() {
   });
 
   if (loading && !data) {
-    return (
-      <div className="space-y-4 sm:space-y-5">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="card p-4 flex items-center gap-3">
-              <Skeleton className="h-10 w-10 rounded-xl" />
-              <div className="flex-1">
-                <Skeleton className="h-5 w-16 mb-2" />
-                <Skeleton className="h-3 w-24" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+    return <DashboardPageSkeleton />;
   }
 
   return (
