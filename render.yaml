@@ -15,7 +15,7 @@ services:
     repo: https://github.com/Baid-Inbest-LLP/Mer-App
     branch: main
     autoDeploy: true
-    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    buildCommand: pnpm install --frozen-lockfile
     startCommand: pnpm --filter server start
     healthCheckPath: /api/v1/health
     disk:
@@ -44,7 +44,7 @@ services:
       - key: SUPERADMIN_PASSWORD
         sync: false
       - key: CLIENT_URL
-        value: https://mer-client.onrender.com
+        value: https://mer-app.onrender.com
 
   - type: web
     name: mer-client
@@ -52,7 +52,7 @@ services:
     repo: https://github.com/Baid-Inbest-LLP/Mer-App
     branch: main
     autoDeploy: true
-    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter client build
+    buildCommand: pnpm --filter client build
     staticPublishPath: client/dist
     routes:
       - type: rewrite
