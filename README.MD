@@ -74,10 +74,10 @@ Payment status (Paid/Pending/Cancelled) is separate from approval status.
 ### 4. Run development
 
 ```bash
-# Terminal 1 — API (port 5000)
+# Terminal 1 — API (port 5002)
 pnpm dev:server
 
-# Terminal 2 — UI (port 5173)
+# Terminal 2 — UI (port 5174)
 pnpm dev:client
 ```
 
@@ -87,7 +87,7 @@ Or both in parallel:
 pnpm dev
 ```
 
-Open **http://localhost:5173**
+Open **http://localhost:5174**
 
 ## Docker
 
@@ -97,7 +97,7 @@ pnpm --filter server seed   # run once against local/mongo
 docker compose up --build
 ```
 
-- API: http://localhost:5000/api/v1/health
+- API: http://localhost:5002/api/v1/health
 - UI: http://localhost (nginx)
 
 ## API overview

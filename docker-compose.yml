@@ -19,13 +19,14 @@ services:
     container_name: mer-server
     restart: unless-stopped
     ports:
-      - '5000:5000'
+      - '5002:5002'
     environment:
       NODE_ENV: production
+      PORT: 5002
       MONGODB_URI: mongodb://mongodb:27017/mer_db
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh}
-      CLIENT_URL: http://localhost:5173
+      CLIENT_URL: http://localhost:5174
     volumes:
       - ./server/uploads:/app/uploads
     depends_on:

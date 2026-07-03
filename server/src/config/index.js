@@ -33,7 +33,7 @@ export const normalizeMongoUri = (rawUri) => {
 
 export const config = {
   env: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.PORT, 10) || 5000,
+  port: parseInt(process.env.PORT, 10) || 5002,
   mongodbUri: normalizeMongoUri(process.env.MONGODB_URI),
   jwt: {
     secret: process.env.JWT_SECRET || 'dev-secret-change-me',
@@ -41,7 +41,7 @@ export const config = {
     expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
-  clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  clientUrl: process.env.CLIENT_URL || 'http://localhost:5174',
   upload: {
     dir: path.resolve(process.cwd(), process.env.UPLOAD_DIR || 'uploads'),
     maxSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 5 * 1024 * 1024,

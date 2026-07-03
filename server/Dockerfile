@@ -11,6 +11,6 @@ COPY . .
 
 RUN mkdir -p uploads
 
-EXPOSE 5000
+EXPOSE 5002
 
 CMD ["node", "src/index.js"]
