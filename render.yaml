@@ -49,7 +49,6 @@ services:
   - type: web
     name: mer-client
     runtime: static
-    region: singapore
     repo: https://github.com/Baid-Inbest-LLP/Mer-App
     branch: main
     autoDeploy: true
