@@ -10,7 +10,7 @@ const start = async () => {
   const { migrateApprovalStatus } = await import('./services/expense.service.js');
   await migrateApprovalStatus();
   await bootstrapCompanies();
-  app.listen(config.port, () => {
+  app.listen(config.port, '0.0.0.0', () => {
     console.log(`MER Server running on port ${config.port} [${config.env}]`);
   });
 };
