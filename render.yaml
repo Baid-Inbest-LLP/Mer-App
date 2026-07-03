@@ -1,0 +1,64 @@
+# Render Blueprint — MER App (pnpm monorepo)
+# Repo: https://github.com/Baid-Inbest-LLP/Mer-App
+#
+# Before deploy:
+# 1. Set MONGODB_URI in the Render Dashboard (Environment tab on mer-server).
+# 2. In MongoDB Atlas → Network Access, allow 0.0.0.0/0 (or Render egress IPs).
+# 3. Optionally set SUPERADMIN_EMAIL / SUPERADMIN_PASSWORD (sync: false below).
+
+services:
+  - type: web
+    name: mer-server
+    runtime: node
+    plan: starter
+    region: singapore
+    repo: https://github.com/Baid-Inbest-LLP/Mer-App
+    branch: main
+    autoDeploy: true
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: pnpm --filter server start
+    healthCheckPath: /api/v1/health
+    disk:
+      name: uploads
+      mountPath: /var/data/uploads
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: MAX_FILE_SIZE
+        value: "5242880"
+      - key: JWT_EXPIRES_IN
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 7d
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: MONGODB_URI
+        sync: false
+      - key: SUPERADMIN_EMAIL
+        sync: false
+      - key: SUPERADMIN_PASSWORD
+        sync: false
+      - key: CLIENT_URL
+        value: https://mer-client.onrender.com
+
+  - type: web
+    name: mer-client
+    runtime: static
+    region: singapore
+    repo: https://github.com/Baid-Inbest-LLP/Mer-App
+    branch: main
+    autoDeploy: true
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm --filter client build
+    staticPublishPath: client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://mer-server.onrender.com/api/v1
