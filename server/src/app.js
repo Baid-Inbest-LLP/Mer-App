@@ -11,9 +11,39 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 const app = express();
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
+const normalizeOrigin = (value = '') =>
+  String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/\/+$/, '');
+
+const allowedOrigins = [
+  config.clientUrl,
+  ...(process.env.FRONTEND_URLS || '').split(',').map((x) => x.trim()).filter(Boolean),
+]
+  .filter(Boolean)
+  .map(normalizeOrigin);
+
+const isAllowedOrigin = (origin) => {
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (allowedOrigins.includes(normalizedOrigin)) return true;
+  try {
+    const { hostname } = new URL(origin);
+    if (hostname.endsWith('.onrender.com')) return true;
+  } catch {
+    return false;
+  }
+  return false;
+};
+
 app.use(
   cors({
-    origin: config.clientUrl,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (isAllowedOrigin(origin)) return callback(null, true);
+      return callback(null, false);
+    },
     credentials: true,
   }),
 );

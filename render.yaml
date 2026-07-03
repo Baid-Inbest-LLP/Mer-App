@@ -43,7 +43,7 @@ services:
         sync: false
       - key: SUPERADMIN_PASSWORD
         sync: false
-      - key: CLIENT_URL
+      - key: FRONTEND_URL
         value: https://mer-app.onrender.com
 
   - type: web

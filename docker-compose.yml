@@ -26,7 +26,7 @@ services:
       MONGODB_URI: mongodb://mongodb:27017/mer_db
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-refresh}
-      CLIENT_URL: http://localhost:5174
+      FRONTEND_URL: http://localhost:5174
     volumes:
       - ./server/uploads:/app/uploads
     depends_on:
