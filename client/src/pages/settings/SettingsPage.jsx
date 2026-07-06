@@ -5,6 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { authApi } from '../../api/auth.api';
 import { masterApi } from '../../api/master.api';
 import ConfirmModal from '../../components/common/ConfirmModal';
+import PasswordInput from '../../components/common/PasswordInput';
 import PageBanner from '../../components/common/PageBanner';
 import Skeleton, { SkeletonText } from '../../components/common/Skeleton';
 import { isAdmin, isSuperAdmin } from '../../constants/roles';
@@ -307,10 +308,8 @@ export default function SettingsPage() {
 
                   <div>
                     <label className="company-form-field-label">Password</label>
-                    <input
-                      className="input-field"
+                    <PasswordInput
                       placeholder="At least 8 characters"
-                      type="password"
                       autoComplete="new-password"
                       {...registerCreate('password', {
                         required: 'Password is required',
@@ -573,9 +572,7 @@ export default function SettingsPage() {
             <form onSubmit={handleSubmitPwd(onChangePassword)} className="p-6 space-y-4">
               <div>
                 <label className="company-form-field-label">Current password</label>
-                <input
-                  type="password"
-                  className="input-field"
+                <PasswordInput
                   autoComplete="current-password"
                   {...registerPwd('currentPassword', { required: 'Current password is required' })}
                 />
@@ -585,9 +582,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label className="company-form-field-label">New password</label>
-                <input
-                  type="password"
-                  className="input-field"
+                <PasswordInput
                   autoComplete="new-password"
                   {...registerPwd('newPassword', {
                     required: 'New password is required',
@@ -600,9 +595,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label className="company-form-field-label">Confirm new password</label>
-                <input
-                  type="password"
-                  className="input-field"
+                <PasswordInput
                   autoComplete="new-password"
                   {...registerPwd('confirmPassword', {
                     required: 'Please confirm your new password',
