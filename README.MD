@@ -45,21 +45,21 @@ cp client/.env.example client/.env
 
 Edit `server/.env` with your MongoDB URI and JWT secrets.
 
-### 3. Seed database
+### 3. Seed company master data (optional)
+
+Companies and branches are upserted automatically on every startup. To re-sync them manually:
 
 ```bash
-pnpm --filter server seed
+pnpm --filter server seed:companies
 ```
 
-**Demo accounts:**
+**Default accounts** (created automatically on first startup with an empty database):
 
 | Role | Email | Password |
 |------|-------|----------|
 | Superadmin | superadmin@mer.com | super123 |
 | Admin | admin@mer.com | admin123 |
 | User (regular) | user@mer.com | user123 |
-
-On first startup with an empty database, these accounts are created automatically.
 
 ### MER approval workflow
 
@@ -93,7 +93,7 @@ Open **http://localhost:5174**
 
 ```bash
 docker compose up -d mongodb
-pnpm --filter server seed   # run once against local/mongo
+pnpm --filter server seed:companies   # optional: sync company master data
 docker compose up --build
 ```
 
@@ -141,7 +141,7 @@ pnpm --filter client preview
 | `pnpm build` | Build client + server |
 | `pnpm lint` | Lint all packages |
 | `pnpm format` | Prettier write |
-| `pnpm --filter server seed` | Reset & seed DB |
+| `pnpm --filter server seed:companies` | Sync company master data |
 
 ## Indian financial year
 

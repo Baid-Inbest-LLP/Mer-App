@@ -1,11 +1,9 @@
 export const PAYMENT_METHODS = ['Bank', 'Cash', 'UPI', 'Debit/Credit Card'];
 
-export const MER_TYPES = [...PAYMENT_METHODS];
+/** MER type on new expense entries — bank or cash only. */
+export const MER_ENTRY_TYPES = ['Bank', 'Cash'];
 
-export const MER_PAYMENT_MISMATCH_MESSAGE = 'MER type and payment method must match';
-
-export const merTypeMatchesPaymentMethod = (merType, paymentMethod) =>
-  Boolean(merType && paymentMethod && merType === paymentMethod);
+export const MER_TYPES = [...MER_ENTRY_TYPES];
 
 export const PAYMENT_METHOD_RULES = {
   Bank: {

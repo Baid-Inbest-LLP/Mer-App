@@ -117,18 +117,51 @@ const MONTH_ABBREV = {
   december: 'Dec',
 };
 
-/** Monthly report identifier, e.g. MER/26-27/Jun */
-export const buildMonthlyReportNo = (financialYear, month) => {
-  if (!financialYear || !month) return null;
-  const [start, end] = String(financialYear).split('-');
-  const fyShort = start && end ? `${String(start).slice(-2)}-${end}` : String(financialYear);
+const abbreviateMonthlyReportMerType = (merType) => {
+  const normalized = String(merType || '').trim().toLowerCase();
+  if (normalized === 'cash') return 'CASH';
+  if (normalized === 'bank') return 'BNK';
+  if (normalized === 'combined' || normalized === 'comb') return 'COMBINED';
+  return normalized ? normalized.toUpperCase() : 'COMBINED';
+};
+
+/**
+ * {COMPANY_CODE}/MER/{MER_TYPE}/{MONTH'FY}
+ * Example: BILLP/MER/COMBINED/Apr'26
+ */
+export const buildMonthlyReportNo = ({
+  companyCode,
+  month,
+  financialYear,
+  merType = 'combined',
+} = {}) => {
+  const code = String(companyCode || '').trim();
+  const type = abbreviateMonthlyReportMerType(merType);
+  if (!code || !month || !financialYear) return null;
+
   const trimmed = String(month).trim();
   const fromMap = MONTH_ABBREV[trimmed.toLowerCase()];
   const monthLabel = fromMap
     || (trimmed.length <= 3
       ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
       : trimmed.slice(0, 3).charAt(0).toUpperCase() + trimmed.slice(1, 3).toLowerCase());
-  return `MER/${fyShort}/${monthLabel}`;
+  const [startYear] = String(financialYear).split('-');
+  const yy = String(startYear).slice(-2);
+  const period = `${monthLabel}'${yy}`;
+
+  return `${code}/MER/${type}/${period}`;
+};
+
+export const buildMonthlyReportFilename = (params) => {
+  const reportNo = buildMonthlyReportNo(params);
+  if (!reportNo) return 'MER-monthly-report.xlsx';
+  const slug = reportNo
+    .replace(/\//g, '-')
+    .replace(/'/g, '')
+    .replace(/[^a-zA-Z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `${slug}.xlsx`;
 };
 
 const abbreviateMonth = (month) => {

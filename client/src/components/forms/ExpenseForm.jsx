@@ -16,13 +16,13 @@ import { normalizeBranchLabel } from '../../utils/locationFormat';
 import { expenseApi } from '../../api/expense.api';
 import FilterSelect from '../common/FilterSelect';
 import FormDateInput from '../common/FormDateInput';
+import { buildCompanySelectOptionsFromRecords } from '../../utils/companySelect';
 import { formatAmountInWords, formatMerSerial, formatNumber } from '../../utils/format';
 import {
-  MER_TYPE_OPTIONS,
+  MER_ENTRY_TYPE_OPTIONS,
+  MER_ENTRY_TYPES,
   PAYMENT_METHOD_OPTIONS,
-  MER_PAYMENT_MISMATCH_MESSAGE,
   getPaymentMethodRules,
-  merTypeMatchesPaymentMethod,
   normalizeExpensePaymentFields,
 } from '../../utils/paymentMethods';
 
@@ -190,13 +190,21 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
 
   const paymentRules = getPaymentMethodRules(paymentMethod);
 
+  const merTypeOptions = useMemo(() => {
+    const current = initialData?.merType;
+    if (current && !MER_ENTRY_TYPES.includes(current)) {
+      return [{ value: current, label: current }, ...MER_ENTRY_TYPE_OPTIONS];
+    }
+    return MER_ENTRY_TYPE_OPTIONS;
+  }, [initialData?.merType]);
+
   const activeCompanies = useMemo(
     () => (companies || []).filter((company) => company.isActive !== false),
     [companies],
   );
 
   const companyOptions = useMemo(
-    () => activeCompanies.map((company) => ({ value: company.name, label: company.name })),
+    () => buildCompanySelectOptionsFromRecords(activeCompanies),
     [activeCompanies],
   );
 
@@ -221,7 +229,7 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
 
   useEffect(() => {
     if (initialData) return;
-    if (!selectedCompany || !selectedMonth) {
+    if (!selectedCompany || !selectedMonth || !merType) {
       setSlNo(null);
       return;
     }
@@ -230,10 +238,11 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
         company: selectedCompany,
         month: selectedMonth,
         invoiceDate: invoiceDate?.toISOString?.() ?? invoiceDate,
+        merType,
       })
       .then(({ data }) => setSlNo(data.data.slNo))
       .catch(() => setSlNo(null));
-  }, [initialData, selectedCompany, selectedMonth, invoiceDate]);
+  }, [initialData, selectedCompany, selectedMonth, invoiceDate, merType]);
 
   useEffect(() => {
     const gst = calculateGST(netAmount, gstPercent, useIGST);
@@ -264,15 +273,6 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
       return 'Net amount is required';
     }
     return true;
-  };
-
-  const validateMerPaymentMatch = (fieldName) => (value) => {
-    const otherValue = fieldName === 'merType' ? getValues('paymentMethod') : getValues('merType');
-    if (!value || !otherValue) return true;
-    return merTypeMatchesPaymentMethod(
-      fieldName === 'merType' ? value : otherValue,
-      fieldName === 'paymentMethod' ? value : otherValue,
-    ) || MER_PAYMENT_MISMATCH_MESSAGE;
   };
 
   const submit = (data, isDraft = false) => {
@@ -434,17 +434,14 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
           <Controller
             name="merType"
             control={control}
-            rules={{
-              required: 'MER type is required',
-              validate: validateMerPaymentMatch('merType'),
-            }}
+            rules={{ required: 'MER type is required' }}
             render={({ field, fieldState }) => (
               <FilterSelect
                 label="MER Type"
                 required
                 clearable
                 placeholder="Select MER type"
-                data={MER_TYPE_OPTIONS}
+                data={merTypeOptions}
                 {...field}
                 value={toSelectValue(field.value)}
                 onChange={(value) => field.onChange(toSelectValue(value))}
@@ -517,7 +514,6 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
               control={control}
               rules={{
                 required: 'Payment method is required',
-                validate: validateMerPaymentMatch('paymentMethod'),
               }}
               render={({ field, fieldState }) => (
                 <FilterSelect

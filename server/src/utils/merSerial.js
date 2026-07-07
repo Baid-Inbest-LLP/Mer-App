@@ -34,26 +34,80 @@ export const formatFyShort = (financialYear) => {
   return `${String(start).slice(-2)}-${end}`;
 };
 
+/** Cash → CASH, Bank → BNK */
+export const abbreviateMerType = (merType) => {
+  const normalized = String(merType || '').trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === 'cash') return 'CASH';
+  if (normalized === 'bank') return 'BNK';
+  return null;
+};
+
+const MONTH_INDEX = {
+  january: 0,
+  february: 1,
+  march: 2,
+  april: 3,
+  may: 4,
+  june: 5,
+  july: 6,
+  august: 7,
+  september: 8,
+  october: 9,
+  november: 10,
+  december: 11,
+};
+
+/** Map month name + FY to a representative date (Indian FY: Apr–Mar). */
+export const monthToDateInFy = (month, financialYear) => {
+  const startYear = parseInt(String(financialYear).split('-')[0], 10);
+  const idx = MONTH_INDEX[String(month || '').trim().toLowerCase()];
+  if (!startYear || idx === undefined) return new Date();
+  const year = idx >= 3 ? startYear : startYear + 1;
+  return new Date(year, idx, 15);
+};
+
 /**
- * EXP/{COMPANY_CODE}/{FY}/{MONTH}
- * Example: EXP/BSIBPL/25-26/Jan
+ * Month + FY start year, e.g. Apr'26 for April in FY 2026-27.
  */
-export const buildMerSerialBase = ({ companyCode, month, invoiceDate }) => {
-  const code = String(companyCode || '').trim();
-  if (!code || !month?.trim()) return null;
+export const formatMonthFyLabel = (month, invoiceDate) => {
+  const monthLabel = abbreviateMonthName(month);
+  if (!monthLabel) return null;
 
   const date = invoiceDate ? new Date(invoiceDate) : new Date();
-  const fyShort = formatFyShort(getFinancialYear(date));
-  const monthLabel = abbreviateMonthName(month);
-  return `EXP/${code}/${fyShort}/${monthLabel}`;
+  const [startYear] = getFinancialYear(date).split('-');
+  const yy = String(startYear).slice(-2);
+  return `${monthLabel}'${yy}`;
+};
+
+/**
+ * {COMPANY_CODE}/EXP/{MER_TYPE}/{MONTH'FY}
+ * Example: BSIBPL/EXP/BNK/Apr'26
+ */
+export const buildMerSerialBase = ({ companyCode, month, invoiceDate, merType }) => {
+  const code = String(companyCode || '').trim();
+  const type = abbreviateMerType(merType);
+  const period = formatMonthFyLabel(month, invoiceDate);
+  if (!code || !type || !period) return null;
+
+  return `${code}/EXP/${type}/${period}`;
 };
 
 /**
  * Appends /001, /002, … (always padded, including the first entry).
- * Example: EXP/BSIBPL/26-27/Feb/001
+ * Example: BSIBPL/EXP/BNK/Apr'26/001
  */
 export const buildMerSerial = (base, sequence) => {
   if (!base) return null;
   const seq = Math.max(1, parseInt(sequence, 10) || 1);
   return `${base}/${String(seq).padStart(3, '0')}`;
+};
+
+/** Escape a string for use inside a RegExp. */
+export const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** Regex matching serial numbers under a given base (…/001, …/002, …). */
+export const buildMerSerialPattern = (base) => {
+  if (!base) return null;
+  return new RegExp(`^${escapeRegex(base)}/\\d{3}$`, 'i');
 };

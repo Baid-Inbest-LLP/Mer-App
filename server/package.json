@@ -8,11 +8,8 @@
     "start": "node src/index.js",
     "build": "echo \"Server runs directly with Node\"",
     "lint": "eslint src/",
-    "seed": "node src/seed/index.js",
     "seed:companies": "node src/seed/runCompanies.js",
-    "seed:dummy": "node src/seed/seedDummyExpenses.js",
-    "migrate:slno-prefix": "node src/seed/migrateSlNoPrefix.js",
-    "migrate:slno-company-code": "node src/seed/migrateSlNoCompanyCode.js"
+    "migrate:slno": "node scripts/migrate-expense-slno.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

@@ -1,10 +1,13 @@
 import { Expense } from '../models/Expense.js';
 import { Company } from '../models/Company.js';
-import { getFinancialYear } from '../config/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { calculateGST, calculateGrossAmount } from '../utils/gstCalculator.js';
 import { buildExpenseQuery, buildPagination, buildSort } from '../utils/queryBuilder.js';
-import { buildMerSerial, buildMerSerialBase } from '../utils/merSerial.js';
+import {
+  buildMerSerial,
+  buildMerSerialBase,
+  buildMerSerialPattern,
+} from '../utils/merSerial.js';
 import { toLocationLabel } from '../utils/locationFormat.js';
 import { APPROVAL_STATUS } from '../constants/roles.js';
 import {
@@ -34,22 +37,31 @@ const resolveCompanyCode = async (companyName) => {
   return company.code;
 };
 
-const resolveMerSerial = async ({ company, month, invoiceDate }) => {
+const resolveMerType = (merType) => asTrimmedString(merType);
+
+const countSerialSequence = async (base) => {
+  const pattern = buildMerSerialPattern(base);
+  if (!pattern) return 0;
+  return Expense.countDocuments({ slNo: pattern });
+};
+
+const resolveMerSerial = async ({ company, month, invoiceDate, merType }) => {
+  const type = resolveMerType(merType);
   const companyCode = await resolveCompanyCode(company);
-  const companyStr = asTrimmedString(company);
   const monthStr = asTrimmedString(month);
-  const base = buildMerSerialBase({ companyCode, month: monthStr, invoiceDate });
+  const base = buildMerSerialBase({
+    companyCode,
+    month: monthStr,
+    invoiceDate,
+    merType: type,
+  });
   if (!base) {
-    throw ApiError.badRequest('Company and month are required to generate expense serial number');
+    throw ApiError.badRequest(
+      'Company, month, and MER type are required to generate expense serial number',
+    );
   }
 
-  const financialYear = getFinancialYear(invoiceDate ? new Date(invoiceDate) : new Date());
-  const count = await Expense.countDocuments({
-    company: companyStr,
-    month: monthStr,
-    financialYear,
-  });
-
+  const count = await countSerialSequence(base);
   return buildMerSerial(base, count + 1);
 };
 
@@ -138,12 +150,14 @@ export const createExpense = async (data, user) => {
       company: payload.company,
       month: data.month,
       invoiceDate: data.invoiceDate,
+      merType: payload.merType,
     });
-  } else if (payload.company && asTrimmedString(data.month)) {
+  } else if (payload.company && asTrimmedString(data.month) && resolveMerType(payload.merType)) {
     payload.slNo = await resolveMerSerial({
       company: payload.company,
       month: data.month,
       invoiceDate: data.invoiceDate,
+      merType: payload.merType,
     });
   }
 
@@ -176,6 +190,7 @@ export const updateExpense = async (id, data, user) => {
         company: expense.company,
         month: expense.month,
         invoiceDate: expense.invoiceDate,
+        merType: expense.merType,
       });
     }
   }
@@ -242,19 +257,18 @@ export const migrateApprovalStatus = async () => {
   );
 };
 
-export const getNextSlNo = async ({ company, month, invoiceDate }) => {
+export const getNextSlNo = async ({ company, month, invoiceDate, merType }) => {
+  const type = resolveMerType(merType);
   const companyCode = await resolveCompanyCode(company);
-  const companyStr = asTrimmedString(company);
   const monthStr = asTrimmedString(month);
-  const base = buildMerSerialBase({ companyCode, month: monthStr, invoiceDate });
+  const base = buildMerSerialBase({
+    companyCode,
+    month: monthStr,
+    invoiceDate,
+    merType: type,
+  });
   if (!base) return null;
 
-  const financialYear = getFinancialYear(invoiceDate ? new Date(invoiceDate) : new Date());
-  const count = await Expense.countDocuments({
-    company: companyStr,
-    month: monthStr,
-    financialYear,
-  });
-
+  const count = await countSerialSequence(base);
   return buildMerSerial(base, count + 1);
 };

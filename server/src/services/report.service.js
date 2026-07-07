@@ -6,6 +6,7 @@ import { getFinancialYear } from '../config/index.js';
 import { toLocationLabel } from '../utils/locationFormat.js';
 import {
   buildMonthlyReportNo,
+  resolveMonthlyReportMeta,
   resolveCustomizedReportMeta,
 } from '../utils/merReportSerial.js';
 import {
@@ -130,28 +131,70 @@ export const getExpenseHeadSummary = async (query) => {
   ]);
 };
 
+const FY_MONTH_ORDER = [
+  'April', 'May', 'June', 'July', 'August', 'September',
+  'October', 'November', 'December', 'January', 'February', 'March',
+];
+
+const sortMonthlyRows = (rows) =>
+  rows.sort((a, b) => {
+    const monthDiff = FY_MONTH_ORDER.indexOf(a.month) - FY_MONTH_ORDER.indexOf(b.month);
+    if (monthDiff !== 0) return monthDiff;
+    return String(a.companyCode || a.company || '').localeCompare(
+      String(b.companyCode || b.company || ''),
+    );
+  });
+
 export const getMonthlyReport = async (query) => {
   const filter = buildExpenseQuery(query);
   const financialYear = query.financialYear || getFinancialYear();
-  const rows = await Expense.aggregate([
-    { $match: baseMatch(filter) },
-    {
-      $group: {
-        _id: '$month',
-        net: { $sum: '$netAmount' },
-        gst: { $sum: '$totalGST' },
-        tds: { $sum: '$tds' },
-        gross: { $sum: '$grossAmount' },
-        count: { $sum: 1 },
+
+  const [rows, companies] = await Promise.all([
+    Expense.aggregate([
+      { $match: baseMatch(filter) },
+      {
+        $group: {
+          _id: { company: '$company', month: '$month' },
+          net: { $sum: '$netAmount' },
+          gst: { $sum: '$totalGST' },
+          tds: { $sum: '$tds' },
+          gross: { $sum: '$grossAmount' },
+          count: { $sum: 1 },
+        },
       },
-    },
-    { $sort: { _id: 1 } },
+    ]),
+    Company.find({ isActive: { $ne: false } }).select('name code').lean(),
   ]);
 
-  return rows.map((row) => ({
-    ...row,
-    reportNo: buildMonthlyReportNo({ financialYear, month: row._id }),
-  }));
+  const codeByName = Object.fromEntries(
+    companies.filter((c) => c.name && c.code).map((c) => [c.name, c.code]),
+  );
+
+  const mapped = rows
+    .filter((row) => row._id?.company && row._id?.month)
+    .map((row) => {
+      const company = row._id.company;
+      const month = row._id.month;
+      const companyCode = codeByName[company] || '';
+      return {
+        company,
+        month,
+        companyCode,
+        net: row.net,
+        gst: row.gst,
+        tds: row.tds,
+        gross: row.gross,
+        count: row.count,
+        reportNo: buildMonthlyReportNo({
+          companyCode,
+          month,
+          financialYear,
+          merType: 'combined',
+        }),
+      };
+    });
+
+  return sortMonthlyRows(mapped);
 };
 
 export const getMonthlyDetailedReport = async (query) => {
@@ -187,7 +230,9 @@ export const getMonthlyDetailedReport = async (query) => {
   });
 
   return {
-    ...(await resolveCustomizedReportMeta(query, Company)),
+    ...(query.company && query.month
+      ? await resolveMonthlyReportMeta(query, Company)
+      : await resolveCustomizedReportMeta(query, Company)),
     entries,
     totals,
     count: entries.length,
@@ -215,11 +260,14 @@ const DETAIL_HEADERS = [
 export const generateMonthlyExcel = async (query) => {
   const filter = buildExpenseQuery(query);
 
-  const [entries, { reportNo, filename }, companyCtx] = await Promise.all([
+  const [entries, meta, companyCtx] = await Promise.all([
     Expense.find(baseMatch(filter)).sort({ invoiceDate: 1 }).lean(),
-    resolveCustomizedReportMeta(query, Company),
+    query.company && query.month
+      ? resolveMonthlyReportMeta(query, Company)
+      : resolveCustomizedReportMeta(query, Company),
     resolveCompanyContext(query),
   ]);
+  const { reportNo, filename } = meta;
 
   const totals = { net: 0, gst: 0, tds: 0, gross: 0 };
   const rows = entries.map((e, index) => {
@@ -366,10 +414,11 @@ export const generateSummaryExcel = async (query) => {
     title: 'MER Monthly Summary Report',
     reportNo: '',
     metaPairs,
-    headers: ['Report No', 'Month', 'Net', 'GST', 'TDS', 'Gross', 'Entries'],
+    headers: ['Report No', 'Company', 'Month', 'Net', 'GST', 'TDS', 'Gross', 'Entries'],
     rows: monthlyReport.map((m) => [
       m.reportNo || '',
-      m._id,
+      m.companyCode || m.company || '',
+      m.month,
       m.net,
       m.gst,
       m.tds,
@@ -378,6 +427,7 @@ export const generateSummaryExcel = async (query) => {
     ]),
     totalsRow: [
       'Totals',
+      '',
       '',
       monthlyTotals.net,
       monthlyTotals.gst,
@@ -388,11 +438,11 @@ export const generateSummaryExcel = async (query) => {
     grandTotal: monthlyTotals.gross,
     footerAddress,
     companyCtx,
-    moneyColIndices: [2, 3, 4, 5],
+    moneyColIndices: [3, 4, 5, 6],
     textColIndices: [0],
-    gstColIndex: 3,
-    tdsColIndex: 4,
-    totalColIndex: 5,
+    gstColIndex: 4,
+    tdsColIndex: 5,
+    totalColIndex: 6,
   });
 
   return workbook;

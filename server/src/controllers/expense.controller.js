@@ -42,6 +42,7 @@ export const getNextSlNo = asyncHandler(async (req, res) => {
     company: req.query.company,
     month: req.query.month,
     invoiceDate: req.query.invoiceDate,
+    merType: req.query.merType,
   });
   ApiResponse.success(res, { slNo });
 });

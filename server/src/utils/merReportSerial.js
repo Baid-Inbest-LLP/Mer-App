@@ -1,16 +1,70 @@
-import { abbreviateMonthName, formatFyShort } from './merSerial.js';
+import {
+  abbreviateMonthName,
+  formatFyShort,
+  formatMonthFyLabel,
+  monthToDateInFy,
+} from './merSerial.js';
 import { toLocationLabel } from './locationFormat.js';
 import { getFinancialYear } from '../config/index.js';
 
+/** Bank → BNK, Cash → CASH, Combined → COMBINED */
+export const abbreviateMonthlyReportMerType = (merType) => {
+  const normalized = String(merType || '').trim().toLowerCase();
+  if (normalized === 'cash') return 'CASH';
+  if (normalized === 'bank') return 'BNK';
+  if (normalized === 'combined' || normalized === 'comb') return 'COMBINED';
+  return normalized ? normalized.toUpperCase() : 'COMBINED';
+};
+
 /**
- * MER/{FY}/{MONTH}
- * Example: MER/26-27/Jun
+ * {COMPANY_CODE}/MER/{MER_TYPE}/{MONTH'FY}
+ * Example: BILLP/MER/COMBINED/Apr'26
  */
-export const buildMonthlyReportNo = ({ financialYear, month }) => {
-  const fyShort = formatFyShort(financialYear);
-  const monthLabel = abbreviateMonthName(month);
-  if (!fyShort || !monthLabel) return null;
-  return `MER/${fyShort}/${monthLabel}`;
+export const buildMonthlyReportNo = ({
+  companyCode,
+  month,
+  financialYear,
+  merType = 'combined',
+}) => {
+  const code = String(companyCode || '').trim();
+  const type = abbreviateMonthlyReportMerType(merType);
+  const fy = financialYear || getFinancialYear();
+  const period = formatMonthFyLabel(month, monthToDateInFy(month, fy));
+  if (!code || !type || !period) return null;
+  return `${code}/MER/${type}/${period}`;
+};
+
+/** BILLP-MER-COMBINED-Apr26.xlsx */
+export const buildMonthlyReportFilename = (params) => {
+  const reportNo = buildMonthlyReportNo(params);
+  if (!reportNo) return 'MER-monthly-report.xlsx';
+  const slug = reportNo
+    .replace(/\//g, '-')
+    .replace(/'/g, '')
+    .replace(/[^a-zA-Z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `${slug}.xlsx`;
+};
+
+export const resolveMonthlyReportMeta = async (query, Company) => {
+  let companyCode;
+  if (query.company) {
+    const company = await Company.findOne({ name: query.company }).select('code').lean();
+    companyCode = company?.code || undefined;
+  }
+
+  const params = {
+    companyCode,
+    month: query.month,
+    financialYear: query.financialYear || getFinancialYear(),
+    merType: query.merType || 'combined',
+  };
+
+  return {
+    reportNo: buildMonthlyReportNo(params),
+    filename: buildMonthlyReportFilename(params),
+  };
 };
 
 const asSegment = (value) => {

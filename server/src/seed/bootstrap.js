@@ -58,7 +58,7 @@ export const ensureDefaultUsers = async () => {
   console.log(`  Superadmin: ${DEFAULT_SUPERADMIN.email} / ${DEFAULT_SUPERADMIN.password}`);
   console.log(`  Admin:      ${DEFAULT_ADMIN.email} / ${DEFAULT_ADMIN.password}`);
   console.log(`  User:       ${DEFAULT_USER.email} / ${DEFAULT_USER.password}`);
-  console.log('--- Run `pnpm --filter server seed` for full sample data ---\n');
+  console.log('--- Run `pnpm --filter server seed:companies` to sync company master data ---\n');
 };
 
 export const bootstrapCompanies = async () => {

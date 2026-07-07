@@ -1,23 +1,12 @@
 import { body, param } from 'express-validator';
 import {
-  MER_TYPES,
+  MER_ENTRY_TYPES,
   PAYMENT_METHODS,
-  MER_PAYMENT_MISMATCH_MESSAGE,
-  merTypeMatchesPaymentMethod,
   requiresBankAccount,
   requiresPaymentRef,
 } from '../constants/paymentMethods.js';
 
 const isDraftRequest = (req) => req.body?.isDraft === true || req.body?.isDraft === 'true';
-
-const merPaymentMatchRule = body('paymentMethod').custom((value, { req }) => {
-  if (isDraftRequest(req)) return true;
-  if (!req.body.merType || !value) return true;
-  if (!merTypeMatchesPaymentMethod(req.body.merType, value)) {
-    throw new Error(MER_PAYMENT_MISMATCH_MESSAGE);
-  }
-  return true;
-});
 
 const paymentReferenceRules = [
   body('bankAccountNumber').custom((value, { req }) => {
@@ -89,7 +78,7 @@ const sharedBodyRules = [
     .withMessage('Invalid payment method'),
   body('merType')
     .optional({ values: 'falsy' })
-    .isIn(MER_TYPES)
+    .isIn(MER_ENTRY_TYPES)
     .withMessage('Invalid MER type'),
   paymentStatusRule,
   body('useIGST').optional({ values: 'falsy' }),
@@ -161,14 +150,13 @@ export const createExpenseValidator = [
     .if((_, { req }) => !isDraftRequest(req))
     .notEmpty()
     .withMessage('MER type is required')
-    .isIn(MER_TYPES)
+    .isIn(MER_ENTRY_TYPES)
     .withMessage('Invalid MER type'),
   body('merType')
     .if((_, { req }) => isDraftRequest(req))
     .optional({ values: 'falsy' })
-    .isIn(MER_TYPES)
+    .isIn(MER_ENTRY_TYPES)
     .withMessage('Invalid MER type'),
-  merPaymentMatchRule,
   ...paymentReferenceRules,
   paymentStatusRule,
   body('location').optional({ values: 'falsy' }).trim(),
@@ -180,7 +168,6 @@ export const createExpenseValidator = [
 export const updateExpenseValidator = [
   param('id').isMongoId().withMessage('Invalid expense ID'),
   ...sharedBodyRules,
-  merPaymentMatchRule,
   ...paymentReferenceRules,
 ];
 

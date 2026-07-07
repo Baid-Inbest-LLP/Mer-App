@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import { getRecentFinancialYearOptions } from '../../utils/financialYear';
 import FilterSelect from './FilterSelect';
+import { buildCompanySelectOptions } from '../../utils/companySelect';
 
 const TIMEFRAMES = [
   { value: '', label: 'All time' },
@@ -43,6 +44,11 @@ export default function FilterPanel({ filters, onChange, onApply, onClear, compa
     onClear?.();
     setResetKey((k) => k + 1);
   };
+
+  const companyOptions = buildCompanySelectOptions(
+    lookups?.companies,
+    lookups?.companyCodeByName,
+  );
 
   return (
     <div className="card p-4 mb-4 filter-panel">
@@ -133,7 +139,7 @@ export default function FilterPanel({ filters, onChange, onApply, onClear, compa
           placeholder="Company"
           clearable
           searchable
-          data={selectData(lookups?.companies)}
+          data={companyOptions}
           value={selectValue('company')}
           onChange={(v) => update('company', v)}
         />

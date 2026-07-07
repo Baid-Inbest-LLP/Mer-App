@@ -30,16 +30,36 @@ const cleanParams = (params) => {
   return out;
 };
 
-const mapMonthly = (items = []) =>
-  items.map((item) => ({
-    name: item._id || item.month,
-    value: item.gross ?? item.total ?? 0,
-    net: item.net ?? 0,
-    gst: item.gst ?? 0,
-    tds: item.tds ?? 0,
-    gross: item.gross ?? item.total ?? 0,
-    count: item.count ?? 0,
-  }));
+const mapMonthly = (items = []) => {
+  const byMonth = new Map();
+
+  for (const item of items) {
+    const month = item.month || item._id;
+    if (!month) continue;
+
+    const prev = byMonth.get(month) || {
+      name: month,
+      value: 0,
+      net: 0,
+      gst: 0,
+      tds: 0,
+      gross: 0,
+      count: 0,
+    };
+
+    byMonth.set(month, {
+      name: month,
+      value: prev.value + (item.gross ?? item.total ?? 0),
+      net: prev.net + (item.net ?? 0),
+      gst: prev.gst + (item.gst ?? 0),
+      tds: prev.tds + (item.tds ?? 0),
+      gross: prev.gross + (item.gross ?? item.total ?? 0),
+      count: prev.count + (item.count ?? 0),
+    });
+  }
+
+  return [...byMonth.values()];
+};
 
 const filterMonthlyForFy = (items, fy, currentFY) => {
   const isCurrentFY = fy === currentFY;
@@ -124,12 +144,20 @@ export default function MonthlyReportPage() {
     const currentIdx = FY_MONTH_ORDER.indexOf(CURRENT_MONTH);
     return monthlyReport
       .filter((m) => {
-        const idx = FY_MONTH_ORDER.indexOf(m._id);
+        const idx = FY_MONTH_ORDER.indexOf(m.month);
         if (idx === -1) return false;
         return isCurrentFY ? idx <= currentIdx : true;
       })
-      .sort((a, b) => FY_MONTH_ORDER.indexOf(a._id) - FY_MONTH_ORDER.indexOf(b._id));
+      .sort((a, b) => {
+        const monthDiff = FY_MONTH_ORDER.indexOf(a.month) - FY_MONTH_ORDER.indexOf(b.month);
+        if (monthDiff !== 0) return monthDiff;
+        return String(a.companyCode || a.company || '').localeCompare(
+          String(b.companyCode || b.company || ''),
+        );
+      });
   }, [monthlyReport, activeTableFY, currentFY]);
+
+  const firstVisibleMonthly = visibleMonthly[0];
 
   const loadMonthlyChart = useCallback(async (fy) => {
     if (!fy) return;
@@ -201,7 +229,11 @@ export default function MonthlyReportPage() {
         className="mb-4"
         title={`Monthly Report`}
         subtitle={`${lookups?.currentFinancialYear || ''} · ${CURRENT_MONTH}`}
-        action={{ to: `/reports/monthly/detail?fy=${encodeURIComponent(activeTableFY || '')}&month=${encodeURIComponent(CURRENT_MONTH)}`, label: 'View Monthly Report', icon: false }}
+        action={firstVisibleMonthly ? {
+          to: `/reports/monthly/detail?fy=${encodeURIComponent(activeTableFY || '')}&month=${encodeURIComponent(firstVisibleMonthly.month)}&company=${encodeURIComponent(firstVisibleMonthly.company || '')}`,
+          label: 'View Monthly Report',
+          icon: false,
+        } : undefined}
       />
 
       <ReportSummaryStatCards className="mb-4" loading={loading} summary={summary} />
@@ -238,7 +270,6 @@ export default function MonthlyReportPage() {
         onTableFyChange={(v) => setTableFY(v || currentFY)}
         exporting={exporting}
         onExport={runExport}
-        companyCodeByName={companyCodeByName}
       />
     </div>
   );

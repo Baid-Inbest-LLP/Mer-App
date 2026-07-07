@@ -1,21 +1,12 @@
 export const PAYMENT_METHOD_OPTIONS = ['Bank', 'Cash', 'UPI', 'Debit/Credit Card'];
 
-const MER_TYPE_LABELS = {
-  Bank: 'Bank MER',
-  Cash: 'Cash MER',
-  UPI: 'UPI MER',
-  'Debit/Credit Card': 'Debit/Credit Card MER',
-};
+/** MER type on new expense entries — bank or cash only. */
+export const MER_ENTRY_TYPES = ['Bank', 'Cash'];
 
-export const MER_TYPE_OPTIONS = PAYMENT_METHOD_OPTIONS.map((value) => ({
+export const MER_ENTRY_TYPE_OPTIONS = MER_ENTRY_TYPES.map((value) => ({
   value,
-  label: MER_TYPE_LABELS[value] || `${value} MER`,
+  label: value,
 }));
-
-export const MER_PAYMENT_MISMATCH_MESSAGE = 'MER type and payment method must match';
-
-export const merTypeMatchesPaymentMethod = (merType, paymentMethod) =>
-  Boolean(merType && paymentMethod && merType === paymentMethod);
 
 export const PAYMENT_METHOD_RULES = {
   Bank: {
@@ -56,15 +47,17 @@ export const getPaymentMethodRules = (method) =>
 export const normalizeExpensePaymentFields = (data) => {
   if (!data) return { merType: null, paymentMethod: null };
 
-  if (data.merType) {
+  const merType = MER_ENTRY_TYPES.includes(data.merType) ? data.merType : data.merType || null;
+
+  if (merType) {
     return {
-      merType: data.merType,
-      paymentMethod: data.paymentMethod || data.merType,
+      merType,
+      paymentMethod: data.paymentMethod || null,
     };
   }
 
   if (data.paymentMethod && PAYMENT_METHOD_OPTIONS.includes(data.paymentMethod)) {
-    return { merType: data.paymentMethod, paymentMethod: data.paymentMethod };
+    return { merType: null, paymentMethod: data.paymentMethod };
   }
 
   return { merType: null, paymentMethod: null };

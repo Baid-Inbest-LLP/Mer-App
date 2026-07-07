@@ -7,6 +7,7 @@ import PageBanner from '../../components/common/PageBanner';
 import FilterSelect from '../../components/common/FilterSelect';
 import EmptyState from '../../components/common/EmptyState';
 import { formatCurrency, formatDate, buildCustomizedReportFilename } from '../../utils/format';
+import { buildCompanySelectOptions } from '../../utils/companySelect';
 import { getRecentFinancialYearOptions } from '../../utils/financialYear';
 import { reportApi } from '../../api/report.api';
 import { downloadBlob } from '../../utils/download';
@@ -68,8 +69,8 @@ export default function CustomizedReportPage() {
     [lookups?.months],
   );
   const companyOptions = useMemo(
-    () => (lookups?.companies || []).map((c) => ({ value: c, label: c })),
-    [lookups?.companies],
+    () => buildCompanySelectOptions(lookups?.companies, companyCodeByName),
+    [lookups?.companies, companyCodeByName],
   );
   const fyOptions = useMemo(
     () => getRecentFinancialYearOptions(lookups?.currentFinancialYear, 2),
@@ -279,10 +280,10 @@ export default function CustomizedReportPage() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-5">
             {[
-              { label: 'Total Net', value: preview.totals?.net, tone: 'net' },
-              { label: 'Total GST', value: preview.totals?.gst, tone: 'gst' },
-              { label: 'Total TDS', value: preview.totals?.tds, tone: 'tds' },
-              { label: 'Gross Amount', value: preview.totals?.gross, tone: 'gross' },
+              { label: 'Net Expense', value: preview.totals?.net, tone: 'net' },
+              { label: 'GST Paid', value: preview.totals?.gst, tone: 'gst' },
+              { label: 'TDS Deducted', value: preview.totals?.tds, tone: 'tds' },
+              { label: 'Gross Expense', value: preview.totals?.gross, tone: 'gross' },
             ].map((tile) => (
               <div
                 key={tile.label}

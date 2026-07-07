@@ -6,7 +6,7 @@ import PageBanner from '../../components/common/PageBanner';
 import StatCard from '../../components/common/StatCard';
 import EmptyState from '../../components/common/EmptyState';
 import ReportDetailSkeleton from '../../components/common/ReportDetailSkeleton';
-import { formatCurrency, formatDate, buildMonthlyReportNo, buildCustomizedReportFilename } from '../../utils/format';
+import { formatCurrency, formatDate, buildMonthlyReportNo, buildMonthlyReportFilename } from '../../utils/format';
 import { reportApi } from '../../api/report.api';
 import { downloadBlob } from '../../utils/download';
 
@@ -42,6 +42,7 @@ export default function MonthlyDetailPage() {
   const companyCode = (name) => lookups?.companyCodeByName?.[name] || name || '—';
   const month = searchParams.get('month') || '';
   const financialYear = searchParams.get('fy') || '';
+  const company = searchParams.get('company') || '';
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +53,7 @@ export default function MonthlyDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const params = cleanParams({ month, financialYear });
+        const params = cleanParams({ month, financialYear, company, merType: 'combined' });
         const res = await reportApi.monthlyDetailed(params);
         if (active) setData(res.data.data);
       } catch {
@@ -68,17 +69,22 @@ export default function MonthlyDetailPage() {
     return () => {
       active = false;
     };
-  }, [month, financialYear]);
+  }, [month, financialYear, company]);
 
   const runExport = async () => {
     if (exporting) return;
     setExporting(true);
     try {
-      const params = cleanParams({ month, financialYear });
+      const params = cleanParams({ month, financialYear, company, merType: 'combined' });
       const res = await reportApi.exportMonthlyExcel(params);
       downloadBlob(
         res.data,
-        buildCustomizedReportFilename(params, lookups?.companyCodeByName),
+        buildMonthlyReportFilename({
+          companyCode: companyCode(company),
+          month,
+          financialYear,
+          merType: 'combined',
+        }),
       );
       notifications.show({ message: 'Excel download started', color: 'green' });
     } catch {
@@ -91,7 +97,12 @@ export default function MonthlyDetailPage() {
   const totals = data?.totals || {};
   const entries = data?.entries || [];
   const count = data?.count ?? 0;
-  const reportNo = data?.reportNo || buildMonthlyReportNo(financialYear, month);
+  const reportNo = data?.reportNo || buildMonthlyReportNo({
+    companyCode: companyCode(company),
+    month,
+    financialYear,
+    merType: 'combined',
+  });
 
   if (loading && !data) {
     return <ReportDetailSkeleton />;
@@ -122,24 +133,12 @@ export default function MonthlyDetailPage() {
       <PageBanner
         className="mb-4"
         title={reportNo || `${month || 'Monthly'} Expense Report`}
-        subtitle={`${month || 'Monthly'}${financialYear ? ` · ${financialYear}` : ''} · ${count} ${count === 1 ? 'entry' : 'entries'}`}
+        subtitle={`${companyCode(company)}${month ? ` · ${month}` : ''}${financialYear ? ` · ${financialYear}` : ''} · ${count} ${count === 1 ? 'entry' : 'entries'}`}
       />
 
       <div className="dashboard-grid-4 mb-4">
         <StatCard
-          label="Gross Amount"
-          value={formatCurrency(totals.gross)}
-          color="text-indigo-700"
-          iconBg="bg-indigo-100"
-          accent="bg-indigo-500"
-          icon={
-            <svg className={`${iconClass} text-indigo-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Total Net"
+          label="Net Expense"
           value={formatCurrency(totals.net)}
           color="text-blue-700"
           iconBg="bg-blue-100"
@@ -151,7 +150,7 @@ export default function MonthlyDetailPage() {
           }
         />
         <StatCard
-          label="Total GST"
+          label="GST Paid"
           value={formatCurrency(totals.gst)}
           color="text-emerald-700"
           iconBg="bg-emerald-100"
@@ -163,7 +162,7 @@ export default function MonthlyDetailPage() {
           }
         />
         <StatCard
-          label="Total TDS"
+          label="TDS Deducted"
           value={formatCurrency(totals.tds)}
           color="text-orange-700"
           iconBg="bg-orange-100"
@@ -171,6 +170,18 @@ export default function MonthlyDetailPage() {
           icon={
             <svg className={`${iconClass} text-orange-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Gross Expense"
+          value={formatCurrency(totals.gross)}
+          color="text-indigo-700"
+          iconBg="bg-indigo-100"
+          accent="bg-indigo-500"
+          icon={
+            <svg className={`${iconClass} text-indigo-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           }
         />
