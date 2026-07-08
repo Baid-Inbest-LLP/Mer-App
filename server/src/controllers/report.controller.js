@@ -17,6 +17,11 @@ export const getMonthlyReport = asyncHandler(async (req, res) => {
   ApiResponse.success(res, data);
 });
 
+export const getFinancialYearReport = asyncHandler(async (req, res) => {
+  const data = await reportService.getFinancialYearReport(req.query);
+  ApiResponse.success(res, data);
+});
+
 export const getMonthlyDetailed = asyncHandler(async (req, res) => {
   const data = await reportService.getMonthlyDetailedReport(req.query);
   ApiResponse.success(res, data);

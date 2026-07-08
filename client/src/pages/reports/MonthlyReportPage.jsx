@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { notifications } from '@mantine/notifications';
 import { useDispatch, useSelector } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import {
   fetchReportSummary,
   fetchMonthlyReport,
@@ -34,6 +35,7 @@ const mapMonthly = (items = []) => {
   const byMonth = new Map();
 
   for (const item of items) {
+    if (item.merType && item.merType !== 'combined') continue;
     const month = item.month || item._id;
     if (!month) continue;
 
@@ -103,6 +105,7 @@ const buildMomComparison = (items = []) => {
 
 export default function MonthlyReportPage() {
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
   const { lookups } = useSelector((state) => state.common);
   const currentFY = lookups?.currentFinancialYear;
   const { summary, monthlyReport, monthlyReportLoading, loading } = useSelector((state) => state.report);
@@ -116,6 +119,7 @@ export default function MonthlyReportPage() {
 
   const activeTableFY = tableFY || currentFY;
   const resolvedMonthlyFy = monthlyFy || currentFY;
+  const initialMonth = searchParams.get('month') || null;
 
   useEffect(() => {
     dispatch(fetchReportSummary({ timeframe: 'month' }));
@@ -139,25 +143,15 @@ export default function MonthlyReportPage() {
     return Math.round(((curr - prev) / prev) * 1000) / 10;
   }, [momComparisonChart]);
 
-  const visibleMonthly = useMemo(() => {
+  const visibleMonthlyRows = useMemo(() => {
     const isCurrentFY = activeTableFY === currentFY;
     const currentIdx = FY_MONTH_ORDER.indexOf(CURRENT_MONTH);
-    return monthlyReport
-      .filter((m) => {
-        const idx = FY_MONTH_ORDER.indexOf(m.month);
-        if (idx === -1) return false;
-        return isCurrentFY ? idx <= currentIdx : true;
-      })
-      .sort((a, b) => {
-        const monthDiff = FY_MONTH_ORDER.indexOf(a.month) - FY_MONTH_ORDER.indexOf(b.month);
-        if (monthDiff !== 0) return monthDiff;
-        return String(a.companyCode || a.company || '').localeCompare(
-          String(b.companyCode || b.company || ''),
-        );
-      });
+    return monthlyReport.filter((row) => {
+      const idx = FY_MONTH_ORDER.indexOf(row.month);
+      if (idx === -1) return false;
+      return isCurrentFY ? idx <= currentIdx : true;
+    });
   }, [monthlyReport, activeTableFY, currentFY]);
-
-  const firstVisibleMonthly = visibleMonthly[0];
 
   const loadMonthlyChart = useCallback(async (fy) => {
     if (!fy) return;
@@ -227,13 +221,8 @@ export default function MonthlyReportPage() {
     <div>
       <PageBanner
         className="mb-4"
-        title={`Monthly Report`}
+        title="Monthly Report"
         subtitle={`${lookups?.currentFinancialYear || ''} · ${CURRENT_MONTH}`}
-        action={firstVisibleMonthly ? {
-          to: `/reports/monthly/detail?fy=${encodeURIComponent(activeTableFY || '')}&month=${encodeURIComponent(firstVisibleMonthly.month)}&company=${encodeURIComponent(firstVisibleMonthly.company || '')}`,
-          label: 'View Monthly Report',
-          icon: false,
-        } : undefined}
       />
 
       <ReportSummaryStatCards className="mb-4" loading={loading} summary={summary} />
@@ -263,11 +252,13 @@ export default function MonthlyReportPage() {
       )}
 
       <MonthlyExpensesTable
+        key={`${activeTableFY}-${initialMonth ?? 'all'}`}
         loading={monthlyReportLoading}
-        visibleMonthly={visibleMonthly}
+        monthlyRows={visibleMonthlyRows}
         activeTableFY={activeTableFY}
         fyOptions={fyOptions}
         onTableFyChange={(v) => setTableFY(v || currentFY)}
+        initialMonth={initialMonth}
         exporting={exporting}
         onExport={runExport}
       />

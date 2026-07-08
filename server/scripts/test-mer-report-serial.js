@@ -6,6 +6,8 @@ import {
   abbreviateMonthlyReportMerType,
   buildMonthlyReportNo,
   buildMonthlyReportFilename,
+  buildFyReportNo,
+  buildFyReportFilename,
 } from '../src/utils/merReportSerial.js';
 
 let passed = 0;
@@ -72,6 +74,37 @@ assert(
     merType: 'combined',
   }),
   'BILLP-MER-COMBINED-Apr26.xlsx',
+);
+
+console.log('\nbuildFyReportNo');
+assert(
+  'combined fy',
+  buildFyReportNo({
+    companyCode: 'BILLP',
+    financialYear: '2025-26',
+    merType: 'combined',
+  }),
+  'BILLP/MER/COMBINED/25-26',
+);
+assert(
+  'bank fy',
+  buildFyReportNo({
+    companyCode: 'BSIBPL',
+    financialYear: '2025-26',
+    merType: 'bank',
+  }),
+  'BSIBPL/MER/BNK/25-26',
+);
+
+console.log('\nbuildFyReportFilename');
+assert(
+  'fy filename slug',
+  buildFyReportFilename({
+    companyCode: 'BILLP',
+    financialYear: '2025-26',
+    merType: 'combined',
+  }),
+  'BILLP-MER-COMBINED-25-26.xlsx',
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -1,6 +1,8 @@
 /**
  * Builds MongoDB query from request query params for expenses
  */
+import { buildReportMerTypeFilter } from './reportMerType.js';
+
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const buildSearchConditions = (rawSearch) => {
@@ -57,31 +59,18 @@ export const buildExpenseQuery = (query) => {
   if (query.bankAccountNumber) filter.bankAccountNumber = query.bankAccountNumber;
   if (query.coNames) filter.coNames = new RegExp(query.coNames, 'i');
 
-  if (query.merType === 'BANK') {
-    filter.$and = [...(filter.$and || []), {
-      $or: [
-        { merType: 'Bank' },
-        { merType: { $exists: false }, paymentMethod: 'Bank' },
-      ],
-    }];
-  }
-  if (query.merType === 'CASH') {
-    filter.$and = [...(filter.$and || []), {
-      $or: [
-        { merType: 'Cash' },
-        { merType: { $exists: false }, paymentMethod: 'Cash' },
-      ],
-    }];
-  }
-  if (query.merType === 'UPI') {
+  const merTypeParam = String(query.merType || '').trim().toLowerCase();
+  const reportMerFilter = buildReportMerTypeFilter(merTypeParam);
+  if (reportMerFilter) {
+    filter.$and = [...(filter.$and || []), reportMerFilter];
+  } else if (merTypeParam === 'upi') {
     filter.$and = [...(filter.$and || []), {
       $or: [
         { merType: 'UPI' },
         { merType: { $exists: false }, paymentMethod: 'UPI' },
       ],
     }];
-  }
-  if (query.merType === 'CARD') {
+  } else if (merTypeParam === 'card' || merTypeParam === 'debit/credit card') {
     filter.$and = [...(filter.$and || []), {
       $or: [
         { merType: 'Debit/Credit Card' },

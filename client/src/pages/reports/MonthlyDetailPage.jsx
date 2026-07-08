@@ -43,6 +43,13 @@ export default function MonthlyDetailPage() {
   const month = searchParams.get('month') || '';
   const financialYear = searchParams.get('fy') || '';
   const company = searchParams.get('company') || '';
+  const merType = searchParams.get('merType') || 'combined';
+
+  const merTypeLabel = {
+    bank: 'Bank',
+    cash: 'Cash',
+    combined: 'Combined',
+  }[merType.toLowerCase()] || 'Combined';
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -53,7 +60,7 @@ export default function MonthlyDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const params = cleanParams({ month, financialYear, company, merType: 'combined' });
+        const params = cleanParams({ month, financialYear, company, merType });
         const res = await reportApi.monthlyDetailed(params);
         if (active) setData(res.data.data);
       } catch {
@@ -69,13 +76,13 @@ export default function MonthlyDetailPage() {
     return () => {
       active = false;
     };
-  }, [month, financialYear, company]);
+  }, [month, financialYear, company, merType]);
 
   const runExport = async () => {
     if (exporting) return;
     setExporting(true);
     try {
-      const params = cleanParams({ month, financialYear, company, merType: 'combined' });
+      const params = cleanParams({ month, financialYear, company, merType });
       const res = await reportApi.exportMonthlyExcel(params);
       downloadBlob(
         res.data,
@@ -83,7 +90,7 @@ export default function MonthlyDetailPage() {
           companyCode: companyCode(company),
           month,
           financialYear,
-          merType: 'combined',
+          merType,
         }),
       );
       notifications.show({ message: 'Excel download started', color: 'green' });
@@ -101,7 +108,7 @@ export default function MonthlyDetailPage() {
     companyCode: companyCode(company),
     month,
     financialYear,
-    merType: 'combined',
+    merType,
   });
 
   if (loading && !data) {
@@ -113,11 +120,11 @@ export default function MonthlyDetailPage() {
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <button
           type="button"
-          onClick={() => navigate('/reports/monthly')}
+          onClick={() => navigate(`/reports/monthly?fy=${encodeURIComponent(financialYear)}&month=${encodeURIComponent(month)}`)}
           className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 hover:bg-primary-100 hover:border-primary-400 hover:text-primary-900 active:scale-95 transition-all duration-150"
         >
           {backIcon}
-          Back to Monthly Report
+          Back to {month || 'Monthly Report'}
         </button>
         <button
           type="button"
@@ -133,7 +140,7 @@ export default function MonthlyDetailPage() {
       <PageBanner
         className="mb-4"
         title={reportNo || `${month || 'Monthly'} Expense Report`}
-        subtitle={`${companyCode(company)}${month ? ` · ${month}` : ''}${financialYear ? ` · ${financialYear}` : ''} · ${count} ${count === 1 ? 'entry' : 'entries'}`}
+        subtitle={`${companyCode(company)} · ${merTypeLabel}${month ? ` · ${month}` : ''}${financialYear ? ` · ${financialYear}` : ''} · ${count} ${count === 1 ? 'entry' : 'entries'}`}
       />
 
       <div className="dashboard-grid-4 mb-4">

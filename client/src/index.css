@@ -285,6 +285,29 @@
     color: #c2410c;
   }
 
+  .monthly-report-cell {
+    display: inline-grid;
+    grid-template-columns: 13rem 1.75rem;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 2rem;
+  }
+
+  .monthly-report-cell--empty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: calc(13rem + 1.75rem + 0.375rem);
+  }
+
+  .monthly-report-link {
+    @apply block w-[13rem] text-right leading-none whitespace-nowrap overflow-hidden text-ellipsis;
+  }
+
+  .monthly-report-download {
+    @apply inline-flex shrink-0 items-center justify-center h-7 w-7 rounded-md text-primary-700 border border-primary-200 bg-white hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
   .form-date-dropdown {
     border: 1px solid #e5e7eb !important;
     border-radius: 0.75rem !important;

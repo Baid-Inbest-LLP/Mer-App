@@ -11,6 +11,9 @@ import {
   formatDate,
   buildCustomizedReportFilename,
   buildCustomizedReportNo,
+  buildFyReportFilename,
+  buildFyReportNo,
+  formatFyShortLabel,
 } from '../../utils/format';
 import { reportApi } from '../../api/report.api';
 import { downloadBlob } from '../../utils/download';
@@ -47,6 +50,14 @@ export default function FinancialYearDetailPage() {
   const companyCodeByName = lookups?.companyCodeByName || {};
   const companyCode = (name) => companyCodeByName[name] || name || '—';
   const financialYear = searchParams.get('fy') || '';
+  const company = searchParams.get('company') || '';
+  const merType = searchParams.get('merType') || 'combined';
+
+  const merTypeLabel = {
+    bank: 'Bank',
+    cash: 'Cash',
+    combined: 'Combined',
+  }[merType.toLowerCase()] || 'Combined';
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -57,7 +68,7 @@ export default function FinancialYearDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const params = cleanParams({ financialYear });
+        const params = cleanParams({ financialYear, company, merType });
         const res = await reportApi.monthlyDetailed(params);
         if (active) setData(res.data.data);
       } catch {
@@ -73,18 +84,22 @@ export default function FinancialYearDetailPage() {
     return () => {
       active = false;
     };
-  }, [financialYear]);
+  }, [financialYear, company, merType]);
 
   const runExport = async () => {
     if (exporting) return;
     setExporting(true);
     try {
-      const params = cleanParams({ financialYear });
+      const params = cleanParams({ financialYear, company, merType });
       const res = await reportApi.exportMonthlyExcel(params);
-      downloadBlob(
-        res.data,
-        buildCustomizedReportFilename(params, companyCodeByName),
-      );
+      const filename = company
+        ? buildFyReportFilename({
+          companyCode: companyCode(company),
+          financialYear,
+          merType,
+        })
+        : buildCustomizedReportFilename(params, companyCodeByName);
+      downloadBlob(res.data, filename);
       notifications.show({ message: 'Excel download started', color: 'green' });
     } catch {
       notifications.show({ message: 'Failed to download Excel', color: 'red' });
@@ -96,22 +111,32 @@ export default function FinancialYearDetailPage() {
   const totals = data?.totals || {};
   const entries = data?.entries || [];
   const count = data?.count ?? 0;
-  const reportNo = data?.reportNo || buildCustomizedReportNo({ financialYear }, companyCodeByName);
+  const reportNo = data?.reportNo || (company
+    ? buildFyReportNo({
+      companyCode: companyCode(company),
+      financialYear,
+      merType,
+    })
+    : buildCustomizedReportNo({ financialYear }, companyCodeByName));
 
   if (loading && !data) {
     return <ReportDetailSkeleton />;
   }
+
+  const backUrl = company
+    ? `/reports/financial-year?fy=${encodeURIComponent(financialYear)}`
+    : '/reports/financial-year';
 
   return (
     <div className="w-full max-w-[90rem] mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <button
           type="button"
-          onClick={() => navigate('/reports/financial-year')}
+          onClick={() => navigate(backUrl)}
           className="group inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 hover:bg-primary-100 hover:border-primary-400 hover:text-primary-900 active:scale-95 transition-all duration-150"
         >
           {backIcon}
-          Back to FY Report
+          Back to {company ? formatFyShortLabel(financialYear) || 'FY Report' : 'FY Report'}
         </button>
         <button
           type="button"
@@ -127,7 +152,7 @@ export default function FinancialYearDetailPage() {
       <PageBanner
         className="mb-4"
         title={reportNo || `${financialYear || 'Financial Year'} Report`}
-        subtitle={`${financialYear || 'Financial Year'} · ${count} ${count === 1 ? 'entry' : 'entries'}`}
+        subtitle={`${company ? `${companyCode(company)} · ${merTypeLabel} · ` : ''}${financialYear || 'Financial Year'} · ${count} ${count === 1 ? 'entry' : 'entries'}`}
       />
 
       <div className="dashboard-grid-4 mb-4">
@@ -151,7 +176,7 @@ export default function FinancialYearDetailPage() {
           accent="bg-emerald-500"
           icon={
             <svg className={`${iconClass} text-emerald-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5 2 3.5 2 3.5-2 3.5 2z" />
             </svg>
           }
         />

@@ -117,6 +117,55 @@ const MONTH_ABBREV = {
   december: 'Dec',
 };
 
+const MONTH_INDEX = {
+  january: 0,
+  february: 1,
+  march: 2,
+  april: 3,
+  may: 4,
+  june: 5,
+  july: 6,
+  august: 7,
+  september: 8,
+  october: 9,
+  november: 10,
+  december: 11,
+};
+
+const monthToDateInFy = (month, financialYear) => {
+  const startYear = parseInt(String(financialYear).split('-')[0], 10);
+  const idx = MONTH_INDEX[String(month || '').trim().toLowerCase()];
+  if (!startYear || idx === undefined) return null;
+  const year = idx >= 3 ? startYear : startYear + 1;
+  return new Date(year, idx, 15);
+};
+
+const getFinancialYearFromDate = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  if (month >= 3) {
+    return `${year}-${String(year + 1).slice(-2)}`;
+  }
+  return `${year - 1}-${String(year).slice(-2)}`;
+};
+
+/** e.g. April + 2026-27 → Apr'26 */
+export const formatMonthFyPeriodLabel = (month, financialYear) => {
+  const trimmed = String(month || '').trim();
+  if (!trimmed) return '';
+
+  const monthLabel = MONTH_ABBREV[trimmed.toLowerCase()]
+    || (trimmed.length <= 3
+      ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase()
+      : trimmed.slice(0, 3).charAt(0).toUpperCase() + trimmed.slice(1, 3).toLowerCase());
+
+  const date = monthToDateInFy(trimmed, financialYear);
+  if (!date) return trimmed;
+
+  const [startYear] = getFinancialYearFromDate(date).split('-');
+  return `${monthLabel}'${String(startYear).slice(-2)}`;
+};
+
 const abbreviateMonthlyReportMerType = (merType) => {
   const normalized = String(merType || '').trim().toLowerCase();
   if (normalized === 'cash') return 'CASH';
@@ -155,6 +204,41 @@ export const buildMonthlyReportNo = ({
 export const buildMonthlyReportFilename = (params) => {
   const reportNo = buildMonthlyReportNo(params);
   if (!reportNo) return 'MER-monthly-report.xlsx';
+  const slug = reportNo
+    .replace(/\//g, '-')
+    .replace(/'/g, '')
+    .replace(/[^a-zA-Z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `${slug}.xlsx`;
+};
+
+/** 2025-26 → 25-26 */
+export const formatFyShortLabel = (financialYear) => {
+  const [start, end] = String(financialYear || '').split('-');
+  if (!start || !end) return financialYear || '';
+  return `${String(start).slice(-2)}-${end}`;
+};
+
+/**
+ * {COMPANY_CODE}/MER/{MER_TYPE}/{FY_SHORT}
+ * Example: BILLP/MER/COMBINED/25-26
+ */
+export const buildFyReportNo = ({
+  companyCode,
+  financialYear,
+  merType = 'combined',
+} = {}) => {
+  const code = String(companyCode || '').trim();
+  const type = abbreviateMonthlyReportMerType(merType);
+  const fyShort = formatFyShortLabel(financialYear);
+  if (!code || !type || !fyShort) return null;
+  return `${code}/MER/${type}/${fyShort}`;
+};
+
+export const buildFyReportFilename = (params) => {
+  const reportNo = buildFyReportNo(params);
+  if (!reportNo) return 'MER-fy-report.xlsx';
   const slug = reportNo
     .replace(/\//g, '-')
     .replace(/'/g, '')

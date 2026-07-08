@@ -67,6 +67,54 @@ export const resolveMonthlyReportMeta = async (query, Company) => {
   };
 };
 
+/**
+ * {COMPANY_CODE}/MER/{MER_TYPE}/{FY_SHORT}
+ * Example: BILLP/MER/COMBINED/25-26
+ */
+export const buildFyReportNo = ({
+  companyCode,
+  financialYear,
+  merType = 'combined',
+}) => {
+  const code = String(companyCode || '').trim();
+  const type = abbreviateMonthlyReportMerType(merType);
+  const fyShort = formatFyShort(financialYear || getFinancialYear());
+  if (!code || !type || !fyShort) return null;
+  return `${code}/MER/${type}/${fyShort}`;
+};
+
+/** BILLP-MER-COMBINED-25-26.xlsx */
+export const buildFyReportFilename = (params) => {
+  const reportNo = buildFyReportNo(params);
+  if (!reportNo) return 'MER-fy-report.xlsx';
+  const slug = reportNo
+    .replace(/\//g, '-')
+    .replace(/'/g, '')
+    .replace(/[^a-zA-Z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  return `${slug}.xlsx`;
+};
+
+export const resolveFyReportMeta = async (query, Company) => {
+  let companyCode;
+  if (query.company) {
+    const company = await Company.findOne({ name: query.company }).select('code').lean();
+    companyCode = company?.code || undefined;
+  }
+
+  const params = {
+    companyCode,
+    financialYear: query.financialYear || getFinancialYear(),
+    merType: query.merType || 'combined',
+  };
+
+  return {
+    reportNo: buildFyReportNo(params),
+    filename: buildFyReportFilename(params),
+  };
+};
+
 const asSegment = (value) => {
   const trimmed = String(value || '').trim();
   return trimmed || null;

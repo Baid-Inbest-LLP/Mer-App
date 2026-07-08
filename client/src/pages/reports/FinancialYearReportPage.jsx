@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { analyticsApi } from '../../api/dashboard.api';
 import { reportApi } from '../../api/report.api';
@@ -7,7 +8,6 @@ import { BarChartCard } from '../../components/charts/lazyCharts';
 import { ChartSkeletonGrid } from '../../components/charts/LazyChartBoundary';
 import { FinancialYearExpensesTable } from '../../components/reports/lazyReportTables';
 import { FinancialYearReportStatCards } from '../../components/reports/lazyReportStatCards';
-import { buildCustomizedReportFilename, buildCustomizedReportNo } from '../../utils/format';
 import { downloadBlob } from '../../utils/download';
 import { notifications } from '@mantine/notifications';
 
@@ -44,15 +44,14 @@ const mapFyComparison = (items = []) =>
   }));
 
 export default function FinancialYearReportPage() {
+  const [searchParams] = useSearchParams();
   const { lookups } = useSelector((state) => state.common);
   const currentFY = lookups?.currentFinancialYear || '';
-  const companyCodeByName = useMemo(
-    () => lookups?.companyCodeByName || {},
-    [lookups?.companyCodeByName],
-  );
   const [quarterlyFy, setQuarterlyFy] = useState('');
   const [quarterly, setQuarterly] = useState([]);
   const [fyOverview, setFyOverview] = useState([]);
+  const [fyRows, setFyRows] = useState([]);
+  const [fyRowsLoading, setFyRowsLoading] = useState(true);
   const [quarterlyChart, setQuarterlyChart] = useState([]);
   const [fyComparisonChart, setFyComparisonChart] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +59,7 @@ export default function FinancialYearReportPage() {
   const [exporting, setExporting] = useState(false);
   const [tableYearLimit, setTableYearLimit] = useState('2');
 
+  const initialFy = searchParams.get('fy') || null;
   const resolvedQuarterlyFy = quarterlyFy || currentFY;
 
   const availableFyYears = useMemo(
@@ -80,27 +80,17 @@ export default function FinancialYearReportPage() {
     return TABLE_YEAR_OPTIONS.filter((opt) => parseInt(opt.value, 10) <= count);
   }, [availableFyYears.length]);
 
-  const effectiveTableYearLimit = useMemo(() => {
-    const requested = parseInt(tableYearLimit, 10) || 2;
-    const maxAvailable = availableFyYears.length;
-    if (!maxAvailable) return 0;
-    const maxOption = tableYearOptions.length
-      ? parseInt(tableYearOptions[tableYearOptions.length - 1].value, 10)
-      : maxAvailable;
-    return Math.min(requested, maxOption, maxAvailable);
-  }, [tableYearLimit, availableFyYears.length, tableYearOptions]);
-
-  const visibleFyYears = useMemo(() => {
-    return availableFyYears.slice(0, effectiveTableYearLimit).map((row) => ({
-      name: row.name,
-      reportNo: buildCustomizedReportNo({ financialYear: row.name }, companyCodeByName),
-      net: row.net,
-      gst: row.gst,
-      tds: row.tds,
-      gross: row.gross,
-      count: row.count,
-    }));
-  }, [availableFyYears, effectiveTableYearLimit, companyCodeByName]);
+  const loadFyRows = useCallback(async () => {
+    setFyRowsLoading(true);
+    try {
+      const { data } = await reportApi.financialYear();
+      setFyRows(data.data || []);
+    } catch {
+      setFyRows([]);
+    } finally {
+      setFyRowsLoading(false);
+    }
+  }, []);
 
   const loadQuarterlyChart = useCallback(async (fy) => {
     if (!fy) return;
@@ -141,7 +131,7 @@ export default function FinancialYearReportPage() {
     (async () => {
       setLoading(true);
       try {
-        await fetchReport();
+        await Promise.all([fetchReport(), loadFyRows()]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -150,23 +140,19 @@ export default function FinancialYearReportPage() {
     return () => {
       cancelled = true;
     };
-  }, [fetchReport, currentFY]);
+  }, [fetchReport, loadFyRows, currentFY]);
 
   const handleQuarterlyFyChange = (fy) => {
     setQuarterlyFy(fy);
     void loadQuarterlyChart(fy);
   };
 
-  const runExport = async (financialYear) => {
-    if (exporting || !financialYear) return;
+  const runExport = async (params, filenameHint) => {
+    if (exporting) return;
     setExporting(true);
     try {
-      const params = cleanParams({ financialYear });
-      const { data } = await reportApi.exportMonthlyExcel(params);
-      downloadBlob(
-        data,
-        buildCustomizedReportFilename(params, companyCodeByName),
-      );
+      const { data } = await reportApi.exportMonthlyExcel(cleanParams(params));
+      downloadBlob(data, filenameHint);
       notifications.show({ message: 'Excel download started', color: 'green' });
     } catch {
       notifications.show({ message: 'Failed to download Excel', color: 'red' });
@@ -203,9 +189,8 @@ export default function FinancialYearReportPage() {
     <div>
       <PageBanner
         className="mb-4"
-        title={`FY Report`}
+        title="FY Report"
         subtitle={`FY Overview ${currentFY}`}
-        action={{ to: `/reports/financial-year/detail?fy=${encodeURIComponent(currentFY)}`, label: 'View FY Report', icon: false }}
       />
       <FinancialYearReportStatCards
         className="mb-4"
@@ -239,12 +224,14 @@ export default function FinancialYearReportPage() {
       )}
 
       <FinancialYearExpensesTable
+        key={initialFy ?? 'all'}
         className="mt-4"
-        loading={loading}
-        visibleFyYears={visibleFyYears}
+        loading={loading || fyRowsLoading}
+        fyRows={fyRows}
         tableYearOptions={tableYearOptions}
         tableYearLimit={tableYearLimit}
         onTableYearLimitChange={(v) => setTableYearLimit(v || tableYearOptions[0]?.value || '2')}
+        initialFy={initialFy}
         exporting={exporting}
         onExport={runExport}
       />

@@ -49,7 +49,7 @@ export default function ExpenseHeadSummaryTable({
             <thead>
               <tr>
                 <th className="text-center w-14">#</th>
-                <th className="text-left">Expense Head</th>
+                <th className="text-center">Expense Head</th>
                 <th className="text-right">Net</th>
                 <th className="text-right">GST</th>
                 <th className="text-right">TDS</th>
@@ -64,7 +64,7 @@ export default function ExpenseHeadSummaryTable({
                 return (
                   <tr key={h._id}>
                     <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
-                    <td className="text-left">
+                    <td className="text-center">
                       <p className="summary-head-report-name font-semibold">{h._id}</p>
                     </td>
                     <td className="text-right">{formatCurrency(h.net)}</td>

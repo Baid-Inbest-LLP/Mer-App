@@ -6,9 +6,12 @@ import { getFinancialYear } from '../config/index.js';
 import { toLocationLabel } from '../utils/locationFormat.js';
 import {
   buildMonthlyReportNo,
+  buildFyReportNo,
   resolveMonthlyReportMeta,
+  resolveFyReportMeta,
   resolveCustomizedReportMeta,
 } from '../utils/merReportSerial.js';
+import { reportMerTypeAddFieldsStage, REPORT_MER_TYPES } from '../utils/reportMerType.js';
 import {
   buildDetailTitle,
   buildMerStyledSheet,
@@ -140,16 +143,46 @@ const sortMonthlyRows = (rows) =>
   rows.sort((a, b) => {
     const monthDiff = FY_MONTH_ORDER.indexOf(a.month) - FY_MONTH_ORDER.indexOf(b.month);
     if (monthDiff !== 0) return monthDiff;
-    return String(a.companyCode || a.company || '').localeCompare(
+    const companyDiff = String(a.companyCode || a.company || '').localeCompare(
       String(b.companyCode || b.company || ''),
     );
+    if (companyDiff !== 0) return companyDiff;
+    const typeOrder = { bank: 0, cash: 1, combined: 2 };
+    return (typeOrder[a.merType] ?? 9) - (typeOrder[b.merType] ?? 9);
   });
+
+
+const emptyTotals = () => ({ net: 0, gst: 0, tds: 0, gross: 0, count: 0 });
+
+const resolveDetailReportMeta = async (query, Company) => {
+  if (query.company && query.month) {
+    return resolveMonthlyReportMeta(query, Company);
+  }
+  if (query.company && query.financialYear) {
+    return resolveFyReportMeta(query, Company);
+  }
+  return resolveCustomizedReportMeta(query, Company);
+};
 
 export const getMonthlyReport = async (query) => {
   const filter = buildExpenseQuery(query);
   const financialYear = query.financialYear || getFinancialYear();
 
-  const [rows, companies] = await Promise.all([
+  const [typedRows, combinedRows, companies] = await Promise.all([
+    Expense.aggregate([
+      { $match: baseMatch(filter) },
+      reportMerTypeAddFieldsStage,
+      {
+        $group: {
+          _id: { company: '$company', month: '$month', merType: '$reportMerType' },
+          net: { $sum: '$netAmount' },
+          gst: { $sum: '$totalGST' },
+          tds: { $sum: '$tds' },
+          gross: { $sum: '$grossAmount' },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
     Expense.aggregate([
       { $match: baseMatch(filter) },
       {
@@ -170,31 +203,207 @@ export const getMonthlyReport = async (query) => {
     companies.filter((c) => c.name && c.code).map((c) => [c.name, c.code]),
   );
 
-  const mapped = rows
-    .filter((row) => row._id?.company && row._id?.month)
-    .map((row) => {
-      const company = row._id.company;
-      const month = row._id.month;
-      const companyCode = codeByName[company] || '';
-      return {
+  const statsByKey = new Map();
+
+  for (const row of combinedRows) {
+    if (!row._id?.company || !row._id?.month) continue;
+    const key = `${row._id.company}|${row._id.month}`;
+    statsByKey.set(`${key}|combined`, {
+      company: row._id.company,
+      month: row._id.month,
+      merType: 'combined',
+      net: row.net,
+      gst: row.gst,
+      tds: row.tds,
+      gross: row.gross,
+      count: row.count,
+    });
+  }
+
+  for (const row of typedRows) {
+    if (!row._id?.company || !row._id?.month) continue;
+    const merType = row._id.merType;
+    if (merType !== 'bank' && merType !== 'cash') continue;
+    const key = `${row._id.company}|${row._id.month}|${merType}`;
+    statsByKey.set(key, {
+      company: row._id.company,
+      month: row._id.month,
+      merType,
+      net: row.net,
+      gst: row.gst,
+      tds: row.tds,
+      gross: row.gross,
+      count: row.count,
+    });
+  }
+
+  const companyMonths = [...statsByKey.values()]
+    .filter((row) => row.merType === 'combined')
+    .map((row) => ({ company: row.company, month: row.month }));
+
+  const mapped = [];
+
+  for (const { company, month } of companyMonths) {
+    const companyCode = codeByName[company] || '';
+    const prefix = `${company}|${month}`;
+
+    for (const merType of REPORT_MER_TYPES) {
+      const stats = statsByKey.get(`${prefix}|${merType}`) || {
+        ...emptyTotals(),
+        company,
+        month,
+        merType,
+      };
+
+      mapped.push({
         company,
         month,
         companyCode,
-        net: row.net,
-        gst: row.gst,
-        tds: row.tds,
-        gross: row.gross,
-        count: row.count,
+        merType,
+        net: stats.net,
+        gst: stats.gst,
+        tds: stats.tds,
+        gross: stats.gross,
+        count: stats.count,
         reportNo: buildMonthlyReportNo({
           companyCode,
           month,
           financialYear,
-          merType: 'combined',
+          merType,
         }),
-      };
-    });
+      });
+    }
+  }
 
   return sortMonthlyRows(mapped);
+};
+
+const sortFyRows = (rows) =>
+  rows.sort((a, b) => {
+    const fyDiff = String(b.financialYear || '').localeCompare(String(a.financialYear || ''));
+    if (fyDiff !== 0) return fyDiff;
+    const companyDiff = String(a.companyCode || a.company || '').localeCompare(
+      String(b.companyCode || b.company || ''),
+    );
+    if (companyDiff !== 0) return companyDiff;
+    const typeOrder = { bank: 0, cash: 1, combined: 2 };
+    return (typeOrder[a.merType] ?? 9) - (typeOrder[b.merType] ?? 9);
+  });
+
+export const getFinancialYearReport = async (query) => {
+  const filter = buildExpenseQuery(query);
+
+  const [typedRows, combinedRows, companies] = await Promise.all([
+    Expense.aggregate([
+      { $match: baseMatch(filter) },
+      reportMerTypeAddFieldsStage,
+      {
+        $group: {
+          _id: {
+            company: '$company',
+            financialYear: '$financialYear',
+            merType: '$reportMerType',
+          },
+          net: { $sum: '$netAmount' },
+          gst: { $sum: '$totalGST' },
+          tds: { $sum: '$tds' },
+          gross: { $sum: '$grossAmount' },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Expense.aggregate([
+      { $match: baseMatch(filter) },
+      {
+        $group: {
+          _id: { company: '$company', financialYear: '$financialYear' },
+          net: { $sum: '$netAmount' },
+          gst: { $sum: '$totalGST' },
+          tds: { $sum: '$tds' },
+          gross: { $sum: '$grossAmount' },
+          count: { $sum: 1 },
+        },
+      },
+    ]),
+    Company.find({ isActive: { $ne: false } }).select('name code').lean(),
+  ]);
+
+  const codeByName = Object.fromEntries(
+    companies.filter((c) => c.name && c.code).map((c) => [c.name, c.code]),
+  );
+
+  const statsByKey = new Map();
+
+  for (const row of combinedRows) {
+    if (!row._id?.company || !row._id?.financialYear) continue;
+    const key = `${row._id.company}|${row._id.financialYear}`;
+    statsByKey.set(`${key}|combined`, {
+      company: row._id.company,
+      financialYear: row._id.financialYear,
+      merType: 'combined',
+      net: row.net,
+      gst: row.gst,
+      tds: row.tds,
+      gross: row.gross,
+      count: row.count,
+    });
+  }
+
+  for (const row of typedRows) {
+    if (!row._id?.company || !row._id?.financialYear) continue;
+    const merType = row._id.merType;
+    if (merType !== 'bank' && merType !== 'cash') continue;
+    const key = `${row._id.company}|${row._id.financialYear}|${merType}`;
+    statsByKey.set(key, {
+      company: row._id.company,
+      financialYear: row._id.financialYear,
+      merType,
+      net: row.net,
+      gst: row.gst,
+      tds: row.tds,
+      gross: row.gross,
+      count: row.count,
+    });
+  }
+
+  const companyYears = [...statsByKey.values()]
+    .filter((row) => row.merType === 'combined')
+    .map((row) => ({ company: row.company, financialYear: row.financialYear }));
+
+  const mapped = [];
+
+  for (const { company, financialYear } of companyYears) {
+    const companyCode = codeByName[company] || '';
+    const prefix = `${company}|${financialYear}`;
+
+    for (const merType of REPORT_MER_TYPES) {
+      const stats = statsByKey.get(`${prefix}|${merType}`) || {
+        ...emptyTotals(),
+        company,
+        financialYear,
+        merType,
+      };
+
+      mapped.push({
+        company,
+        financialYear,
+        companyCode,
+        merType,
+        net: stats.net,
+        gst: stats.gst,
+        tds: stats.tds,
+        gross: stats.gross,
+        count: stats.count,
+        reportNo: buildFyReportNo({
+          companyCode,
+          financialYear,
+          merType,
+        }),
+      });
+    }
+  }
+
+  return sortFyRows(mapped);
 };
 
 export const getMonthlyDetailedReport = async (query) => {
@@ -230,9 +439,7 @@ export const getMonthlyDetailedReport = async (query) => {
   });
 
   return {
-    ...(query.company && query.month
-      ? await resolveMonthlyReportMeta(query, Company)
-      : await resolveCustomizedReportMeta(query, Company)),
+    ...(await resolveDetailReportMeta(query, Company)),
     entries,
     totals,
     count: entries.length,
@@ -262,9 +469,7 @@ export const generateMonthlyExcel = async (query) => {
 
   const [entries, meta, companyCtx] = await Promise.all([
     Expense.find(baseMatch(filter)).sort({ invoiceDate: 1 }).lean(),
-    query.company && query.month
-      ? resolveMonthlyReportMeta(query, Company)
-      : resolveCustomizedReportMeta(query, Company),
+    resolveDetailReportMeta(query, Company),
     resolveCompanyContext(query),
   ]);
   const { reportNo, filename } = meta;
@@ -398,7 +603,8 @@ export const generateSummaryExcel = async (query) => {
     totalColIndex: 4,
   });
 
-  const monthlyTotals = monthlyReport.reduce(
+  const monthlyCombined = monthlyReport.filter((m) => m.merType === 'combined');
+  const monthlyTotals = monthlyCombined.reduce(
     (acc, m) => ({
       net: acc.net + (m.net || 0),
       gst: acc.gst + (m.gst || 0),
@@ -414,11 +620,12 @@ export const generateSummaryExcel = async (query) => {
     title: 'MER Monthly Summary Report',
     reportNo: '',
     metaPairs,
-    headers: ['Report No', 'Company', 'Month', 'Net', 'GST', 'TDS', 'Gross', 'Entries'],
+    headers: ['Report No', 'Company', 'Month', 'Type', 'Net', 'GST', 'TDS', 'Gross', 'Entries'],
     rows: monthlyReport.map((m) => [
       m.reportNo || '',
       m.companyCode || m.company || '',
       m.month,
+      m.merType || 'combined',
       m.net,
       m.gst,
       m.tds,
@@ -427,6 +634,7 @@ export const generateSummaryExcel = async (query) => {
     ]),
     totalsRow: [
       'Totals',
+      '',
       '',
       '',
       monthlyTotals.net,
@@ -438,11 +646,11 @@ export const generateSummaryExcel = async (query) => {
     grandTotal: monthlyTotals.gross,
     footerAddress,
     companyCtx,
-    moneyColIndices: [3, 4, 5, 6],
+    moneyColIndices: [4, 5, 6, 7],
     textColIndices: [0],
-    gstColIndex: 4,
-    tdsColIndex: 5,
-    totalColIndex: 6,
+    gstColIndex: 5,
+    tdsColIndex: 6,
+    totalColIndex: 7,
   });
 
   return workbook;
