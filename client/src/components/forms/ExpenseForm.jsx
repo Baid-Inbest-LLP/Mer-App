@@ -4,6 +4,7 @@ import {
   TextInput,
   NumberInput,
   Switch,
+  Checkbox,
   Loader,
   Paper,
   Text,
@@ -22,6 +23,9 @@ import {
   MER_ENTRY_TYPE_OPTIONS,
   MER_ENTRY_TYPES,
   PAYMENT_METHOD_OPTIONS,
+  formatIssuerLast4,
+  getCardNumberOptions,
+  getFromAccountOptions,
   getPaymentMethodRules,
   normalizeExpensePaymentFields,
 } from '../../utils/paymentMethods';
@@ -68,8 +72,10 @@ const defaultValues = {
   paymentDate: null,
   paymentRefNumber: '',
   bankAccountNumber: '',
+  cardNumber: '',
   merType: null,
   paymentMethod: null,
+  hasBillOrReceipt: false,
   notes: '',
   terms: '',
   isDraft: false,
@@ -185,7 +191,7 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
 
   useEffect(() => {
     if (!shouldShowErrors) return;
-    trigger(['merType', 'paymentMethod', 'bankAccountNumber', 'paymentRefNumber']);
+    trigger(['merType', 'paymentMethod', 'bankAccountNumber', 'paymentRefNumber', 'cardNumber']);
   }, [merType, paymentMethod, trigger, shouldShowErrors]);
 
   const paymentRules = getPaymentMethodRules(paymentMethod);
@@ -197,6 +203,29 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
     }
     return MER_ENTRY_TYPE_OPTIONS;
   }, [initialData?.merType]);
+
+  const paymentMethodOptions = useMemo(() => {
+    const base = PAYMENT_METHOD_OPTIONS.map((item) => ({ value: item, label: item }));
+    const current = initialData?.paymentMethod;
+    if (
+      current
+      && !PAYMENT_METHOD_OPTIONS.includes(current)
+      && !base.some((opt) => opt.value === current)
+    ) {
+      return [...base, { value: current, label: current }];
+    }
+    return base;
+  }, [initialData?.paymentMethod]);
+
+  const fromAccountOptions = useMemo(
+    () => getFromAccountOptions(initialData?.bankAccountNumber),
+    [initialData?.bankAccountNumber],
+  );
+
+  const cardNumberOptions = useMemo(
+    () => getCardNumberOptions(initialData?.cardNumber),
+    [initialData?.cardNumber],
+  );
 
   const activeCompanies = useMemo(
     () => (companies || []).filter((company) => company.isActive !== false),
@@ -256,11 +285,6 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
 
   const selectData = (items) => (items || []).map((i) => ({ value: i, label: i }));
 
-  const paymentMethodOptions = useMemo(
-    () => selectData(lookups?.paymentMethods?.length ? lookups.paymentMethods : PAYMENT_METHOD_OPTIONS),
-    [lookups?.paymentMethods],
-  );
-
   const requireIfPaymentRule = (ruleKey, message) => (value) => {
     const rules = getPaymentMethodRules(getValues('paymentMethod'));
     if (!rules[ruleKey]) return true;
@@ -276,7 +300,14 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
   };
 
   const submit = (data, isDraft = false) => {
-    onSubmit({ ...data, isDraft });
+    const payload = { ...data, isDraft };
+    if (payload.cardNumber) {
+      payload.cardNumber = formatIssuerLast4(payload.cardNumber);
+    }
+    if (payload.bankAccountNumber) {
+      payload.bankAccountNumber = formatIssuerLast4(payload.bankAccountNumber);
+    }
+    onSubmit(payload);
   };
 
   const onValidSubmit = (data) => {
@@ -524,24 +555,71 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
                   data={paymentMethodOptions}
                   {...field}
                   value={toSelectValue(field.value)}
-                  onChange={(value) => field.onChange(toSelectValue(value))}
+                  onChange={(value) => {
+                    const next = toSelectValue(value);
+                    field.onChange(next);
+                    const rules = getPaymentMethodRules(next);
+                    if (!rules.requiresBankAccount) {
+                      setValue('bankAccountNumber', '');
+                    }
+                    if (!rules.requiresCardNumber) {
+                      setValue('cardNumber', '');
+                    }
+                  }}
                   error={showControllerError('paymentMethod', fieldState)}
                 />
               )}
             />
             {paymentRules.requiresBankAccount ? (
-              <TextInput
-                label={paymentRules.bankAccountLabel || 'Bank Account Number'}
-                required
-                classNames={TEXT_INPUT_CLASS_NAMES}
-                placeholder={paymentRules.bankAccountPlaceholder}
-                {...register('bankAccountNumber', {
+              <Controller
+                name="bankAccountNumber"
+                control={control}
+                rules={{
                   validate: requireIfPaymentRule(
                     'requiresBankAccount',
-                    paymentRules.bankAccountMessage || 'Bank account number is required',
+                    paymentRules.bankAccountMessage || 'From account is required',
                   ),
-                })}
-                error={showRegisterError('bankAccountNumber')}
+                }}
+                render={({ field, fieldState }) => (
+                  <FilterSelect
+                    label={paymentRules.bankAccountLabel || 'From Account'}
+                    required
+                    clearable
+                    searchable
+                    placeholder="Select from account"
+                    data={fromAccountOptions}
+                    {...field}
+                    value={toSelectValue(field.value)}
+                    onChange={(value) => field.onChange(toSelectValue(value) || '')}
+                    error={showControllerError('bankAccountNumber', fieldState)}
+                  />
+                )}
+              />
+            ) : null}
+            {paymentRules.requiresCardNumber ? (
+              <Controller
+                name="cardNumber"
+                control={control}
+                rules={{
+                  validate: requireIfPaymentRule(
+                    'requiresCardNumber',
+                    paymentRules.cardNumberMessage || 'Card number is required',
+                  ),
+                }}
+                render={({ field, fieldState }) => (
+                  <FilterSelect
+                    label={paymentRules.cardNumberLabel || 'Card No'}
+                    required
+                    clearable
+                    searchable
+                    placeholder="Select card"
+                    data={cardNumberOptions}
+                    {...field}
+                    value={toSelectValue(field.value)}
+                    onChange={(value) => field.onChange(toSelectValue(value) || '')}
+                    error={showControllerError('cardNumber', fieldState)}
+                  />
+                )}
               />
             ) : null}
             <TextInput
@@ -656,7 +734,7 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
             />
           </div>
         </Paper>
-        <Paper withBorder p="md" mb="sm" className="expense-form-summary flex flex-col justify-between">
+        <Paper withBorder p="md" mb="sm" className="expense-form-summary flex flex-col start">
           <Text fw={600} mb="xs" className="expense-form-summary-title">
             Entry Summary
           </Text>
@@ -669,10 +747,10 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
               <>
                 <SummaryRow label="CGST" value={cgst} />
                 <SummaryRow label="SGST" value={sgst} />
+                <SummaryRow label="Total GST" value={totalGST} />
               </>
             )}
 
-            <SummaryRow label="Total GST" value={totalGST} />
             <SummaryRow label="TDS" value={tds || 0} />
 
             <div className="expense-form-summary-gross-divider border-t border-gray-200 pt-3">
@@ -687,6 +765,19 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
                 {formatAmountInWords(grossAmount)}
               </p>
             </div>
+
+            <Controller
+              name="hasBillOrReceipt"
+              control={control}
+              render={({ field }) => (
+                <Checkbox
+                  label="Bill / Receipt available"
+                  classNames={{ root: 'cursor-pointer', label: 'cursor-pointer' }}
+                  checked={Boolean(field.value)}
+                  onChange={(event) => field.onChange(event.currentTarget.checked)}
+                />
+              )}
+            />
           </div>
           <div className="mt-6 flex justify-end gap-2">
             <button

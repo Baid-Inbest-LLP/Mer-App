@@ -1,4 +1,7 @@
-export const PAYMENT_METHOD_OPTIONS = ['Bank', 'Cash', 'UPI', 'Debit/Credit Card'];
+export const PAYMENT_METHOD_OPTIONS = ['UPI', 'NEFT', 'RTGS', 'IMPS', 'Card', 'Cash'];
+
+/** Older values that may still exist on saved expenses. */
+export const LEGACY_PAYMENT_METHODS = ['Bank', 'Debit/Credit Card'];
 
 /** MER type on new expense entries — bank or cash only. */
 export const MER_ENTRY_TYPES = ['Bank', 'Cash'];
@@ -8,17 +11,36 @@ export const MER_ENTRY_TYPE_OPTIONS = MER_ENTRY_TYPES.map((value) => ({
   label: value,
 }));
 
+/** Dummy payer bank accounts for NEFT / RTGS / IMPS. */
+export const FROM_ACCOUNT_OPTIONS = [
+  'ICICI - 2404',
+  'HDFC - 7812',
+  'SBI - 3356',
+  'AXIS - 9021',
+  'KOTAK - 4488',
+].map((value) => ({ value, label: value }));
+
+/** Dummy cards for Card payments. */
+export const CARD_NUMBER_OPTIONS = [
+  'ICICI - 2404',
+  'HDFC - 1190',
+  'SBI - 6677',
+  'AXIS - 5543',
+  'AMEX - 3001',
+].map((value) => ({ value, label: value }));
+
+const withCurrentOption = (options, current) => {
+  if (!current || options.some((opt) => opt.value === current)) return options;
+  return [{ value: current, label: current }, ...options];
+};
+
+export const getFromAccountOptions = (current) =>
+  withCurrentOption(FROM_ACCOUNT_OPTIONS, current);
+
+export const getCardNumberOptions = (current) =>
+  withCurrentOption(CARD_NUMBER_OPTIONS, current);
+
 export const PAYMENT_METHOD_RULES = {
-  Bank: {
-    requiresBankAccount: true,
-    requiresPaymentRef: true,
-    bankAccountLabel: 'Bank Account Number',
-    paymentRefLabel: 'Payment Ref / UTR Number',
-    bankAccountMessage: 'Bank account number is required',
-    paymentRefMessage: 'Payment reference number is required',
-    bankAccountPlaceholder: 'Enter beneficiary account number',
-    paymentRefPlaceholder: 'Enter NEFT/RTGS/IMPS UTR',
-  },
   UPI: {
     requiresBankAccount: false,
     requiresPaymentRef: true,
@@ -26,12 +48,46 @@ export const PAYMENT_METHOD_RULES = {
     paymentRefMessage: 'UPI transaction ID is required',
     paymentRefPlaceholder: 'Enter UPI reference / UTR',
   },
-  'Debit/Credit Card': {
+  NEFT: {
+    requiresBankAccount: true,
+    requiresPaymentRef: true,
+    bankAccountLabel: 'From Account',
+    paymentRefLabel: 'NEFT UTR Number',
+    bankAccountMessage: 'From account is required (e.g. ICICI - 2404)',
+    paymentRefMessage: 'NEFT UTR number is required',
+    bankAccountPlaceholder: 'e.g. ICICI - 2404',
+    paymentRefPlaceholder: 'Enter NEFT UTR',
+  },
+  RTGS: {
+    requiresBankAccount: true,
+    requiresPaymentRef: true,
+    bankAccountLabel: 'From Account',
+    paymentRefLabel: 'RTGS UTR Number',
+    bankAccountMessage: 'From account is required (e.g. ICICI - 2404)',
+    paymentRefMessage: 'RTGS UTR number is required',
+    bankAccountPlaceholder: 'e.g. ICICI - 2404',
+    paymentRefPlaceholder: 'Enter RTGS UTR',
+  },
+  IMPS: {
+    requiresBankAccount: true,
+    requiresPaymentRef: true,
+    bankAccountLabel: 'From Account',
+    paymentRefLabel: 'IMPS UTR Number',
+    bankAccountMessage: 'From account is required (e.g. ICICI - 2404)',
+    paymentRefMessage: 'IMPS UTR number is required',
+    bankAccountPlaceholder: 'e.g. ICICI - 2404',
+    paymentRefPlaceholder: 'Enter IMPS UTR / reference',
+  },
+  Card: {
     requiresBankAccount: false,
     requiresPaymentRef: true,
+    requiresCardNumber: true,
+    cardNumberLabel: 'Card No',
+    cardNumberMessage: 'Card number is required (e.g. ICICI - 2404)',
+    cardNumberPlaceholder: 'e.g. ICICI - 2404',
     paymentRefLabel: 'Card Transaction Reference',
     paymentRefMessage: 'Card transaction reference is required',
-    paymentRefPlaceholder: 'Auth code or last 4 digits',
+    paymentRefPlaceholder: 'Auth code / approval code',
   },
   Cash: {
     requiresBankAccount: false,
@@ -39,15 +95,54 @@ export const PAYMENT_METHOD_RULES = {
     paymentRefLabel: 'Payment Reference (optional)',
     paymentRefPlaceholder: 'Receipt or voucher number',
   },
+  // Legacy
+  Bank: {
+    requiresBankAccount: true,
+    requiresPaymentRef: true,
+    bankAccountLabel: 'From Account',
+    paymentRefLabel: 'Payment Ref / UTR Number',
+    bankAccountMessage: 'From account is required (e.g. ICICI - 2404)',
+    paymentRefMessage: 'Payment reference number is required',
+    bankAccountPlaceholder: 'e.g. ICICI - 2404',
+    paymentRefPlaceholder: 'Enter NEFT/RTGS/IMPS UTR',
+  },
+  'Debit/Credit Card': {
+    requiresBankAccount: false,
+    requiresPaymentRef: true,
+    requiresCardNumber: true,
+    cardNumberLabel: 'Card No',
+    cardNumberMessage: 'Card number is required (e.g. ICICI - 2404)',
+    cardNumberPlaceholder: 'e.g. ICICI - 2404',
+    paymentRefLabel: 'Card Transaction Reference',
+    paymentRefMessage: 'Card transaction reference is required',
+    paymentRefPlaceholder: 'Auth code / approval code',
+  },
 };
 
 export const getPaymentMethodRules = (method) =>
   PAYMENT_METHOD_RULES[method] || PAYMENT_METHOD_RULES.Cash;
 
+/** Normalize issuer + last 4 to "ISSUER - 1234" (e.g. ICICI - 2404). */
+export const formatIssuerLast4 = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  const match = raw.match(/^(.+?)\s*[-–—]?\s*(\d{4})$/);
+  if (match) {
+    const issuer = match[1].trim().replace(/\s+/g, ' ').toUpperCase();
+    return `${issuer} - ${match[2]}`;
+  }
+
+  return raw.replace(/\s+/g, ' ').toUpperCase();
+};
+
+export const formatCardNumber = formatIssuerLast4;
+
 export const normalizeExpensePaymentFields = (data) => {
   if (!data) return { merType: null, paymentMethod: null };
 
   const merType = MER_ENTRY_TYPES.includes(data.merType) ? data.merType : data.merType || null;
+  const knownMethods = [...PAYMENT_METHOD_OPTIONS, ...LEGACY_PAYMENT_METHODS];
 
   if (merType) {
     return {
@@ -56,7 +151,7 @@ export const normalizeExpensePaymentFields = (data) => {
     };
   }
 
-  if (data.paymentMethod && PAYMENT_METHOD_OPTIONS.includes(data.paymentMethod)) {
+  if (data.paymentMethod && knownMethods.includes(data.paymentMethod)) {
     return { merType: null, paymentMethod: data.paymentMethod };
   }
 

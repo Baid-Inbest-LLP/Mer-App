@@ -1,9 +1,10 @@
 import { body, param } from 'express-validator';
 import {
   MER_ENTRY_TYPES,
-  PAYMENT_METHODS,
+  ALL_PAYMENT_METHODS,
   requiresBankAccount,
   requiresPaymentRef,
+  requiresCardNumber,
 } from '../constants/paymentMethods.js';
 
 const isDraftRequest = (req) => req.body?.isDraft === true || req.body?.isDraft === 'true';
@@ -12,13 +13,19 @@ const paymentReferenceRules = [
   body('bankAccountNumber').custom((value, { req }) => {
     if (isDraftRequest(req)) return true;
     if (!requiresBankAccount(req.body.paymentMethod)) return true;
-    if (!value?.trim()) throw new Error('Bank account number is required for bank payments');
+    if (!value?.trim()) throw new Error('From account is required (e.g. ICICI - 2404)');
     return true;
   }),
   body('paymentRefNumber').custom((value, { req }) => {
     if (isDraftRequest(req)) return true;
     if (!requiresPaymentRef(req.body.paymentMethod)) return true;
     if (!value?.trim()) throw new Error('Payment reference is required for the selected payment method');
+    return true;
+  }),
+  body('cardNumber').custom((value, { req }) => {
+    if (isDraftRequest(req)) return true;
+    if (!requiresCardNumber(req.body.paymentMethod)) return true;
+    if (!value?.trim()) throw new Error('Card number is required (e.g. ICICI - 2404)');
     return true;
   }),
 ];
@@ -74,7 +81,7 @@ const sharedBodyRules = [
   body('grossAmount').optional({ values: 'falsy' }).toFloat(),
   body('paymentMethod')
     .optional({ values: 'falsy' })
-    .isIn(PAYMENT_METHODS)
+    .isIn(ALL_PAYMENT_METHODS)
     .withMessage('Invalid payment method'),
   body('merType')
     .optional({ values: 'falsy' })
@@ -82,9 +89,11 @@ const sharedBodyRules = [
     .withMessage('Invalid MER type'),
   paymentStatusRule,
   body('useIGST').optional({ values: 'falsy' }),
+  body('hasBillOrReceipt').optional({ values: 'falsy' }),
   body('isDraft').optional({ values: 'falsy' }),
   body('paymentRefNumber').optional({ values: 'falsy' }).trim(),
   body('bankAccountNumber').optional({ values: 'falsy' }).trim(),
+  body('cardNumber').optional({ values: 'falsy' }).trim(),
 ];
 
 export const createExpenseValidator = [
@@ -139,12 +148,12 @@ export const createExpenseValidator = [
     .if((_, { req }) => !isDraftRequest(req))
     .notEmpty()
     .withMessage('Payment method is required')
-    .isIn(PAYMENT_METHODS)
+    .isIn(ALL_PAYMENT_METHODS)
     .withMessage('Invalid payment method'),
   body('paymentMethod')
     .if((_, { req }) => isDraftRequest(req))
     .optional({ values: 'falsy' })
-    .isIn(PAYMENT_METHODS)
+    .isIn(ALL_PAYMENT_METHODS)
     .withMessage('Invalid payment method'),
   body('merType')
     .if((_, { req }) => !isDraftRequest(req))
@@ -163,6 +172,7 @@ export const createExpenseValidator = [
   body('gstPercent').optional({ values: 'falsy' }).toFloat(),
   body('tds').optional({ values: 'falsy' }).toFloat(),
   body('useIGST').optional({ values: 'falsy' }),
+  body('hasBillOrReceipt').optional({ values: 'falsy' }),
 ];
 
 export const updateExpenseValidator = [

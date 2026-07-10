@@ -73,6 +73,7 @@ export const buildExpenseQuery = (query) => {
   } else if (merTypeParam === 'card' || merTypeParam === 'debit/credit card') {
     filter.$and = [...(filter.$and || []), {
       $or: [
+        { paymentMethod: 'Card' },
         { merType: 'Debit/Credit Card' },
         { merType: { $exists: false }, paymentMethod: 'Debit/Credit Card' },
       ],

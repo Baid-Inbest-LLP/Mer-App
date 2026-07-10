@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SimpleGrid } from '@mantine/core';
+import { SimpleGrid, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useSelector } from 'react-redux';
 import PageBanner from '../../components/common/PageBanner';
@@ -9,29 +9,21 @@ import EmptyState from '../../components/common/EmptyState';
 import { formatCurrency, formatDate, buildCustomizedReportFilename } from '../../utils/format';
 import { buildCompanySelectOptions } from '../../utils/companySelect';
 import { getRecentFinancialYearOptions } from '../../utils/financialYear';
+import { MER_ENTRY_TYPE_OPTIONS } from '../../utils/paymentMethods';
 import { reportApi } from '../../api/report.api';
 import { downloadBlob } from '../../utils/download';
-
-const MER_TYPE_OPTIONS = [
-  { value: 'BANK', label: 'Bank' },
-  { value: 'CASH', label: 'Cash' },
-  { value: 'UPI', label: 'UPI' },
-  { value: 'CARD', label: 'Debit/Credit Card' },
-];
-
-const MER_TYPE_LABEL = { BANK: 'Bank', CASH: 'Cash', UPI: 'UPI', CARD: 'Debit/Credit Card' };
 
 const FILTER_LABELS = {
   financialYear: 'FY',
   month: 'Month',
   company: 'Company',
+  coNames: 'Co Name',
   location: 'Location',
   expenseType: 'Expense Type',
   merType: 'MER Type',
 };
 
 const filterChipValue = (key, value, companyCodeByName = {}) => {
-  if (key === 'merType') return MER_TYPE_LABEL[value] || value;
   if (key === 'company') return companyCodeByName[value] || value;
   return value;
 };
@@ -63,6 +55,8 @@ export default function CustomizedReportPage() {
   const companyCode = (name) => companyCodeByName[name] || name || '—';
   const hasSelectedFY = Boolean(downloadFilters.financialYear);
   const optionalFiltersEnabled = hasSelectedFY;
+  const hasSelectedCompany = Boolean(downloadFilters.company);
+  const locationEnabled = optionalFiltersEnabled && hasSelectedCompany;
 
   const monthOptions = useMemo(
     () => (lookups?.months || []).map((m) => ({ value: m, label: m })),
@@ -77,12 +71,11 @@ export default function CustomizedReportPage() {
     [lookups?.currentFinancialYear],
   );
   const companyLocations = lookups?.companyLocations;
-  const allLocations = lookups?.locations;
   const locationOptions = useMemo(() => {
-    const scoped = downloadFilters.company && companyLocations?.[downloadFilters.company];
-    const list = scoped || allLocations;
-    return (list || []).map((l) => ({ value: l, label: l }));
-  }, [downloadFilters.company, companyLocations, allLocations]);
+    if (!downloadFilters.company) return [];
+    const scoped = companyLocations?.[downloadFilters.company] || [];
+    return scoped.map((l) => ({ value: l, label: l }));
+  }, [downloadFilters.company, companyLocations]);
   const expenseTypeOptions = useMemo(
     () => (lookups?.expenseTypes || []).map((t) => ({ value: t, label: t })),
     [lookups?.expenseTypes],
@@ -92,10 +85,7 @@ export default function CustomizedReportPage() {
     setDownloadFilters((prev) => {
       const next = { ...prev, [key]: value || undefined };
       if (key === 'company' && value !== prev.company) {
-        const valid = lookups?.companyLocations?.[value];
-        if (valid && prev.location && !valid.includes(prev.location)) {
-          next.location = undefined;
-        }
+        next.location = undefined;
       }
       return next;
     });
@@ -165,7 +155,7 @@ export default function CustomizedReportPage() {
         <div className="flex items-center gap-2 mb-3">
           <div>
             <p className="summary-head-report-subtitle text-sm text-gray-700">
-              Select a Financial Year (required), then optionally filter by Month, Company, Location, Expense Type, or MER Type.
+              Select a Financial Year (required), then optionally filter by Month, Company, Co Name, Expense Type, or MER Type. Location / Branch unlocks after you select a Company.
             </p>
           </div>
         </div>
@@ -195,11 +185,17 @@ export default function CustomizedReportPage() {
             value={downloadFilters.company || ''}
             onChange={(v) => updateFilter('company', v)}
           />
+          <TextInput
+            placeholder="Co name"
+            disabled={!optionalFiltersEnabled}
+            value={downloadFilters.coNames || ''}
+            onChange={(e) => updateFilter('coNames', e.target.value)}
+          />
           <FilterSelect
-            placeholder="Location / Branch"
+            placeholder={hasSelectedCompany ? 'Location / Branch' : 'Select company first'}
             clearable
             searchable
-            disabled={!optionalFiltersEnabled}
+            disabled={!locationEnabled}
             data={locationOptions}
             value={downloadFilters.location || ''}
             onChange={(v) => updateFilter('location', v)}
@@ -216,7 +212,7 @@ export default function CustomizedReportPage() {
             placeholder="MER type"
             clearable
             disabled={!optionalFiltersEnabled}
-            data={MER_TYPE_OPTIONS}
+            data={MER_ENTRY_TYPE_OPTIONS}
             value={downloadFilters.merType || ''}
             onChange={(v) => updateFilter('merType', v)}
           />

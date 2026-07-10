@@ -521,8 +521,12 @@ export const buildMetaPairsFromQuery = (query, companyCtx = {}) => {
       ['Location', query.location || 'All'],
     ],
     [
+      ['Co Name', query.coNames || 'All'],
       ['Expense Type', query.expenseType || 'All'],
+    ],
+    [
       ['Phone', companyCtx.phone || ''],
+      ['MER Type', query.merType || 'All'],
     ],
   ];
 

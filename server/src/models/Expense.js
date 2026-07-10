@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { getFinancialYear } from '../config/index.js';
-import { MER_TYPES, PAYMENT_METHODS } from '../constants/paymentMethods.js';
+import { MER_TYPES, ALL_PAYMENT_METHODS } from '../constants/paymentMethods.js';
 
 const expenseSchema = new mongoose.Schema(
   {
@@ -29,8 +29,11 @@ const expenseSchema = new mongoose.Schema(
     paymentDate: { type: Date },
     paymentRefNumber: { type: String, trim: true },
     bankAccountNumber: { type: String, trim: true },
+    cardNumber: { type: String, trim: true },
     merType: { type: String, enum: MER_TYPES },
-    paymentMethod: { type: String, enum: PAYMENT_METHODS },
+    paymentMethod: { type: String, enum: ALL_PAYMENT_METHODS },
+    hasBillOrReceipt: { type: Boolean, default: false },
+    useIGST: { type: Boolean, default: false },
     status: { type: String, enum: ['Paid', 'Pending', 'Cancelled'], default: 'Pending' },
     approvalStatus: {
       type: String,
@@ -81,8 +84,8 @@ expenseSchema.pre('save', function setDerivedFields(next) {
   if (!this.month && this.invoiceDate) {
     this.month = new Date(this.invoiceDate).toLocaleString('en-US', { month: 'long' });
   }
-  if (!this.merType && this.paymentMethod && PAYMENT_METHODS.includes(this.paymentMethod)) {
-    this.merType = this.paymentMethod;
+  if (!this.merType && this.paymentMethod) {
+    this.merType = this.paymentMethod === 'Cash' ? 'Cash' : 'Bank';
   }
   next();
 });

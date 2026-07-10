@@ -120,14 +120,20 @@ const asSegment = (value) => {
   return trimmed || null;
 };
 
+const asCoNameSegment = (value) => {
+  const trimmed = String(value || '').trim();
+  return trimmed ? trimmed.replace(/\s+/g, '').toUpperCase() : null;
+};
+
 /**
- * MER/{companyCode}/{location}/{expenseType}/{merType}/{fy}/{month}
+ * MER/{companyCode}/{coName}/{location}/{expenseType}/{merType}/{fy}/{month}
  * Only segments provided by the user are included (financial year is required).
  */
 export const buildCustomizedReportNo = ({
   financialYear,
   month,
   companyCode,
+  coNames,
   location,
   expenseType,
   merType,
@@ -137,12 +143,14 @@ export const buildCustomizedReportNo = ({
 
   const segments = ['MER'];
   const code = asSegment(companyCode);
+  const coName = asCoNameSegment(coNames);
   const branch = location ? toLocationLabel(location) : null;
   const type = asSegment(expenseType);
   const mer = asSegment(merType)?.toUpperCase() || null;
   const monthLabel = month ? abbreviateMonthName(month) : null;
 
   if (code) segments.push(code);
+  if (coName) segments.push(coName);
   if (branch) segments.push(branch);
   if (type) segments.push(type);
   if (mer) segments.push(mer);
@@ -175,6 +183,7 @@ export const resolveCustomizedReportMeta = async (query, Company) => {
     financialYear: query.financialYear || getFinancialYear(),
     month: query.month,
     companyCode,
+    coNames: query.coNames,
     location: query.location,
     expenseType: query.expenseType,
     merType: query.merType,

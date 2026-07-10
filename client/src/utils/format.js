@@ -260,11 +260,11 @@ const abbreviateMonth = (month) => {
 };
 
 /**
- * MER/{companyCode}/{location}/{expenseType}/{merType}/{fy}/{month}
+ * MER/{companyCode}/{coName}/{location}/{expenseType}/{merType}/{fy}/{month}
  * Only includes filter segments provided by the user (financial year required).
  */
 export const buildCustomizedReportNo = (params, companyCodeByName = {}) => {
-  const { financialYear, month, company, location, expenseType, merType } = params;
+  const { financialYear, month, company, coNames, location, expenseType, merType } = params;
   if (!financialYear) return null;
 
   const [start, end] = String(financialYear).split('-');
@@ -272,6 +272,7 @@ export const buildCustomizedReportNo = (params, companyCodeByName = {}) => {
   const segments = ['MER'];
 
   if (company && companyCodeByName[company]) segments.push(companyCodeByName[company]);
+  if (coNames) segments.push(String(coNames).trim().replace(/\s+/g, '').toUpperCase());
   if (location) segments.push(String(location).trim().replace(/\s+/g, '').toUpperCase());
   if (expenseType) segments.push(String(expenseType).trim());
   if (merType) segments.push(String(merType).trim().toUpperCase());

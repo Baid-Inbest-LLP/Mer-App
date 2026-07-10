@@ -348,12 +348,26 @@ export default function ExpenseViewPage() {
             >
               <DetailRow label="Net Amount" value={formatCurrency(e.netAmount)} />
               <DetailRow label="GST %" value={`${e.gstPercent}%`} />
-              <DetailRow label="Total GST" value={formatCurrency(e.totalGST)} />
+              {e.useIGST || Number(e.igst) > 0 ? (
+                <DetailRow label="IGST" value={formatCurrency(e.igst)} />
+              ) : (
+                <DetailRow label="Total GST" value={formatCurrency(e.totalGST)} />
+              )}
               <DetailRow label="TDS" value={formatCurrency(e.tds)} />
               <DetailRow label="Gross Amount" value={formatCurrency(e.grossAmount)} />
               <DetailRow label="Payment Date" value={formatDate(e.paymentDate)} />
+              <DetailRow
+                label="Bill / Receipt"
+                value={e.hasBillOrReceipt ? 'Available' : 'Not available'}
+              />
               {e.bankAccountNumber ? (
-                <DetailRow label="Bank Account" value={e.bankAccountNumber} />
+                <DetailRow
+                  label={paymentRules.bankAccountLabel || 'From Account'}
+                  value={e.bankAccountNumber}
+                />
+              ) : null}
+              {e.cardNumber ? (
+                <DetailRow label="Card No" value={e.cardNumber} />
               ) : null}
               <DetailRow
                 label={paymentRules.paymentRefLabel || 'Payment Ref'}
@@ -402,6 +416,14 @@ export default function ExpenseViewPage() {
                             </span>
                             <span className="expense-summary-list-value text-gray-700 text-md capitalize font-semibold">{e.coNames ? e.coNames : '—'}</span>
                           </li>
+                          <li className="flex items-center justify-between gap-4 py-2.5">
+                            <span className="expense-summary-list-label text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
+                              Bill / Receipt:
+                            </span>
+                            <span className="expense-summary-list-value text-gray-700 text-md capitalize font-semibold">
+                              {e.hasBillOrReceipt ? 'Available' : 'Not available'}
+                            </span>
+                          </li>
                         </ul>
                       </div>
                     </div>
@@ -421,10 +443,17 @@ export default function ExpenseViewPage() {
                     <span className="expense-totals-row-label text-gray-500 font-medium">Net Amount</span>
                     <span className="expense-totals-row-value font-bold text-gray-800 text-base">{formatCurrency(e.netAmount)}</span>
                   </div>
-                  <div className="flex justify-between items-center text-sm py-1">
-                    <span className="expense-totals-row-label text-gray-500 font-medium">Total GST</span>
-                    <span className="expense-totals-row-value-gst font-bold text-emerald-700 text-base">{formatCurrency(e.totalGST)}</span>
-                  </div>
+                  {e.useIGST || Number(e.igst) > 0 ? (
+                    <div className="flex justify-between items-center text-sm py-1">
+                      <span className="expense-totals-row-label text-gray-500 font-medium">IGST</span>
+                      <span className="expense-totals-row-value-gst font-bold text-emerald-700 text-base">{formatCurrency(e.igst)}</span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center text-sm py-1">
+                      <span className="expense-totals-row-label text-gray-500 font-medium">Total GST</span>
+                      <span className="expense-totals-row-value-gst font-bold text-emerald-700 text-base">{formatCurrency(e.totalGST)}</span>
+                    </div>
+                  )}
                   {Number(e.tds) > 0 && (
                     <div className="flex justify-between items-center text-sm py-1">
                       <span className="expense-totals-row-label text-gray-500 font-medium">TDS</span>
