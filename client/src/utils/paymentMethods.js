@@ -11,34 +11,20 @@ export const MER_ENTRY_TYPE_OPTIONS = MER_ENTRY_TYPES.map((value) => ({
   label: value,
 }));
 
-/** Dummy payer bank accounts for NEFT / RTGS / IMPS. */
-export const FROM_ACCOUNT_OPTIONS = [
-  'ICICI - 2404',
-  'HDFC - 7812',
-  'SBI - 3356',
-  'AXIS - 9021',
-  'KOTAK - 4488',
-].map((value) => ({ value, label: value }));
-
-/** Dummy cards for Card payments. */
-export const CARD_NUMBER_OPTIONS = [
-  'ICICI - 2404',
-  'HDFC - 1190',
-  'SBI - 6677',
-  'AXIS - 5543',
-  'AMEX - 3001',
-].map((value) => ({ value, label: value }));
-
+/** Build select options from lookup lists; keep current value if missing (legacy rows). */
 const withCurrentOption = (options, current) => {
   if (!current || options.some((opt) => opt.value === current)) return options;
   return [{ value: current, label: current }, ...options];
 };
 
-export const getFromAccountOptions = (current) =>
-  withCurrentOption(FROM_ACCOUNT_OPTIONS, current);
+const toSelectOptions = (values = []) =>
+  (values || []).filter(Boolean).map((value) => ({ value, label: value }));
 
-export const getCardNumberOptions = (current) =>
-  withCurrentOption(CARD_NUMBER_OPTIONS, current);
+export const getFromAccountOptions = (current, bankAccounts = []) =>
+  withCurrentOption(toSelectOptions(bankAccounts), current);
+
+export const getCardNumberOptions = (current, cards = []) =>
+  withCurrentOption(toSelectOptions(cards), current);
 
 export const PAYMENT_METHOD_RULES = {
   UPI: {

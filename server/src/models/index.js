@@ -5,3 +5,5 @@ export { Company } from './Company.js';
 export { Location } from './Location.js';
 export { ExpenseHead } from './ExpenseHead.js';
 export { FinancialYear } from './FinancialYear.js';
+export { BankAccount } from './BankAccount.js';
+export { Card } from './Card.js';

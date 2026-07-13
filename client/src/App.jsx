@@ -14,7 +14,7 @@ import MonthlyReportPage from './pages/reports/MonthlyReportPage';
 import FinancialYearReportPage from './pages/reports/FinancialYearReportPage';
 import CustomizedReportPage from './pages/reports/CustomizedReportPage';
 import SettingsPage from './pages/settings/SettingsPage';
-import CompanyListPage from './pages/companies/CompanyListPage';
+import ControlCenterPage from './pages/control-center/ControlCenterPage';
 import ExpenseViewSkeleton from './components/common/ExpenseViewSkeleton';
 import ReportDetailSkeleton from './components/common/ReportDetailSkeleton';
 
@@ -79,7 +79,8 @@ export default function App() {
               <FinancialYearDetailPage />
             </Suspense>
           } />
-          <Route path="companies" element={<CompanyListPage />} />
+          <Route path="control-center/*" element={<ControlCenterPage />} />
+          <Route path="companies" element={<Navigate to="/control-center/companies" replace />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

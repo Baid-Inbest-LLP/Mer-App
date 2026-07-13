@@ -218,13 +218,13 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
   }, [initialData?.paymentMethod]);
 
   const fromAccountOptions = useMemo(
-    () => getFromAccountOptions(initialData?.bankAccountNumber),
-    [initialData?.bankAccountNumber],
+    () => getFromAccountOptions(initialData?.bankAccountNumber, lookups?.bankAccounts),
+    [initialData?.bankAccountNumber, lookups?.bankAccounts],
   );
 
   const cardNumberOptions = useMemo(
-    () => getCardNumberOptions(initialData?.cardNumber),
-    [initialData?.cardNumber],
+    () => getCardNumberOptions(initialData?.cardNumber, lookups?.cards),
+    [initialData?.cardNumber, lookups?.cards],
   );
 
   const activeCompanies = useMemo(

@@ -6,6 +6,8 @@ import reportRoutes from './report.routes.js';
 import analyticsRoutes from './analytics.routes.js';
 import masterRoutes from './master.routes.js';
 import companyRoutes from './company.routes.js';
+import bankAccountRoutes from './bankAccount.routes.js';
+import cardRoutes from './card.routes.js';
 
 const router = Router();
 
@@ -20,5 +22,7 @@ router.use('/reports', reportRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/masters', masterRoutes);
 router.use('/companies', companyRoutes);
+router.use('/bank-accounts', bankAccountRoutes);
+router.use('/cards', cardRoutes);
 
 export default router;

@@ -7,9 +7,10 @@ import CompanyForm from './CompanyForm';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import PageBanner from '../../components/common/PageBanner';
 import Skeleton, { SkeletonText } from '../../components/common/Skeleton';
+import ControlCenterToolbar from '../control-center/ControlCenterToolbar';
 import { isAdmin } from '../../constants/roles';
 
-export default function CompanyListPage() {
+export default function CompanyListPage({ embedded = false }) {
   const dispatch = useDispatch();
   const { companies = [], total = 0, loading = false, error } = useSelector(
     (state) => state.companies ?? {},
@@ -51,27 +52,44 @@ export default function CompanyListPage() {
     dispatch(fetchLookups());
   };
 
+  const subtitle = `Legal entities and branch locations · ${total} compan${total !== 1 ? 'ies' : 'y'}`;
+
   return (
     <div>
-      <PageBanner
-        className="mb-4"
-        title="Companies"
-        subtitle={`Legal entities and branch locations · ${total} compan${total !== 1 ? 'ies' : 'y'}`}
-        action={
-          canManage
-            ? { onClick: () => setShowForm(true), label: 'Add Company' }
-            : undefined
-        }
-      />
-
-      <div className="card p-4 mb-4 flex justify-end">
-        <input
-          className="input-field max-w-sm"
-          placeholder="Search companies..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+      {!embedded && (
+        <PageBanner
+          className="mb-4"
+          title="Companies"
+          subtitle={subtitle}
+          action={
+            canManage
+              ? { onClick: () => setShowForm(true), label: 'Add Company' }
+              : undefined
+          }
         />
-      </div>
+      )}
+
+      {embedded ? (
+        <ControlCenterToolbar
+          title="Companies"
+          subtitle={subtitle}
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search companies..."
+          showAction={canManage}
+          actionLabel="Add Company"
+          onAction={() => setShowForm(true)}
+        />
+      ) : (
+        <div className="card p-4 mb-4 flex justify-end">
+          <input
+            className="input-field max-w-sm"
+            placeholder="Search companies..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      )}
 
       {error && (
         <div className="card p-4 mb-4 company-error-alert">

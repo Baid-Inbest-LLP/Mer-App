@@ -1,41 +1,54 @@
 import ExcelJS from 'exceljs';
-import { readAssetBuffer, readWatermarkBuffer } from './assetLoader.js';
+import { readAssetBuffer } from './assetLoader.js';
 import { amountToWordsINR } from './amountToWords.js';
 
 const DATA_FIRST_COL = 2; // B
-const DATA_LAST_COL = 16; // P (15 data columns)
+const DATA_LAST_COL = 20; // T (19 data columns)
 const DATA_COL_COUNT = DATA_LAST_COL - DATA_FIRST_COL + 1;
 const INR_FMT = '"₹" #,##0';
 const TEXT_FMT = '@';
-const MIN_MONEY_COL_WIDTH = 20;
+const MIN_MONEY_COL_WIDTH = 16;
 const MIN_MER_NO_COL_WIDTH = 36;
-const SINGLE_LINE_HEADERS = new Set(['Invoice Date', 'Expense Type', 'Payment Method']);
+const LEFT_ALIGN_HEADERS = new Set(['Co\nName', 'Particulars']);
 
-/** Column widths for A–Q (gap + 15 data cols + gap). Money cols K–N are wider. */
+/** Column widths for A–U (gap + 19 data cols + gap). */
 const SHEET_COLUMN_WIDTHS = [
   2,  // A gap
   8,  // B S.No
-  36, // C Expense No
-  18, // D Invoice Date
-  12, // E Month
-  22, // F Company
-  24, // G Co Name
-  24, // H Head of Expense
-  36, // I Particulars
-  18, // J Expense Type
-  20, // K Net Amount
-  20, // L Total GST
-  18, // M TDS
-  22, // N Gross Amount
-  24, // O Payment Method
-  18, // P Approval Status / grand-total amount
-  2,  // Q gap
+  10, // C Exp Type
+  10, // D Month
+  22, // E Co Name
+  10, // F Location
+  12, // G Invoice Date
+  18, // H Invoice No
+  18, // I Head of Exp
+  36, // J Particulars
+  12, // K Net Amt
+  10, // L CGST
+  10, // M SGST
+  10, // N IGST
+  12, // O Total GST
+  10, // P TDS
+  12, // Q Gross Amt
+  10, // R Paid By
+  18, // S Payment Method
+  12, // T Payment Date
+  2,  // U gap
 ];
 
 const HEADER_MIN_WIDTHS = {
-  'Invoice Date': 18,
-  'Expense Type': 18,
-  'Payment Method': 24,
+  'Exp\nType': 10,
+  'Co\nName': 18,
+  'Invoice\nDate': 12,
+  'Invoice\nNo': 18,
+  'Head of\nExp': 18,
+  Particulars: 36,
+  'Net\nAmt': 12,
+  'Total\nGST': 12,
+  'Gross\nAmt': 12,
+  'Paid\nBy': 10,
+  'Payment\nMethod': 18,
+  'Payment\nDate': 12,
 };
 
 const fmtDateDMY = (d) => {
@@ -66,23 +79,6 @@ const formatAddressOneLine = (value) =>
     .trim()
     .replace(/[\r\n]+/g, ', ')
     .replace(/\s+/g, ' ');
-
-const getMetaColumnSplit = () => {
-  const widths = SHEET_COLUMN_WIDTHS.slice(DATA_FIRST_COL - 1, DATA_LAST_COL);
-  const totalWidth = widths.reduce((sum, w) => sum + w, 0);
-  const target = totalWidth / 2;
-
-  let cumulative = 0;
-  let leftEndCol = DATA_FIRST_COL;
-  for (let i = 0; i < widths.length; i += 1) {
-    cumulative += widths[i];
-    leftEndCol = DATA_FIRST_COL + i;
-    if (cumulative >= target) break;
-  }
-
-  const rightStartCol = Math.min(leftEndCol + 1, DATA_LAST_COL);
-  return { leftEndCol, rightStartCol };
-};
 
 const panelSplit = () => {
   const third = Math.floor(DATA_COL_COUNT / 3);
@@ -132,8 +128,14 @@ const resolveTextColIndices = (headers, textColIndices = []) => {
   return [...cols];
 };
 
-const resolveSingleLineColIndices = (headers) =>
-  headers.map((header, index) => (SINGLE_LINE_HEADERS.has(header) ? index : -1)).filter((i) => i >= 0);
+const resolveLeftAlignColIndices = (headers) =>
+  headers.map((header, index) => (LEFT_ALIGN_HEADERS.has(header) ? index : -1)).filter((i) => i >= 0);
+
+const resolveCellHorizontal = (index, moneyColIndices, leftAlignCols) => {
+  if (moneyColIndices.includes(index)) return 'right';
+  if (leftAlignCols.has(index)) return 'left';
+  return 'center';
+};
 
 const ensureHeaderColumnWidths = (ws, headers) => {
   headers.forEach((header, index) => {
@@ -153,29 +155,15 @@ const ensureMoneyColumnWidths = (ws, moneyColIndices = []) => {
   grandTotalCol.width = Math.max(grandTotalCol.width || 0, MIN_MONEY_COL_WIDTH);
 };
 
-const addWatermark = (wb, ws, { tableStartRow = 14, tableEndRow = 30 } = {}) => {
-  const watermarkPng = readWatermarkBuffer();
-  if (!watermarkPng) return;
-
-  const imageId = wb.addImage({ buffer: watermarkPng, extension: 'png' });
-  const centerCol = (DATA_FIRST_COL + DATA_LAST_COL) / 2;
-  const centerRow = (tableStartRow + tableEndRow) / 2;
-
-  ws.addImage(imageId, {
-    tl: { col: centerCol - 4.5, row: centerRow - 2 },
-    ext: { width: 640, height: 140 },
-  });
-};
-
 const renderBrandedHeader = (ws, wb, companyCtx) => {
   const { leftStart, leftEnd, centerStart, centerEnd, rightStart, rightEnd } = panelSplit();
   const companyCode = companyCtx?.companyCode || 'INBEST';
   const taxId = companyCtx?.taxId || '';
 
   let r = 1;
-  ws.getRow(r).height = 26;
-  ws.getRow(r + 1).height = 26;
-  ws.getRow(r + 2).height = 26;
+  ws.getRow(r).height = 28;
+  ws.getRow(r + 1).height = 28;
+  ws.getRow(r + 2).height = 28;
 
   ws.mergeCells(`${colLetter(leftStart)}${r}:${colLetter(leftEnd)}${r + 2}`);
   ws.mergeCells(`${colLetter(centerStart)}${r}:${colLetter(centerEnd)}${r + 2}`);
@@ -198,15 +186,15 @@ const renderBrandedHeader = (ws, wb, companyCtx) => {
   ws.getCell(r, centerStart).alignment = { vertical: 'middle', horizontal: 'center' };
   ws.getCell(r, rightStart).alignment = { vertical: 'middle', horizontal: 'center' };
 
-  const shreePng = readAssetBuffer('shree_red.png');
+  const shreePng = readAssetBuffer('Shree_black.png');
   const inbestPng = readAssetBuffer('Inbest_Logo(Blue).png');
   const sheetCenterCol = (DATA_FIRST_COL + DATA_LAST_COL) / 2;
 
   if (shreePng) {
     const shreeImgId = wb.addImage({ buffer: shreePng, extension: 'png' });
     ws.addImage(shreeImgId, {
-      tl: { col: sheetCenterCol - 0.02, row: 1.05 },
-      ext: { width: 90, height: 48 },
+      tl: { col: sheetCenterCol - 0.15, row: 0.85 },
+      ext: { width: 120, height: 72 },
     });
   } else {
     const shreeCell = ws.getCell(r, Math.round(sheetCenterCol));
@@ -218,8 +206,8 @@ const renderBrandedHeader = (ws, wb, companyCtx) => {
   if (inbestPng) {
     const inbestImgId = wb.addImage({ buffer: inbestPng, extension: 'png' });
     ws.addImage(inbestImgId, {
-      tl: { col: DATA_LAST_COL - 0.85, row: 0.95 },
-      br: { col: DATA_LAST_COL + 0.01, row: 2.2 },
+      tl: { col: DATA_LAST_COL - 1.15, row: 0.75 },
+      br: { col: DATA_LAST_COL + 0.05, row: 2.95 },
     });
   } else {
     const inbestCell = ws.getCell(r, rightEnd);
@@ -250,36 +238,6 @@ const renderTitleBlock = (ws, r, { title, reportNo }) => {
   return r + 1;
 };
 
-const renderMetaBlock = (ws, r, metaPairs) => {
-  const { leftEndCol, rightStartCol } = getMetaColumnSplit();
-
-  metaPairs.forEach(([left, right]) => {
-    const [lLabel, lValue] = left;
-    const [rLabel, rValue] = right;
-    ws.mergeCells(`${colLetter(DATA_FIRST_COL)}${r}:${colLetter(leftEndCol)}${r}`);
-    ws.mergeCells(`${colLetter(rightStartCol)}${r}:${colLetter(DATA_LAST_COL)}${r}`);
-
-    ws.getCell(r, DATA_FIRST_COL).value = {
-      richText: [
-        { font: { name: 'Calibri', size: 13, bold: true }, text: lLabel ? `${lLabel}: ` : '' },
-        { font: { name: 'Calibri', size: 13 }, text: lValue || '' },
-      ],
-    };
-    ws.getCell(r, rightStartCol).value = {
-      richText: [
-        { font: { name: 'Calibri', size: 13, bold: true }, text: rLabel ? `${rLabel}: ` : '' },
-        { font: { name: 'Calibri', size: 13 }, text: rValue || '' },
-      ],
-    };
-    ws.getCell(r, DATA_FIRST_COL).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-    ws.getCell(r, rightStartCol).alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-    ws.getRow(r).height = 22;
-    r += 1;
-  });
-
-  return r;
-};
-
 const renderTable = (ws, r, {
   headers,
   rows,
@@ -294,21 +252,21 @@ const renderTable = (ws, r, {
   const colSpan = headers.length;
   const tableEndCol = DATA_FIRST_COL + colSpan - 1;
   const allTextCols = new Set(resolveTextColIndices(headers, textColIndices));
-  const singleLineCols = new Set(resolveSingleLineColIndices(headers));
+  const leftAlignCols = new Set(resolveLeftAlignColIndices(headers));
 
   headers.forEach((h, i) => {
     const c = ws.getCell(r, DATA_FIRST_COL + i);
     c.value = h;
-    c.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    c.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
     c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF005887' } };
     c.alignment = {
       horizontal: 'center',
       vertical: 'middle',
-      wrapText: !singleLineCols.has(i),
+      wrapText: true,
     };
     border(c);
   });
-  ws.getRow(r).height = 32;
+  ws.getRow(r).height = 36;
   r += 1;
 
   rows.forEach((rowVals) => {
@@ -316,6 +274,7 @@ const renderTable = (ws, r, {
       const c = ws.getCell(r, DATA_FIRST_COL + i);
       const isMoney = moneyColIndices.includes(i);
       const isText = allTextCols.has(i);
+      const isLeft = leftAlignCols.has(i);
       c.value = isMoney ? toNumericAmount(v) : isText ? toTextCell(v) : v;
       c.font = {
         name: 'Calibri',
@@ -324,13 +283,10 @@ const renderTable = (ws, r, {
         ...(i === gstColIndex ? { color: { argb: 'FF047857' }, bold: true } : {}),
         ...(i === totalColIndex ? { bold: true } : {}),
       };
-      const isCenter = i === 0;
-      const singleLine = singleLineCols.has(i);
       c.alignment = {
-        horizontal: isMoney ? 'right' : isCenter ? 'center' : 'left',
+        horizontal: resolveCellHorizontal(i, moneyColIndices, leftAlignCols),
         vertical: 'middle',
-        wrapText: isText ? !singleLine : false,
-        shrinkToFit: isText && !singleLine,
+        wrapText: isLeft,
       };
       if (isMoney) c.numFmt = INR_FMT;
       if (isText) c.numFmt = TEXT_FMT;
@@ -357,7 +313,7 @@ const renderTable = (ws, r, {
         c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
       }
       c.alignment = {
-        horizontal: isMoney ? 'right' : i === 0 ? 'center' : 'left',
+        horizontal: resolveCellHorizontal(i, moneyColIndices, leftAlignCols),
         vertical: 'middle',
       };
       if (isMoney) c.numFmt = INR_FMT;
@@ -452,7 +408,6 @@ export const buildMerStyledSheet = (wb, {
   sheetName,
   title,
   reportNo,
-  metaPairs,
   headers,
   rows,
   totalsRow,
@@ -470,7 +425,6 @@ export const buildMerStyledSheet = (wb, {
   const ws = createStyledSheet(wb, sheetName);
   let r = renderBrandedHeader(ws, wb, companyCtx);
   r = renderTitleBlock(ws, r, { title, reportNo });
-  r = renderMetaBlock(ws, r, metaPairs);
   ws.pageSetup.printTitlesRow = `1:${r - 1}`;
   r += 1;
 
@@ -495,11 +449,6 @@ export const buildMerStyledSheet = (wb, {
 
   renderFooter(ws, r, footerAddress);
 
-  addWatermark(wb, ws, {
-    tableStartRow: tableResult.tableStartRow,
-    tableEndRow: Math.max(tableResult.tableEndRow, r - 1),
-  });
-
   return ws;
 };
 
@@ -508,29 +457,6 @@ export const createMerWorkbook = () => {
   wb.creator = 'MER System';
   wb.created = new Date();
   return wb;
-};
-
-export const buildMetaPairsFromQuery = (query, companyCtx = {}) => {
-  const pairs = [
-    [
-      ['Financial Year', query.financialYear || 'All'],
-      ['Company', query.company || companyCtx.companyName || 'All'],
-    ],
-    [
-      ['Month', query.month || 'All'],
-      ['Location', query.location || 'All'],
-    ],
-    [
-      ['Co Name', query.coNames || 'All'],
-      ['Expense Type', query.expenseType || 'All'],
-    ],
-    [
-      ['Phone', companyCtx.phone || ''],
-      ['MER Type', query.merType || 'All'],
-    ],
-  ];
-
-  return pairs;
 };
 
 export const buildDetailTitle = (query) => {

@@ -1,7 +1,16 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { PAYMENT_METHODS } from '../constants/paymentMethods.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
-import { Vendor, Company, Location, ExpenseHead, FinancialYear, User } from '../models/index.js';
+import {
+  Vendor,
+  Company,
+  Location,
+  ExpenseHead,
+  FinancialYear,
+  User,
+  BankAccount,
+  Card,
+} from '../models/index.js';
 import { EXPENSE_HEADS, getFinancialYear, APPROVAL_STATUSES, USER_ROLES } from '../config/index.js';
 import { normalizeBranchLabel } from '../utils/locationFormat.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -37,7 +46,7 @@ export const locationController = crud(Location, 'Location');
 export const expenseHeadController = crud(ExpenseHead, 'Expense head');
 
 export const getLookupData = asyncHandler(async (_req, res) => {
-  const [vendors, companies, locationDocs, heads] = await Promise.all([
+  const [vendors, companies, locationDocs, heads, bankAccounts, cards] = await Promise.all([
     Vendor.find({ isActive: true }).select('name').sort({ name: 1 }).lean(),
     Company.find({ isActive: true }).select('name code').sort({ name: 1 }).lean(),
     Location.find({ isActive: true })
@@ -46,6 +55,8 @@ export const getLookupData = asyncHandler(async (_req, res) => {
       .sort({ label: 1 })
       .lean(),
     ExpenseHead.find({ isActive: true }).select('name').sort({ name: 1 }).lean(),
+    BankAccount.find({ isActive: true }).select('bankName last4').sort({ bankName: 1, last4: 1 }).lean(),
+    Card.find({ isActive: true }).select('issuer last4').sort({ issuer: 1, last4: 1 }).lean(),
   ]);
 
   const companyLocations = {};
@@ -74,6 +85,8 @@ export const getLookupData = asyncHandler(async (_req, res) => {
     expenseHeads: heads.length ? heads.map((h) => h.name) : EXPENSE_HEADS,
     expenseTypes: ['Capital', 'Revenue'],
     paymentMethods: PAYMENT_METHODS,
+    bankAccounts: bankAccounts.map((b) => `${b.bankName} - ${b.last4}`),
+    cards: cards.map((c) => `${c.issuer} - ${c.last4}`),
     statuses: ['Paid', 'Pending', 'Cancelled'],
     approvalStatuses: APPROVAL_STATUSES,
     roles: USER_ROLES,

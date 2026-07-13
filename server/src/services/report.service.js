@@ -15,7 +15,6 @@ import { reportMerTypeAddFieldsStage, REPORT_MER_TYPES } from '../utils/reportMe
 import {
   buildDetailTitle,
   buildMerStyledSheet,
-  buildMetaPairsFromQuery,
   createMerWorkbook,
   fmtDateDMY,
 } from '../utils/excelGenerator.js';
@@ -448,54 +447,78 @@ export const getMonthlyDetailedReport = async (query) => {
 
 const DETAIL_HEADERS = [
   'S.No',
-  'Expense No',
-  'Invoice Date',
+  'Exp\nType',
   'Month',
-  'Company',
-  'Co Name',
-  'Head of Expense',
+  'Co\nName',
+  'Location',
+  'Invoice\nDate',
+  'Invoice\nNo',
+  'Head of\nExp',
   'Particulars',
-  'Expense Type',
-  'Net Amount',
-  'Total GST',
+  'Net\nAmt',
+  'CGST',
+  'SGST',
+  'IGST',
+  'Total\nGST',
   'TDS',
-  'Gross Amount',
-  'Payment Method',
-  'Approval Status',
+  'Gross\nAmt',
+  'Paid\nBy',
+  'Payment\nMethod',
+  'Payment\nDate',
 ];
+
+const formatExpenseType = (expenseType) => {
+  if (expenseType === 'Capital') return 'CE';
+  if (expenseType === 'Revenue') return 'RE';
+  return expenseType || '';
+};
 
 export const generateMonthlyExcel = async (query) => {
   const filter = buildExpenseQuery(query);
 
-  const [entries, meta, companyCtx] = await Promise.all([
+  const [entries, meta, companyCtx, companies] = await Promise.all([
     Expense.find(baseMatch(filter)).sort({ invoiceDate: 1 }).lean(),
     resolveDetailReportMeta(query, Company),
     resolveCompanyContext(query),
+    Company.find({}).select('name code').lean(),
   ]);
   const { reportNo, filename } = meta;
 
-  const totals = { net: 0, gst: 0, tds: 0, gross: 0 };
+  const companyCodeByName = new Map(
+    companies.map((c) => [c.name, c.code || c.name]),
+  );
+  const resolveCompanyCode = (name) => companyCodeByName.get(name) || name || '';
+
+  const totals = { net: 0, cgst: 0, sgst: 0, igst: 0, gst: 0, tds: 0, gross: 0 };
   const rows = entries.map((e, index) => {
     totals.net += e.netAmount || 0;
+    totals.cgst += e.cgst || 0;
+    totals.sgst += e.sgst || 0;
+    totals.igst += e.igst || 0;
     totals.gst += e.totalGST || 0;
     totals.tds += e.tds || 0;
     totals.gross += e.grossAmount || 0;
+    const companyCode = resolveCompanyCode(e.company);
     return [
       index + 1,
-      e.slNo || '',
-      fmtDateDMY(e.invoiceDate),
+      formatExpenseType(e.expenseType),
       e.month || '',
-      e.company || '',
       e.coNames || '',
+      toLocationLabel(e.location),
+      fmtDateDMY(e.invoiceDate),
+      e.invoiceNo || '',
       e.headOfExpense || '',
       e.particulars || '',
-      e.expenseType || '',
       e.netAmount || 0,
+      e.cgst || 0,
+      e.sgst || 0,
+      e.igst || 0,
       e.totalGST || 0,
       e.tds || 0,
       e.grossAmount || 0,
+      companyCode,
       e.paymentMethod || e.merType || '',
-      e.approvalStatus || '',
+      fmtDateDMY(e.paymentDate),
     ];
   });
 
@@ -510,9 +533,13 @@ export const generateMonthlyExcel = async (query) => {
     '',
     `${entries.length} entries`,
     totals.net,
+    totals.cgst,
+    totals.sgst,
+    totals.igst,
     totals.gst,
     totals.tds,
     totals.gross,
+    '',
     '',
     '',
   ];
@@ -524,17 +551,16 @@ export const generateMonthlyExcel = async (query) => {
     sheetName: monthLabel,
     title: buildDetailTitle(query),
     reportNo,
-    metaPairs: buildMetaPairsFromQuery(query, companyCtx),
     headers: DETAIL_HEADERS,
     rows,
     totalsRow,
     grandTotal: totals.gross,
     footerAddress: companyCtx.address,
     companyCtx,
-    moneyColIndices: [9, 10, 11, 12],
-    gstColIndex: 10,
-    tdsColIndex: 11,
-    totalColIndex: 12,
+    moneyColIndices: [9, 10, 11, 12, 13, 14, 15],
+    gstColIndex: 13,
+    tdsColIndex: 14,
+    totalColIndex: 15,
   });
 
   return { workbook, filename };
@@ -549,14 +575,12 @@ export const generateSummaryExcel = async (query) => {
   ]);
 
   const workbook = createMerWorkbook();
-  const metaPairs = buildMetaPairsFromQuery(query, companyCtx);
   const footerAddress = companyCtx.address;
 
   buildMerStyledSheet(workbook, {
     sheetName: 'Summary',
     title: 'MER Summary Report',
     reportNo: '',
-    metaPairs,
     headers: ['Metric', 'Value'],
     rows: [
       ['Total Net', summary.totalNetAmount],
@@ -590,7 +614,6 @@ export const generateSummaryExcel = async (query) => {
     sheetName: 'Expense Heads',
     title: 'MER Expense Head Report',
     reportNo: '',
-    metaPairs,
     headers: ['Head', 'Net', 'GST', 'TDS', 'Gross', 'Count'],
     rows: headSummary.map((h) => [h._id, h.net, h.gst, h.tds, h.gross, h.count]),
     totalsRow: ['Totals', headTotals.net, headTotals.gst, headTotals.tds, headTotals.gross, headTotals.count],
@@ -619,7 +642,6 @@ export const generateSummaryExcel = async (query) => {
     sheetName: 'Monthly',
     title: 'MER Monthly Summary Report',
     reportNo: '',
-    metaPairs,
     headers: ['Report No', 'Company', 'Month', 'Type', 'Net', 'GST', 'TDS', 'Gross', 'Entries'],
     rows: monthlyReport.map((m) => [
       m.reportNo || '',

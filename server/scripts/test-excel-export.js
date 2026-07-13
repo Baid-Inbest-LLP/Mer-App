@@ -8,7 +8,6 @@ import { fileURLToPath } from 'url';
 import ExcelJS from 'exceljs';
 import {
   buildMerStyledSheet,
-  buildMetaPairsFromQuery,
   buildDetailTitle,
   createMerWorkbook,
 } from '../src/utils/excelGenerator.js';
@@ -40,7 +39,7 @@ const assert = (condition, message) => {
   if (!condition) throw new Error(message);
 };
 
-const assets = ['shree_red.png', 'Inbest_Logo(Blue).png', 'inbest-water-mark.png'];
+const assets = ['Shree_black.png', 'Inbest_Logo(Blue).png', 'inbest-water-mark.png'];
 assets.forEach((name) => {
   const buf = readAssetBuffer(name);
   assert(buf && buf.length > 0, `Missing asset: ${name}`);
@@ -66,7 +65,6 @@ buildMerStyledSheet(wb, {
   sheetName: 'June',
   title: buildDetailTitle(query),
   reportNo: 'MER/BILLP/HQ/25-26/Jun',
-  metaPairs: buildMetaPairsFromQuery(query, companyCtx),
   headers: [
     'S.No', 'Expense No', 'Invoice Date', 'Month', 'Company', 'Co Name',
     'Head of Expense', 'Particulars', 'Expense Type', 'Net Amount',
@@ -96,7 +94,6 @@ buildMerStyledSheet(wb, {
   sheetName: 'Summary',
   title: 'MER Summary Report',
   reportNo: '',
-  metaPairs: buildMetaPairsFromQuery(query, companyCtx),
   headers: ['Metric', 'Value'],
   rows: [
     ['Total Net', largeNet + 5000],
