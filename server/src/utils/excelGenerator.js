@@ -3,7 +3,7 @@ import { readAssetBuffer } from './assetLoader.js';
 import { amountToWordsINR } from './amountToWords.js';
 
 const DATA_FIRST_COL = 2; // B
-const DATA_LAST_COL = 20; // T (19 data columns)
+const DATA_LAST_COL = 22; // V (21 data columns)
 const DATA_COL_COUNT = DATA_LAST_COL - DATA_FIRST_COL + 1;
 const INR_FMT = '"₹" #,##0';
 const TEXT_FMT = '@';
@@ -11,7 +11,7 @@ const MIN_MONEY_COL_WIDTH = 16;
 const MIN_MER_NO_COL_WIDTH = 36;
 const LEFT_ALIGN_HEADERS = new Set(['Co\nName', 'Particulars']);
 
-/** Column widths for A–U (gap + 19 data cols + gap). */
+/** Column widths for A–W (gap + 21 data cols + gap). */
 const SHEET_COLUMN_WIDTHS = [
   2,  // A gap
   8,  // B S.No
@@ -20,7 +20,7 @@ const SHEET_COLUMN_WIDTHS = [
   22, // E Co Name
   10, // F Location
   12, // G Invoice Date
-  18, // H Invoice No
+  22, // H Invoice No
   18, // I Head of Exp
   36, // J Particulars
   12, // K Net Amt
@@ -31,23 +31,27 @@ const SHEET_COLUMN_WIDTHS = [
   10, // P TDS
   12, // Q Gross Amt
   10, // R Paid By
-  18, // S Payment Method
-  12, // T Payment Date
-  2,  // U gap
+  16, // S Payment From
+  14, // T Payment Method
+  22, // U Payment Ref No
+  12, // V Payment Date
+  12, // W right margin (space for Inbest logo)
 ];
 
 const HEADER_MIN_WIDTHS = {
   'Exp\nType': 10,
   'Co\nName': 18,
   'Invoice\nDate': 12,
-  'Invoice\nNo': 18,
+  'Invoice\nNo': 22,
   'Head of\nExp': 18,
   Particulars: 36,
   'Net\nAmt': 12,
   'Total\nGST': 12,
   'Gross\nAmt': 12,
   'Paid\nBy': 10,
-  'Payment\nMethod': 18,
+  'Payment\nFrom': 16,
+  'Payment\nMethod': 14,
+  'Payment\nRef No': 22,
   'Payment\nDate': 12,
 };
 
@@ -161,9 +165,17 @@ const renderBrandedHeader = (ws, wb, companyCtx) => {
   const taxId = companyCtx?.taxId || '';
 
   let r = 1;
-  ws.getRow(r).height = 28;
-  ws.getRow(r + 1).height = 28;
-  ws.getRow(r + 2).height = 28;
+  // Header band ~90pt — logos sized to fit without crowding company text.
+  const HEADER_ROW_HEIGHT = 32;
+  // Shree_black.png is 1:1 — keep square.
+  const SHREE_PX = 48;
+  // Inbest logo — wider box, same height, extreme-right position.
+  const INBEST_H_PX = 88;
+  const INBEST_W_PX = 110;
+
+  ws.getRow(r).height = HEADER_ROW_HEIGHT;
+  ws.getRow(r + 1).height = HEADER_ROW_HEIGHT;
+  ws.getRow(r + 2).height = HEADER_ROW_HEIGHT;
 
   ws.mergeCells(`${colLetter(leftStart)}${r}:${colLetter(leftEnd)}${r + 2}`);
   ws.mergeCells(`${colLetter(centerStart)}${r}:${colLetter(centerEnd)}${r + 2}`);
@@ -193,8 +205,8 @@ const renderBrandedHeader = (ws, wb, companyCtx) => {
   if (shreePng) {
     const shreeImgId = wb.addImage({ buffer: shreePng, extension: 'png' });
     ws.addImage(shreeImgId, {
-      tl: { col: sheetCenterCol - 0.15, row: 0.85 },
-      ext: { width: 120, height: 72 },
+      tl: { col: sheetCenterCol - 0.4, row: 0.6 },
+      ext: { width: SHREE_PX, height: SHREE_PX },
     });
   } else {
     const shreeCell = ws.getCell(r, Math.round(sheetCenterCol));
@@ -205,12 +217,14 @@ const renderBrandedHeader = (ws, wb, companyCtx) => {
 
   if (inbestPng) {
     const inbestImgId = wb.addImage({ buffer: inbestPng, extension: 'png' });
+    // Extreme right: sit in the trailing margin column, flush to the sheet edge.
+    const lastColIdx = SHEET_COLUMN_WIDTHS.length - 1; // 0-based (ExcelJS)
     ws.addImage(inbestImgId, {
-      tl: { col: DATA_LAST_COL - 1.15, row: 0.75 },
-      br: { col: DATA_LAST_COL + 0.05, row: 2.95 },
+      tl: { col: lastColIdx - 0.08, row: 0.28 },
+      ext: { width: INBEST_W_PX, height: INBEST_H_PX },
     });
   } else {
-    const inbestCell = ws.getCell(r, rightEnd);
+    const inbestCell = ws.getCell(r, SHEET_COLUMN_WIDTHS.length);
     inbestCell.value = 'INBEST';
     inbestCell.alignment = { horizontal: 'right', vertical: 'middle' };
     inbestCell.font = { name: 'Calibri', bold: true, size: 22, color: { argb: 'FF0B2F81' } };

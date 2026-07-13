@@ -463,7 +463,9 @@ const DETAIL_HEADERS = [
   'TDS',
   'Gross\nAmt',
   'Paid\nBy',
+  'Payment\nFrom',
   'Payment\nMethod',
+  'Payment\nRef No',
   'Payment\nDate',
 ];
 
@@ -471,6 +473,24 @@ const formatExpenseType = (expenseType) => {
   if (expenseType === 'Capital') return 'CE';
   if (expenseType === 'Revenue') return 'RE';
   return expenseType || '';
+};
+
+/** Bank ac / card no, or Cash / UPI based on payment method. */
+const formatPaymentFrom = (expense) => {
+  const method = String(expense.paymentMethod || expense.merType || '').trim();
+  const normalized = method.toLowerCase();
+
+  if (normalized === 'cash') return 'Cash';
+  if (normalized === 'upi') return 'UPI';
+  if (normalized === 'card' || normalized === 'debit/credit card') {
+    return expense.cardNumber || '';
+  }
+  if (['neft', 'rtgs', 'imps', 'bank'].includes(normalized)) {
+    return expense.bankAccountNumber || '';
+  }
+  if (expense.bankAccountNumber) return expense.bankAccountNumber;
+  if (expense.cardNumber) return expense.cardNumber;
+  return method || '';
 };
 
 export const generateMonthlyExcel = async (query) => {
@@ -517,7 +537,9 @@ export const generateMonthlyExcel = async (query) => {
       e.tds || 0,
       e.grossAmount || 0,
       companyCode,
+      formatPaymentFrom(e),
       e.paymentMethod || e.merType || '',
+      e.paymentRefNumber || '',
       fmtDateDMY(e.paymentDate),
     ];
   });
@@ -539,6 +561,8 @@ export const generateMonthlyExcel = async (query) => {
     totals.gst,
     totals.tds,
     totals.gross,
+    '',
+    '',
     '',
     '',
     '',

@@ -9,6 +9,7 @@
     "build": "echo \"Server runs directly with Node\"",
     "lint": "eslint src/",
     "seed:companies": "node src/seed/runCompanies.js",
+    "seed:expenses": "node src/seed/seedExpensesAndPaymentInstruments.js",
     "migrate:slno": "node scripts/migrate-expense-slno.js"
   },
   "dependencies": {
