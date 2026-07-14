@@ -30,6 +30,8 @@ const emptyLocation = (isFirst = false) => ({
   isDefault: isFirst,
 });
 
+const emptyOtherDetail = () => ({ label: '', value: '' });
+
 const Field = ({ label, required, error, children }) => (
   <div>
     <label className="company-form-field-label">
@@ -52,6 +54,7 @@ export default function CompanyForm({ company, onClose }) {
     phone: '',
     taxId: '',
     isActive: true,
+    otherDetails: [],
     locations: [emptyLocation(true)],
   });
 
@@ -70,6 +73,9 @@ export default function CompanyForm({ company, onClose }) {
         phone: company.phone || '',
         taxId: company.taxId || '',
         isActive: company.isActive !== false,
+        otherDetails: company.otherDetails?.length
+          ? company.otherDetails.map((d) => ({ label: d.label || '', value: d.value || '' }))
+          : [],
         locations: company.locations?.length
           ? company.locations.map((l) => ({ ...l }))
           : [emptyLocation(true)],
@@ -128,6 +134,15 @@ export default function CompanyForm({ company, onClose }) {
       errs.taxId = 'Enter a valid GST number (e.g. 27AAPFU0939F1ZV)';
     }
 
+    form.otherDetails.forEach((detail, i) => {
+      const hasLabel = Boolean(detail.label.trim());
+      const hasValue = Boolean(detail.value.trim());
+      if (hasLabel || hasValue) {
+        if (!hasLabel) errs[`detail_${i}_label`] = 'Label is required';
+        if (!hasValue) errs[`detail_${i}_value`] = 'Value is required';
+      }
+    });
+
     form.locations.forEach((loc, i) => {
       if (!loc.label.trim()) errs[`loc_${i}_label`] = 'Location name is required';
       if (!loc.street.trim()) errs[`loc_${i}_street`] = 'Street address is required';
@@ -163,6 +178,33 @@ export default function CompanyForm({ company, onClose }) {
     }));
   };
 
+  const handleOtherDetailChange = (idx, field, value) => {
+    setForm((p) => {
+      const otherDetails = [...p.otherDetails];
+      otherDetails[idx] = { ...otherDetails[idx], [field]: value };
+      return { ...p, otherDetails };
+    });
+    const key = `detail_${idx}_${field}`;
+    if (errors[key]) setErrors((e) => { const n = { ...e }; delete n[key]; return n; });
+  };
+
+  const addOtherDetail = () => {
+    setForm((p) => ({ ...p, otherDetails: [...p.otherDetails, emptyOtherDetail()] }));
+  };
+
+  const removeOtherDetail = (idx) => {
+    setForm((p) => ({
+      ...p,
+      otherDetails: p.otherDetails.filter((_, i) => i !== idx),
+    }));
+    setErrors((e) => {
+      const next = { ...e };
+      delete next[`detail_${idx}_label`];
+      delete next[`detail_${idx}_value`];
+      return next;
+    });
+  };
+
   const addLocation = () => {
     setForm((p) => ({ ...p, locations: [...p.locations, emptyLocation(false)] }));
   };
@@ -187,7 +229,13 @@ export default function CompanyForm({ company, onClose }) {
     }
 
     setSubmitting(true);
-    const payload = { ...form, taxId: form.taxId.toUpperCase() };
+    const payload = {
+      ...form,
+      taxId: form.taxId.toUpperCase(),
+      otherDetails: form.otherDetails
+        .map((d) => ({ label: d.label.trim(), value: d.value.trim() }))
+        .filter((d) => d.label && d.value),
+    };
     if (clearStamp) {
       payload.clearStamp = true;
     } else if (stampFile) {
@@ -306,6 +354,59 @@ export default function CompanyForm({ company, onClose }) {
                 onChange={(e) => handleChange('isActive', e.target.checked)}
               />
               <label htmlFor="companyActive" className="company-form-checkbox-label">Active company</label>
+            </div>
+
+            <div className="mt-4 pt-4 company-form-divider">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="company-form-section-title">
+                    Other Details
+                  </h3>
+                  <p className="company-form-section-hint">
+                    Optional fields like IRDA No, ARN No, CIN No
+                  </p>
+                </div>
+                <button type="button" onClick={addOtherDetail} className="btn-secondary text-xs py-1.5 px-3">
+                  + Add Detail
+                </button>
+              </div>
+
+              {form.otherDetails.length === 0 ? (
+                <p className="company-form-stamp-empty mb-0">No additional details added</p>
+              ) : (
+                <div className="space-y-3">
+                  {form.otherDetails.map((detail, idx) => (
+                    <div key={`detail-${idx}`} className="grid grid-cols-[1fr_1fr_auto] gap-3 items-start">
+                      <Field label="Label" error={errors[`detail_${idx}_label`]}>
+                        <input
+                          className={inputCls(errors[`detail_${idx}_label`])}
+                          placeholder="e.g. IRDA No / ARN No / CIN No"
+                          value={detail.label}
+                          onChange={(e) => handleOtherDetailChange(idx, 'label', e.target.value)}
+                        />
+                      </Field>
+                      <Field label="Value" error={errors[`detail_${idx}_value`]}>
+                        <input
+                          className={inputCls(errors[`detail_${idx}_value`])}
+                          placeholder="Enter value"
+                          value={detail.value}
+                          onChange={(e) => handleOtherDetailChange(idx, 'value', e.target.value)}
+                        />
+                      </Field>
+                      <button
+                        type="button"
+                        onClick={() => removeOtherDetail(idx)}
+                        className="company-location-remove-btn mt-7"
+                        title="Remove detail"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mt-4 pt-4 company-form-divider">

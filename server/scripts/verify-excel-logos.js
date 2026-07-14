@@ -55,7 +55,10 @@ const companyCtx = {
 const wb = createMerWorkbook();
 buildMerStyledSheet(wb, {
   sheetName: 'Logo Check',
-  title: buildDetailTitle({ financialYear: '2025-26', month: 'June' }),
+  title: buildDetailTitle(
+    { financialYear: '2025-26', month: 'June', merType: 'combined' },
+    companyCtx,
+  ),
   reportNo: 'MER/BILLP/HQ/25-26/Jun',
   headers: [
     'S.No',

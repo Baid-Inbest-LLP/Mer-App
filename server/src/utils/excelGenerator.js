@@ -1,6 +1,8 @@
 import ExcelJS from 'exceljs';
 import { readAssetBuffer } from './assetLoader.js';
 import { amountToWordsINR } from './amountToWords.js';
+import { abbreviateMonthName, monthToDateInFy } from './merSerial.js';
+import { getFinancialYear } from '../config/index.js';
 
 const DATA_FIRST_COL = 2; // B
 const DATA_LAST_COL = 22; // V (21 data columns)
@@ -77,12 +79,6 @@ const border = (cell, color = 'FF000000') => {
   const edge = { style: 'thin', color: { argb: color } };
   cell.border = { top: edge, left: edge, bottom: edge, right: edge };
 };
-
-const formatAddressOneLine = (value) =>
-  String(value || '')
-    .trim()
-    .replace(/[\r\n]+/g, ', ')
-    .replace(/\s+/g, ' ');
 
 const panelSplit = () => {
   const third = Math.floor(DATA_COL_COUNT / 3);
@@ -163,35 +159,54 @@ const renderBrandedHeader = (ws, wb, companyCtx) => {
   const { leftStart, leftEnd, centerStart, centerEnd, rightStart, rightEnd } = panelSplit();
   const companyCode = companyCtx?.companyCode || 'INBEST';
   const taxId = companyCtx?.taxId || '';
+  const otherDetails = Array.isArray(companyCtx?.otherDetails) ? companyCtx.otherDetails : [];
+
+  const detailLines = [];
+  for (const detail of otherDetails) {
+    const label = String(detail?.label || '').trim();
+    const value = String(detail?.value || '').trim();
+    if (label && value) detailLines.push(`${label}: ${value}`);
+  }
+  if (taxId) detailLines.push(`GST No: ${taxId}`);
 
   let r = 1;
-  // Header band ~90pt — logos sized to fit without crowding company text.
-  const HEADER_ROW_HEIGHT = 32;
+  // Header band — logos sized to fit without crowding company text.
+  // Grow with detail lines so GST / IRDA / ARN stay readable under the code.
+  const detailCount = detailLines.length;
+  const headerRows = Math.max(3, 2 + detailCount);
+  const HEADER_ROW_HEIGHT = detailCount > 1 ? 26 : 32;
   // Shree_black.png is 1:1 — keep square.
   const SHREE_PX = 48;
   // Inbest logo — wider box, same height, extreme-right position.
   const INBEST_H_PX = 88;
   const INBEST_W_PX = 110;
 
-  ws.getRow(r).height = HEADER_ROW_HEIGHT;
-  ws.getRow(r + 1).height = HEADER_ROW_HEIGHT;
-  ws.getRow(r + 2).height = HEADER_ROW_HEIGHT;
+  for (let i = 0; i < headerRows; i += 1) {
+    ws.getRow(r + i).height = HEADER_ROW_HEIGHT;
+  }
 
-  ws.mergeCells(`${colLetter(leftStart)}${r}:${colLetter(leftEnd)}${r + 2}`);
-  ws.mergeCells(`${colLetter(centerStart)}${r}:${colLetter(centerEnd)}${r + 2}`);
-  ws.mergeCells(`${colLetter(rightStart)}${r}:${colLetter(rightEnd)}${r + 2}`);
+  ws.mergeCells(`${colLetter(leftStart)}${r}:${colLetter(leftEnd)}${r + headerRows - 1}`);
+  ws.mergeCells(`${colLetter(centerStart)}${r}:${colLetter(centerEnd)}${r + headerRows - 1}`);
+  ws.mergeCells(`${colLetter(rightStart)}${r}:${colLetter(rightEnd)}${r + headerRows - 1}`);
+
+  const companyCodeFont = { name: 'Calibri', bold: true, size: 20, color: { argb: 'FF13AFCD' } };
+  // Same family/weight as company code; slightly smaller so header stays balanced.
+  const detailFont = { name: 'Calibri', bold: true, size: 14, color: { argb: 'FF000000' } };
 
   const companyCell = ws.getCell(r, leftStart);
-  if (taxId) {
+  if (detailLines.length) {
     companyCell.value = {
       richText: [
-        { text: `${companyCode}\n`, font: { name: 'Calibri', bold: true, size: 20, color: { argb: 'FF13AFCD' } } },
-        { text: `GST No: ${taxId}`, font: { name: 'Calibri', bold: true, size: 14, color: { argb: 'FF000000' } } },
+        { text: `${companyCode}\n`, font: companyCodeFont },
+        ...detailLines.map((line, index) => ({
+          text: index < detailLines.length - 1 ? `${line}\n` : line,
+          font: detailFont,
+        })),
       ],
     };
   } else {
     companyCell.value = companyCode;
-    companyCell.font = { name: 'Calibri', bold: true, size: 20, color: { argb: 'FF13AFCD' } };
+    companyCell.font = companyCodeFont;
   }
   companyCell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
 
@@ -230,25 +245,21 @@ const renderBrandedHeader = (ws, wb, companyCtx) => {
     inbestCell.font = { name: 'Calibri', bold: true, size: 22, color: { argb: 'FF0B2F81' } };
   }
 
-  ws.getRow(r + 3).height = 6;
-  return r + 4;
+  ws.getRow(r + headerRows).height = 6;
+  return r + headerRows + 1;
 };
 
-const renderTitleBlock = (ws, r, { title, reportNo }) => {
+const renderTitleBlock = (ws, r, { title }) => {
   ws.mergeCells(`${colLetter(DATA_FIRST_COL)}${r}:${colLetter(DATA_LAST_COL)}${r}`);
-  ws.getCell(r, DATA_FIRST_COL).value = title;
-  ws.getCell(r, DATA_FIRST_COL).font = { name: 'Calibri', size: 20, bold: true };
-  ws.getCell(r, DATA_FIRST_COL).alignment = { horizontal: 'center' };
-  r += 1;
-
-  if (reportNo) {
-    ws.mergeCells(`${colLetter(DATA_FIRST_COL)}${r}:${colLetter(DATA_LAST_COL)}${r}`);
-    ws.getCell(r, DATA_FIRST_COL).value = reportNo;
-    ws.getCell(r, DATA_FIRST_COL).font = { name: 'Calibri', size: 16, bold: true };
-    ws.getCell(r, DATA_FIRST_COL).alignment = { horizontal: 'center' };
-    r += 1;
+  const titleCell = ws.getCell(r, DATA_FIRST_COL);
+  if (title && typeof title === 'object' && Array.isArray(title.richText)) {
+    titleCell.value = title;
+  } else {
+    titleCell.value = title || '';
+    titleCell.font = { name: 'Calibri', size: 20, bold: true };
   }
-
+  titleCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  ws.getRow(r).height = 32;
   return r + 1;
 };
 
@@ -256,6 +267,7 @@ const renderTable = (ws, r, {
   headers,
   rows,
   totalsRow,
+  totalsLabel = '',
   moneyColIndices = [],
   textColIndices = [],
   gstColIndex = -1,
@@ -311,30 +323,64 @@ const renderTable = (ws, r, {
   });
 
   if (totalsRow) {
+    const TOTAL_BG = 'FF005887';
+    const TOTAL_FONT = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    // Detail report style: merge Exp Type → Particulars for the label; money from Net Amt onward.
+    const useDetailTotalsStyle = Boolean(totalsLabel);
+    const mergeEndIdx = useDetailTotalsStyle ? 8 : -1;
+
     totalsRow.forEach((v, i) => {
       const c = ws.getCell(r, DATA_FIRST_COL + i);
-      const isMoney = moneyColIndices.includes(i);
+      const isMoney = moneyColIndices.includes(i)
+        && !(useDetailTotalsStyle && mergeEndIdx >= 0 && i <= mergeEndIdx);
       const isText = allTextCols.has(i);
-      c.value = isMoney ? toNumericAmount(v) : isText ? toTextCell(v) : v;
-      c.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF1F2937' } };
-      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF3FA' } };
-      if (i === tdsColIndex) {
-        c.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF7F1D1D' } };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
-      }
-      if (i === gstColIndex) {
-        c.font = { name: 'Calibri', size: 14, bold: true, color: { argb: 'FF166534' } };
-        c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
-      }
+      c.value = isMoney
+        ? toNumericAmount(v)
+        : (useDetailTotalsStyle && i > 0 && i <= mergeEndIdx
+          ? ''
+          : (isText ? toTextCell(v) : v));
+      c.font = TOTAL_FONT;
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOTAL_BG } };
       c.alignment = {
-        horizontal: resolveCellHorizontal(i, moneyColIndices, leftAlignCols),
+        horizontal: isMoney ? 'right' : (i === 0 ? 'center' : 'left'),
         vertical: 'middle',
       };
       if (isMoney) c.numFmt = INR_FMT;
-      if (isText) c.numFmt = TEXT_FMT;
+      if (isText && !useDetailTotalsStyle) c.numFmt = TEXT_FMT;
       border(c);
     });
-    ws.getRow(r).height = 28;
+
+    // Fill any trailing table columns with the same total styling
+    for (let i = totalsRow.length; i < colSpan; i += 1) {
+      const c = ws.getCell(r, DATA_FIRST_COL + i);
+      c.value = '';
+      c.font = TOTAL_FONT;
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOTAL_BG } };
+      border(c);
+    }
+
+    if (useDetailTotalsStyle && mergeEndIdx >= 1) {
+      const mergeStart = DATA_FIRST_COL + 1;
+      const mergeEnd = DATA_FIRST_COL + mergeEndIdx;
+      ws.mergeCells(`${colLetter(mergeStart)}${r}:${colLetter(mergeEnd)}${r}`);
+      const labelCell = ws.getCell(r, mergeStart);
+      labelCell.value = buildTotalsLabelRichText(totalsLabel, TOTAL_FONT);
+      labelCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOTAL_BG } };
+      labelCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      border(labelCell);
+    }
+
+    // Count in S.No
+    const countCell = ws.getCell(r, DATA_FIRST_COL);
+    if (useDetailTotalsStyle && (totalsRow[0] !== undefined && totalsRow[0] !== '')) {
+      countCell.value = Number(totalsRow[0]) || totalsRow[0];
+      countCell.font = TOTAL_FONT;
+      countCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOTAL_BG } };
+      countCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      border(countCell);
+    }
+
+    ws.getRow(r).height = 30;
     r += 1;
   }
 
@@ -351,6 +397,25 @@ const renderTable = (ws, r, {
   ensureHeaderColumnWidths(ws, headers);
 
   return { nextRow: r, tableStartRow, tableEndRow: r - 1 };
+};
+
+/** "Total Bank Expense - BSIBPL - APR'24" with period highlighted yellow. */
+const buildTotalsLabelRichText = (label, baseFont) => {
+  const text = String(label || '');
+  const sep = ' - ';
+  const lastSep = text.lastIndexOf(sep);
+  if (lastSep === -1) {
+    return { richText: [{ text, font: { ...baseFont } }] };
+  }
+
+  const prefix = text.slice(0, lastSep + sep.length);
+  const period = text.slice(lastSep + sep.length);
+  return {
+    richText: [
+      { text: prefix, font: { ...baseFont, bold: true, color: { argb: 'FFFFFFFF' } } },
+      { text: period, font: { ...baseFont, bold: true, color: { argb: 'FFFFFF00' } } },
+    ],
+  };
 };
 
 const renderGrandTotal = (ws, r, grandTotal) => {
@@ -388,13 +453,31 @@ const renderAmountInWords = (ws, r, amount) => {
   return r + 3;
 };
 
-const renderFooter = (ws, r, address) => {
-  ws.mergeCells(`${colLetter(DATA_FIRST_COL)}${r}:${colLetter(DATA_LAST_COL)}${r}`);
-  const cell = ws.getCell(r, DATA_FIRST_COL);
-  cell.value = formatAddressOneLine(address);
-  cell.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
-  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF13AFCD' } };
-  cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: false, shrinkToFit: true };
+const renderReportFooter = (ws, r, reportNo) => {
+  // One blank row gap after the table
+  r += 1;
+
+  const mid = Math.floor((DATA_FIRST_COL + DATA_LAST_COL) / 2);
+  const leftEnd = mid;
+  const rightStart = mid + 1;
+
+  ws.mergeCells(`${colLetter(DATA_FIRST_COL)}${r}:${colLetter(leftEnd)}${r}`);
+  const leftCell = ws.getCell(r, DATA_FIRST_COL);
+  leftCell.value = reportNo || '';
+  leftCell.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FF000000' } };
+  leftCell.alignment = { horizontal: 'left', vertical: 'middle' };
+
+  ws.mergeCells(`${colLetter(rightStart)}${r}:${colLetter(DATA_LAST_COL)}${r}`);
+  const rightCell = ws.getCell(r, rightStart);
+  rightCell.value = {
+    richText: [
+      { text: 'Internal Documents', font: { name: 'Calibri', size: 12, bold: true, color: { argb: 'FF000000' } } },
+      { text: ' : ', font: { name: 'Calibri', size: 12, bold: true, color: { argb: 'FF000000' } } },
+      { text: 'Accounts Department', font: { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFEF4444' } } },
+    ],
+  };
+  rightCell.alignment = { horizontal: 'right', vertical: 'middle' };
+
   ws.getRow(r).height = 22;
   return r + 1;
 };
@@ -425,6 +508,7 @@ export const buildMerStyledSheet = (wb, {
   headers,
   rows,
   totalsRow,
+  totalsLabel = '',
   grandTotal,
   footerAddress,
   companyCtx,
@@ -438,14 +522,14 @@ export const buildMerStyledSheet = (wb, {
 }) => {
   const ws = createStyledSheet(wb, sheetName);
   let r = renderBrandedHeader(ws, wb, companyCtx);
-  r = renderTitleBlock(ws, r, { title, reportNo });
+  r = renderTitleBlock(ws, r, { title });
   ws.pageSetup.printTitlesRow = `1:${r - 1}`;
-  r += 1;
 
   const tableResult = renderTable(ws, r, {
     headers,
     rows,
     totalsRow,
+    totalsLabel,
     moneyColIndices,
     textColIndices,
     gstColIndex,
@@ -461,7 +545,9 @@ export const buildMerStyledSheet = (wb, {
     }
   }
 
-  renderFooter(ws, r, footerAddress);
+  if (reportNo) {
+    r = renderReportFooter(ws, r, reportNo);
+  }
 
   return ws;
 };
@@ -473,18 +559,95 @@ export const createMerWorkbook = () => {
   return wb;
 };
 
-export const buildDetailTitle = (query) => {
-  const year = query.financialYear
-    ? String(query.financialYear).split('-')[0]
-    : new Date().getFullYear();
-  const month = query.month || '';
-  if (month) {
-    return `Monthly Expense Report | ${month}'${year}`;
+const TITLE_RED = { argb: 'FFEF4444' };
+const TITLE_BLACK = { argb: 'FF000000' };
+const TITLE_FONT_SIZE = 24;
+const titlePartFont = (color) => ({
+  name: 'Calibri',
+  size: TITLE_FONT_SIZE,
+  bold: true,
+  color,
+});
+
+const formatTitleMerType = (merType) => {
+  const normalized = String(merType || 'combined').trim().toLowerCase();
+  if (normalized === 'cash') return 'CASH';
+  if (normalized === 'bank' || normalized === 'bnk') return 'BANK';
+  if (normalized === 'combined' || normalized === 'comb') return 'COMBINED';
+  return normalized ? normalized.toUpperCase() : 'COMBINED';
+};
+
+/** e.g. April + 2024-25 → APR'24 */
+const formatShortMonthPeriod = (month, financialYear) => {
+  const abbr = abbreviateMonthName(month);
+  if (!abbr) return '';
+  const fy = financialYear || getFinancialYear();
+  const date = monthToDateInFy(month, fy);
+  return `${abbr.toUpperCase()}'${String(date.getFullYear()).slice(-2)}`;
+};
+
+/** e.g. April + 2024-25 → APR'2024 */
+const formatFullMonthPeriod = (month, financialYear) => {
+  const abbr = abbreviateMonthName(month);
+  if (!abbr) return '';
+  const fy = financialYear || getFinancialYear();
+  const date = monthToDateInFy(month, fy);
+  return `${abbr.toUpperCase()}'${date.getFullYear()}`;
+};
+
+/**
+ * Total Bank Expense - BSIBPL - APR'24
+ */
+export const buildTotalsLabel = (query = {}, companyCtx = {}) => {
+  const companyCode = String(companyCtx.companyCode || '').trim().toUpperCase() || 'COMPANY';
+  const merLabel = formatTitleMerType(query.merType);
+  const merTitleCase = merLabel.charAt(0) + merLabel.slice(1).toLowerCase();
+  const fy = query.financialYear || getFinancialYear();
+  const period = query.month
+    ? formatShortMonthPeriod(query.month, fy)
+    : (fy ? `FY ${fy}` : '');
+
+  return `Total ${merTitleCase} Expense - ${companyCode}${period ? ` - ${period}` : ''}`;
+};
+
+/**
+ * BSIBPL - MONTHLY EXPENSE REPORT COMBINED (black) - APR'2024 / FY 2024-25 (bright red)
+ * Plain string titles (summary sheets) remain supported by callers.
+ */
+export const buildDetailTitle = (query = {}, companyCtx = {}) => {
+  const companyCode = String(companyCtx.companyCode || '').trim().toUpperCase();
+  const merLabel = formatTitleMerType(query.merType);
+  const fy = query.financialYear || getFinancialYear();
+
+  let period = '';
+  if (query.month) {
+    period = formatFullMonthPeriod(query.month, fy);
+  } else if (fy) {
+    period = `FY ${fy}`;
   }
-  if (query.financialYear) {
-    return `Monthly Expense Report | FY ${query.financialYear}`;
+
+  const middle = merLabel
+    ? `MONTHLY EXPENSE REPORT ${merLabel}`
+    : 'MONTHLY EXPENSE REPORT';
+
+  if (!companyCode && !period) {
+    return middle;
   }
-  return `Monthly Expense Report | ${new Date().toLocaleString('en-US', { month: 'long' })}'${year}`;
+
+  const richText = [];
+  if (companyCode) {
+    richText.push({ text: companyCode, font: titlePartFont(TITLE_BLACK) });
+    richText.push({ text: ` - ${middle}`, font: titlePartFont(TITLE_BLACK) });
+  } else {
+    richText.push({ text: middle, font: titlePartFont(TITLE_BLACK) });
+  }
+
+  if (period) {
+    richText.push({ text: ' - ', font: titlePartFont(TITLE_BLACK) });
+    richText.push({ text: period, font: titlePartFont(TITLE_RED) });
+  }
+
+  return { richText };
 };
 
 export { fmtDateDMY };

@@ -27,6 +27,16 @@ const toPublicCompany = (company, locations = []) => {
   };
 };
 
+const normalizeOtherDetails = (details = []) => {
+  if (!Array.isArray(details)) return [];
+  return details
+    .map((item) => ({
+      label: String(item?.label || '').trim(),
+      value: String(item?.value || '').trim(),
+    }))
+    .filter((item) => item.label && item.value);
+};
+
 const normalizeCompanyFields = (body = {}) => ({
   name: body.name?.trim(),
   code: (body.companyCode || body.code)?.trim(),
@@ -34,6 +44,7 @@ const normalizeCompanyFields = (body = {}) => ({
   phone: body.phone?.trim(),
   taxId: body.taxId?.trim()?.toUpperCase(),
   logo: body.logo?.trim() || '',
+  otherDetails: normalizeOtherDetails(body.otherDetails),
   isActive: body.isActive !== false,
 });
 

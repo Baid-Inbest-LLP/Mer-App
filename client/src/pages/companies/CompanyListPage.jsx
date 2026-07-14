@@ -191,6 +191,11 @@ export default function CompanyListPage({ embedded = false }) {
                           GST: {company.taxId}
                         </span>
                       )}
+                      {company.otherDetails?.map((detail) => (
+                        <span key={`${detail.label}-${detail.value}`} className="company-meta-chip">
+                          {detail.label}: {detail.value}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>

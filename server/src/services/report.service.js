@@ -14,6 +14,7 @@ import {
 import { reportMerTypeAddFieldsStage, REPORT_MER_TYPES } from '../utils/reportMerType.js';
 import {
   buildDetailTitle,
+  buildTotalsLabel,
   buildMerStyledSheet,
   createMerWorkbook,
   fmtDateDMY,
@@ -29,6 +30,7 @@ const resolveCompanyContext = async (query) => {
       companyName: '',
       taxId: '',
       phone: '',
+      otherDetails: [],
       address: DEFAULT_FOOTER_ADDRESS,
     };
   }
@@ -40,6 +42,7 @@ const resolveCompanyContext = async (query) => {
       companyName: query.company,
       taxId: '',
       phone: '',
+      otherDetails: [],
       address: DEFAULT_FOOTER_ADDRESS,
     };
   }
@@ -71,6 +74,14 @@ const resolveCompanyContext = async (query) => {
     companyName: company.name,
     taxId: company.taxId || '',
     phone: company.phone || '',
+    otherDetails: Array.isArray(company.otherDetails)
+      ? company.otherDetails
+        .map((d) => ({
+          label: String(d?.label || '').trim(),
+          value: String(d?.value || '').trim(),
+        }))
+        .filter((d) => d.label && d.value)
+      : [],
     address: address || DEFAULT_FOOTER_ADDRESS,
   };
 };
@@ -545,15 +556,15 @@ export const generateMonthlyExcel = async (query) => {
   });
 
   const totalsRow = [
-    '',
-    'Totals',
-    '',
+    entries.length,
     '',
     '',
     '',
     '',
     '',
-    `${entries.length} entries`,
+    '',
+    '',
+    '',
     totals.net,
     totals.cgst,
     totals.sgst,
@@ -573,11 +584,12 @@ export const generateMonthlyExcel = async (query) => {
 
   buildMerStyledSheet(workbook, {
     sheetName: monthLabel,
-    title: buildDetailTitle(query),
+    title: buildDetailTitle(query, companyCtx),
     reportNo,
     headers: DETAIL_HEADERS,
     rows,
     totalsRow,
+    totalsLabel: buildTotalsLabel(query, companyCtx),
     grandTotal: totals.gross,
     footerAddress: companyCtx.address,
     companyCtx,
@@ -585,6 +597,8 @@ export const generateMonthlyExcel = async (query) => {
     gstColIndex: 13,
     tdsColIndex: 14,
     totalColIndex: 15,
+    includeGrandTotal: false,
+    includeAmountInWords: false,
   });
 
   return { workbook, filename };

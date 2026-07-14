@@ -25,14 +25,19 @@ const companyCtx = {
   companyName: 'Baid Inbest Llp',
   taxId: '19AALFB4917G1ZB',
   phone: '8981541333',
+  otherDetails: [
+    { label: 'IRDA No', value: 'IRDA/2024/001' },
+    { label: 'CIN No', value: 'U12345WB2020PTC123456' },
+  ],
   address: '6th Floor, Suite No 608 And 609, Ashoka House, 3a, Hare St, B.b.d. Bagh, Kolkata, West Bengal, 700001, India',
 };
 
 const query = {
-  financialYear: '2025-2026',
+  financialYear: '2025-26',
   month: 'June',
   company: 'Baid Inbest Llp',
   location: 'HQ',
+  merType: 'combined',
 };
 
 const assert = (condition, message) => {
@@ -63,7 +68,7 @@ const largeGross = largeNet + largeGst - largeTds;
 const wb = createMerWorkbook();
 buildMerStyledSheet(wb, {
   sheetName: 'June',
-  title: buildDetailTitle(query),
+  title: buildDetailTitle(query, companyCtx),
   reportNo: 'MER/BILLP/HQ/25-26/Jun',
   headers: [
     'S.No', 'Expense No', 'Invoice Date', 'Month', 'Company', 'Co Name',

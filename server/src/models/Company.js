@@ -1,5 +1,13 @@
 import mongoose from 'mongoose';
 
+const otherDetailSchema = new mongoose.Schema(
+  {
+    label: { type: String, required: true, trim: true },
+    value: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
+
 const companySchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, unique: true },
@@ -10,6 +18,7 @@ const companySchema = new mongoose.Schema(
     website: { type: String, trim: true },
     logo: { type: String, trim: true },
     address: { type: String, trim: true },
+    otherDetails: { type: [otherDetailSchema], default: [] },
     stampImage: { type: String, default: '', select: false },
     isActive: { type: Boolean, default: true },
   },
