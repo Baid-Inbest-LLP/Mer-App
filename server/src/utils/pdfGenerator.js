@@ -30,22 +30,22 @@ const DETAIL_COL_WIDTHS = [
   '3%',  // 2  Month
   '7.5%',  // 3  Co Name
   '2.6%',  // 4  Loc (narrower)
-  '4.2%',    // 5  Invoice Date
-  '5.2%',  // 6  Invoice No
-  '6.2%',  // 7  Head of Exp
+  '4%',    // 5  Invoice Date
+  '5%',  // 6  Invoice No
+  '5.8%',  // 7  Head of Exp
   '9%',    // 8  Particulars (absorbs freed space)
-  '4.2%',  // 9  Net Amt
-  '3.6%',  // 10 CGST
-  '3.6%',  // 11 SGST
-  '3.6%',  // 12 IGST
-  '4.0%',  // 13 Total GST
-  '3.6%',  // 14 TDS
-  '4.5%',  // 15 Gross Amt
+  '5.2%',  // 9  Net Amt
+  '4.4%',  // 10 CGST
+  '4.4%',  // 11 SGST
+  '4.4%',  // 12 IGST
+  '4.6%',  // 13 Total GST
+  '4.4%',  // 14 TDS
+  '5.2%',  // 15 Gross Amt
   '3.6%',  // 16 Paid By
   '4.8%',  // 17 Payment From
   '4.2%',  // 18 Payment Method
-  '7%',  // 19 Payment Ref No
-  '4.2%',  // 20 Payment Date
+  '7.2%',  // 19 Payment Ref No
+  '4%',  // 20 Payment Date
 ];
 
 /** Columns that must stay on one line (no word break). */
