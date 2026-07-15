@@ -269,7 +269,14 @@ export default function CustomizedReportPage() {
                 onClick={() => runExport(preview.params, preview.filename, 'pdf')}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-800 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <img src={pdfIconSrc} alt="" className="w-5 h-5" aria-hidden />
+                {exportingReport === 'pdf' ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <img src={pdfIconSrc} alt="" className="w-5 h-5" aria-hidden />
+                )}
                 PDF
               </button>
               <button
@@ -278,7 +285,14 @@ export default function CustomizedReportPage() {
                 onClick={() => runExport(preview.params, preview.filename, 'excel')}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-green-800 bg-green-50 border border-green-200 hover:bg-green-100 hover:border-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <img src={excelIconSrc} alt="" className="w-5 h-5" aria-hidden />
+                {exportingReport === 'excel' ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <img src={excelIconSrc} alt="" className="w-5 h-5" aria-hidden />
+                )}
                 Excel
               </button>
             </div>

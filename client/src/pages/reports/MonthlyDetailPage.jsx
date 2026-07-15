@@ -131,12 +131,14 @@ export default function MonthlyDetailPage() {
           {
             label: 'PDF',
             icon: 'pdf',
+            loading: exporting === 'pdf',
             disabled: Boolean(exporting) || loading || count === 0,
             onClick: () => runExport('pdf'),
           },
           {
             label: 'Excel',
             icon: 'excel',
+            loading: exporting === 'excel',
             disabled: Boolean(exporting) || loading || count === 0,
             onClick: () => runExport('excel'),
           },

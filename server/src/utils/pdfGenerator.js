@@ -29,17 +29,17 @@ const DETAIL_COL_WIDTHS = [
   '2.6%',  // 1  Exp Type (~2-4px tighter)
   '3%',  // 2  Month
   '7.5%',  // 3  Co Name
-  '2.6%',  // 4  Loc (narrower)
+  '2.8%',  // 4  Loc (narrower)
   '4%',    // 5  Invoice Date
   '5%',  // 6  Invoice No
-  '5.8%',  // 7  Head of Exp
+  '6%',  // 7  Head of Exp
   '9%',    // 8  Particulars (absorbs freed space)
-  '5.2%',  // 9  Net Amt
-  '4.4%',  // 10 CGST
-  '4.4%',  // 11 SGST
-  '4.4%',  // 12 IGST
-  '4.6%',  // 13 Total GST
-  '4.4%',  // 14 TDS
+  '5.4%',  // 9  Net Amt
+  '4.6%',  // 10 CGST
+  '4.6%',  // 11 SGST
+  '4.6%',  // 12 IGST
+  '5%',  // 13 Total GST
+  '4.6%',  // 14 TDS
   '5.2%',  // 15 Gross Amt
   '3.6%',  // 16 Paid By
   '4.8%',  // 17 Payment From
