@@ -19,6 +19,45 @@ const ACCOUNTS_RED = '#EF4444';
 const LEFT_ALIGN_HEADERS = new Set(['Co\nName', 'Particulars']);
 const DETAIL_MERGE_END_IDX = 8; // Exp Type → Particulars
 
+/**
+ * Preferred relative widths for the 21 detail-report columns.
+ * Wider nowrap cols: S.No, Exp Type, Month, Co Name, Location, Payment Method.
+ * Narrower: Invoice No.
+ */
+const DETAIL_COL_WIDTHS = [
+  '3%',    // 0  S.No
+  '4%',    // 1  Exp Type
+  '4.2%',  // 2  Month
+  '7%',    // 3  Co Name
+  '5.2%',  // 4  Location
+  '4.8%',  // 5  Invoice Date
+  '5%',    // 6  Invoice No (narrower)
+  '5.2%',  // 7  Head of Exp
+  '8.5%',  // 8  Particulars
+  '4.8%',  // 9  Net Amt
+  '3.8%',  // 10 CGST
+  '3.8%',  // 11 SGST
+  '3.8%',  // 12 IGST
+  '4.2%',  // 13 Total GST
+  '3.8%',  // 14 TDS
+  '4.8%',  // 15 Gross Amt
+  '3.8%',  // 16 Paid By
+  '4.8%',  // 17 Payment From
+  '5.2%',  // 18 Payment Method
+  '5.2%',  // 19 Payment Ref No
+  '4.3%',  // 20 Payment Date
+];
+
+/** Columns that must stay on one line (no word break). */
+const NOWRAP_HEADERS = new Set([
+  'S.No',
+  'Exp\nType',
+  'Month',
+  'Co\nName',
+  'Location',
+  'Payment\nMethod',
+]);
+
 const escapeHtml = (value) =>
   String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -72,6 +111,17 @@ const resolveAlign = (index, headers, moneyCols) => {
   return 'center';
 };
 
+/** Header text is always centered (incl. Co Name / Particulars). */
+const resolveHeaderAlign = () => 'center';
+
+const colClass = (header) => (NOWRAP_HEADERS.has(header) ? 'col-nowrap' : '');
+
+const renderColGroup = (headers) => {
+  if (headers.length !== DETAIL_COL_WIDTHS.length) return '';
+  const cols = DETAIL_COL_WIDTHS.map((w) => `<col style="width:${w}" />`).join('');
+  return `<colgroup>${cols}</colgroup>`;
+};
+
 const renderHeaderPanel = (companyCtx, assets) => {
   const companyCode = companyCtx?.companyCode || 'INBEST';
   const taxId = companyCtx?.taxId || '';
@@ -105,10 +155,11 @@ const renderHeaderPanel = (companyCtx, assets) => {
 };
 
 const renderTableHead = (headers, moneyCols) => {
+  void moneyCols;
   const cells = headers
-    .map((h, i) => {
-      const align = resolveAlign(i, headers, moneyCols);
-      return `<th style="text-align:${align === 'left' ? 'left' : 'center'}">${headerHtml(h)}</th>`;
+    .map((h) => {
+      const cls = colClass(h);
+      return `<th class="${cls}" style="text-align:${resolveHeaderAlign()}">${headerHtml(h)}</th>`;
     })
     .join('');
   return `<thead><tr>${cells}</tr></thead>`;
@@ -118,19 +169,20 @@ const renderBodyRows = (rows, headers, moneyCols, { gstColIndex, tdsColIndex, to
   rows
     .map((rowVals) => {
       const cells = headers
-        .map((_, i) => {
+        .map((header, i) => {
           const value = rowVals[i];
           const isMoney = moneyCols.has(i);
           const align = resolveAlign(i, headers, moneyCols);
-          const classes = [];
+          const classes = [colClass(header)];
           if (i === tdsColIndex) classes.push('cell-tds');
           if (i === gstColIndex) classes.push('cell-gst');
           if (i === totalColIndex) classes.push('cell-total');
-          const wrap = align === 'left' ? 'cell-wrap' : '';
+          // Particulars may wrap; other left-align cols that are nowrap stay single-line.
+          if (align === 'left' && !NOWRAP_HEADERS.has(header)) classes.push('cell-wrap');
           const rendered = isMoney
             ? fmtMoney(value)
             : escapeHtml(value === 0 ? 0 : value || '');
-          return `<td class="${[...classes, wrap].join(' ').trim()}" style="text-align:${align}">${rendered}</td>`;
+          return `<td class="${classes.filter(Boolean).join(' ')}" style="text-align:${align}">${rendered}</td>`;
         })
         .join('');
       return `<tr>${cells}</tr>`;
@@ -219,6 +271,7 @@ export const buildMonthlyReportHtml = ({
   const head = renderTableHead(headers, moneyCols);
   const body = renderBodyRows(rows, headers, moneyCols, { gstColIndex, tdsColIndex, totalColIndex });
   const totals = renderTotalsRow(totalsRow, headers, moneyCols, totalsLabel);
+  const colGroup = renderColGroup(headers);
 
   return `<!doctype html>
 <html>
@@ -262,24 +315,42 @@ export const buildMonthlyReportHtml = ({
       table.report-table {
         width: 100%;
         border-collapse: collapse;
-        table-layout: auto;
+        table-layout: fixed;
       }
       table.report-table th,
       table.report-table td {
         border: 1px solid #000;
-        padding: 3px 4px;
+        padding: 3px 3px;
         font-size: 9px;
         vertical-align: middle;
-        word-break: break-word;
+        overflow: hidden;
       }
       table.report-table thead th {
         background: ${HEADER_BLUE};
         color: #fff;
         font-weight: 700;
         font-size: 9.5px;
+        text-align: center;
       }
       table.report-table tbody td { white-space: nowrap; }
-      table.report-table tbody td.cell-wrap { white-space: normal; }
+      table.report-table tbody td.cell-wrap {
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      /* Keep short label columns readable — no mid-word breaks / no stacking. */
+      table.report-table th.col-nowrap,
+      table.report-table td.col-nowrap {
+        white-space: nowrap;
+        word-break: normal;
+        overflow-wrap: normal;
+      }
+      /* Invoice No (7th data col) may wrap to avoid crowding neighbours. */
+      table.report-table td:nth-child(7) {
+        white-space: normal;
+        word-break: break-all;
+        overflow-wrap: anywhere;
+      }
       .cell-tds { color: ${TDS_RED}; font-weight: 700; }
       .cell-gst { color: ${GST_GREEN}; font-weight: 700; }
       .cell-total { font-weight: 700; }
@@ -332,6 +403,7 @@ export const buildMonthlyReportHtml = ({
     ${renderHeaderPanel(companyCtx, assets)}
     <div class="report-title">${renderRichText(title)}</div>
     <table class="report-table">
+      ${colGroup}
       ${head}
       <tbody>
         ${body}
