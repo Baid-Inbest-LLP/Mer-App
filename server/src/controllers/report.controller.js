@@ -51,3 +51,11 @@ export const exportMonthlyExcel = asyncHandler(async (req, res) => {
   await workbook.xlsx.write(res);
   res.end();
 });
+
+export const exportMonthlyPdf = asyncHandler(async (req, res) => {
+  const { buffer, filename } = await reportService.generateMonthlyPdf(req.query);
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+  res.setHeader('Content-Length', String(buffer.length));
+  res.end(buffer);
+});

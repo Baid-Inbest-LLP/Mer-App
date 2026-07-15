@@ -6,7 +6,6 @@ import ReportOverviewTableSkeleton from '../common/ReportOverviewTableSkeleton';
 import {
   formatCurrency,
   buildFyReportNo,
-  buildFyReportFilename,
   formatFyShortLabel,
 } from '../../utils/format';
 
@@ -16,25 +15,11 @@ const REPORT_TYPES = [
   { key: 'combined', label: 'Combined' },
 ];
 
-const downloadIcon = (
-  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-  </svg>
-);
-
 const backIcon = (
   <svg className="w-4 h-4 transition-transform duration-150 group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
   </svg>
 );
-
-const cleanParams = (params) => {
-  const out = {};
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') out[key] = value;
-  });
-  return out;
-};
 
 const buildDetailUrl = ({ financialYear, company, merType }) => {
   const params = new URLSearchParams();
@@ -121,8 +106,6 @@ export default function FinancialYearExpensesTable({
   tableYearLimit,
   onTableYearLimitChange,
   initialFy = null,
-  exporting,
-  onExport,
 }) {
   const [selectedFy, setSelectedFy] = useState(initialFy);
 
@@ -157,12 +140,6 @@ export default function FinancialYearExpensesTable({
       merType,
     });
 
-    const exportParams = cleanParams({
-      financialYear: selectedFy,
-      company,
-      merType,
-    });
-
     return (
       <div className="monthly-report-cell">
         <Link
@@ -176,22 +153,6 @@ export default function FinancialYearExpensesTable({
         >
           {reportNo || '—'}
         </Link>
-        <button
-          type="button"
-          disabled={exporting}
-          onClick={() => onExport(
-            exportParams,
-            buildFyReportFilename({
-              companyCode: report.companyCode,
-              financialYear: selectedFy,
-              merType,
-            }),
-          )}
-          className="monthly-report-download"
-          title={`Download ${merType} report`}
-        >
-          {downloadIcon}
-        </button>
       </div>
     );
   };

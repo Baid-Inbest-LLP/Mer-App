@@ -8,16 +8,10 @@ import EmptyState from '../../components/common/EmptyState';
 import ReportDetailSkeleton from '../../components/common/ReportDetailSkeleton';
 import { formatCurrency, formatDate, buildMonthlyReportNo, buildMonthlyReportFilename } from '../../utils/format';
 import { reportApi } from '../../api/report.api';
-import { downloadBlob } from '../../utils/download';
+import { downloadBlob, withExtension } from '../../utils/download';
 
 const iconClass =
   'w-5 h-5 sm:w-6 sm:h-6 xl:w-7 xl:h-7 max-[1660px]:w-6 max-[1660px]:h-6 max-[1536px]:w-5 max-[1536px]:h-5 max-[1366px]:w-[18px] max-[1366px]:h-[18px] max-[1280px]:w-4 max-[1280px]:h-4';
-
-const downloadIcon = (
-  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-  </svg>
-);
 
 const backIcon = (
   <svg className="w-4 h-4 transition-transform duration-150 group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -53,7 +47,7 @@ export default function MonthlyDetailPage() {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(false);
+  const [exporting, setExporting] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -78,26 +72,27 @@ export default function MonthlyDetailPage() {
     };
   }, [month, financialYear, company, merType]);
 
-  const runExport = async () => {
+  const runExport = async (format) => {
     if (exporting) return;
-    setExporting(true);
+    setExporting(format);
+    const isPdf = format === 'pdf';
     try {
       const params = cleanParams({ month, financialYear, company, merType });
-      const res = await reportApi.exportMonthlyExcel(params);
-      downloadBlob(
-        res.data,
-        buildMonthlyReportFilename({
-          companyCode: companyCode(company),
-          month,
-          financialYear,
-          merType,
-        }),
-      );
-      notifications.show({ message: 'Excel download started', color: 'green' });
+      const res = isPdf
+        ? await reportApi.exportMonthlyPdf(params)
+        : await reportApi.exportMonthlyExcel(params);
+      const filename = buildMonthlyReportFilename({
+        companyCode: companyCode(company),
+        month,
+        financialYear,
+        merType,
+      });
+      downloadBlob(res.data, isPdf ? withExtension(filename, 'pdf') : filename);
+      notifications.show({ message: `${isPdf ? 'PDF' : 'Excel'} download started`, color: 'green' });
     } catch {
-      notifications.show({ message: 'Failed to download Excel', color: 'red' });
+      notifications.show({ message: `Failed to download ${isPdf ? 'PDF' : 'Excel'}`, color: 'red' });
     } finally {
-      setExporting(false);
+      setExporting(null);
     }
   };
 
@@ -117,7 +112,7 @@ export default function MonthlyDetailPage() {
 
   return (
     <div className="w-full max-w-[90rem] mx-auto">
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <button
           type="button"
           onClick={() => navigate(`/reports/monthly?fy=${encodeURIComponent(financialYear)}&month=${encodeURIComponent(month)}`)}
@@ -126,21 +121,26 @@ export default function MonthlyDetailPage() {
           {backIcon}
           Back to {month || 'Monthly Report'}
         </button>
-        <button
-          type="button"
-          disabled={exporting || loading || count === 0}
-          onClick={runExport}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {downloadIcon}
-          {exporting ? 'Preparing...' : 'Download Report'}
-        </button>
       </div>
 
       <PageBanner
         className="mb-4"
         title={reportNo || `${month || 'Monthly'} Expense Report`}
         subtitle={`${companyCode(company)} · ${merTypeLabel}${month ? ` · ${month}` : ''}${financialYear ? ` · ${financialYear}` : ''} · ${count} ${count === 1 ? 'entry' : 'entries'}`}
+        action={[
+          {
+            label: 'PDF',
+            icon: 'pdf',
+            disabled: Boolean(exporting) || loading || count === 0,
+            onClick: () => runExport('pdf'),
+          },
+          {
+            label: 'Excel',
+            icon: 'excel',
+            disabled: Boolean(exporting) || loading || count === 0,
+            onClick: () => runExport('excel'),
+          },
+        ]}
       />
 
       <div className="dashboard-grid-4 mb-4">

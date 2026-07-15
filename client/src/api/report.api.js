@@ -10,4 +10,6 @@ export const reportApi = {
     api.get('/reports/export/excel', { params, responseType: 'blob' }),
   exportMonthlyExcel: (params) =>
     api.get('/reports/export/monthly', { params, responseType: 'blob' }),
+  exportMonthlyPdf: (params) =>
+    api.get('/reports/export/monthly/pdf', { params, responseType: 'blob' }),
 };

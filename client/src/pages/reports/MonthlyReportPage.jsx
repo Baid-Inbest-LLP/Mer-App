@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { notifications } from '@mantine/notifications';
 import { useDispatch, useSelector } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -11,10 +10,8 @@ import { BarChartCard } from '../../components/charts/lazyCharts';
 import { ChartSkeletonGrid } from '../../components/charts/LazyChartBoundary';
 import { MonthlyExpensesTable } from '../../components/reports/lazyReportTables';
 import { ReportSummaryStatCards } from '../../components/reports/lazyReportStatCards';
-import { buildCustomizedReportFilename } from '../../utils/format';
 import { getRecentFinancialYearOptions } from '../../utils/financialYear';
 import { reportApi } from '../../api/report.api';
-import { downloadBlob } from '../../utils/download';
 
 const CURRENT_MONTH = new Date().toLocaleString('en-US', { month: 'long' });
 
@@ -22,14 +19,6 @@ const FY_MONTH_ORDER = [
   'April', 'May', 'June', 'July', 'August', 'September',
   'October', 'November', 'December', 'January', 'February', 'March',
 ];
-
-const cleanParams = (params) => {
-  const out = {};
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') out[key] = value;
-  });
-  return out;
-};
 
 const mapMonthly = (items = []) => {
   const byMonth = new Map();
@@ -109,7 +98,6 @@ export default function MonthlyReportPage() {
   const { lookups } = useSelector((state) => state.common);
   const currentFY = lookups?.currentFinancialYear;
   const { summary, monthlyReport, monthlyReportLoading, loading } = useSelector((state) => state.report);
-  const [exporting, setExporting] = useState(false);
   const [tableFY, setTableFY] = useState(null);
   const [monthlyFy, setMonthlyFy] = useState('');
   const [momComparisonChart, setMomComparisonChart] = useState([]);
@@ -199,24 +187,6 @@ export default function MonthlyReportPage() {
     void loadMonthlyChart(fy);
   };
 
-  const companyCodeByName = lookups?.companyCodeByName || {};
-
-  const runExport = async (params, filenameHint) => {
-    if (exporting) return;
-    setExporting(true);
-    try {
-      const { data } = await reportApi.exportMonthlyExcel(params);
-      const filename = filenameHint
-        || buildCustomizedReportFilename(params, companyCodeByName);
-      downloadBlob(data, filename);
-      notifications.show({ message: 'Excel download started', color: 'green' });
-    } catch {
-      notifications.show({ message: 'Failed to download Excel', color: 'red' });
-    } finally {
-      setExporting(false);
-    }
-  };
-
   return (
     <div>
       <PageBanner
@@ -259,8 +229,6 @@ export default function MonthlyReportPage() {
         fyOptions={fyOptions}
         onTableFyChange={(v) => setTableFY(v || currentFY)}
         initialMonth={initialMonth}
-        exporting={exporting}
-        onExport={runExport}
       />
     </div>
   );

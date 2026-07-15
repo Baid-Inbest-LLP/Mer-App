@@ -67,6 +67,21 @@ export const readAssetBuffer = (relativePath) => {
   }
 };
 
+const mimeFromFilename = (filename) => {
+  const ext = path.extname(filename).toLowerCase();
+  if (ext === '.png') return 'image/png';
+  if (ext === '.webp') return 'image/webp';
+  if (ext === '.jpg' || ext === '.jpeg') return 'image/jpeg';
+  return 'application/octet-stream';
+};
+
+/** Base64 data URI for an asset — used to embed logos in PDF HTML. */
+export const readAssetDataUri = (relativePath) => {
+  const buffer = readAssetBuffer(relativePath);
+  if (!buffer) return '';
+  return `data:${mimeFromFilename(relativePath)};base64,${buffer.toString('base64')}`;
+};
+
 /** Watermark with dark background removed so it sits behind sheet content. */
 export const readWatermarkBuffer = () => {
   if (cachedWatermarkBuffer) return cachedWatermarkBuffer;

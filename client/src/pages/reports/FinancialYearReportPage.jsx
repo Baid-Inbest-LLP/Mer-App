@@ -8,22 +8,12 @@ import { BarChartCard } from '../../components/charts/lazyCharts';
 import { ChartSkeletonGrid } from '../../components/charts/LazyChartBoundary';
 import { FinancialYearExpensesTable } from '../../components/reports/lazyReportTables';
 import { FinancialYearReportStatCards } from '../../components/reports/lazyReportStatCards';
-import { downloadBlob } from '../../utils/download';
-import { notifications } from '@mantine/notifications';
 
 const TABLE_YEAR_OPTIONS = [
   { value: '2', label: 'Last 2 years' },
   { value: '3', label: 'Last 3 years' },
   { value: '5', label: 'Last 5 years' },
 ];
-
-const cleanParams = (params) => {
-  const out = {};
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') out[key] = value;
-  });
-  return out;
-};
 
 const mapQuarterly = (items = []) =>
   items.map((item) => ({
@@ -56,7 +46,6 @@ export default function FinancialYearReportPage() {
   const [fyComparisonChart, setFyComparisonChart] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quarterlyChartLoading, setQuarterlyChartLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [tableYearLimit, setTableYearLimit] = useState('2');
 
   const initialFy = searchParams.get('fy') || null;
@@ -147,20 +136,6 @@ export default function FinancialYearReportPage() {
     void loadQuarterlyChart(fy);
   };
 
-  const runExport = async (params, filenameHint) => {
-    if (exporting) return;
-    setExporting(true);
-    try {
-      const { data } = await reportApi.exportMonthlyExcel(cleanParams(params));
-      downloadBlob(data, filenameHint);
-      notifications.show({ message: 'Excel download started', color: 'green' });
-    } catch {
-      notifications.show({ message: 'Failed to download Excel', color: 'red' });
-    } finally {
-      setExporting(false);
-    }
-  };
-
   const { fyTotal, totalEntries, peakQuarter, yoyChange } = useMemo(() => {
     const total = quarterly.reduce((sum, q) => sum + (q.value || 0), 0);
     const entries = quarterly.reduce((sum, q) => sum + (q.count || 0), 0);
@@ -232,8 +207,6 @@ export default function FinancialYearReportPage() {
         tableYearLimit={tableYearLimit}
         onTableYearLimitChange={(v) => setTableYearLimit(v || tableYearOptions[0]?.value || '2')}
         initialFy={initialFy}
-        exporting={exporting}
-        onExport={runExport}
       />
     </div>
   );

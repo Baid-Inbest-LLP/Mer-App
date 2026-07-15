@@ -19,6 +19,8 @@ import {
   createMerWorkbook,
   fmtDateDMY,
 } from '../utils/excelGenerator.js';
+import { buildMonthlyReportHtml } from '../utils/pdfGenerator.js';
+import { renderHtmlToPdfBuffer } from '../utils/puppeteerPdf.js';
 
 const DEFAULT_FOOTER_ADDRESS =
   '6th Floor, Suite No 608 And 609, Ashoka House, 3a, Hare St, B.b.d. Bagh, Kolkata, West Bengal, 700001, India';
@@ -504,7 +506,12 @@ const formatPaymentFrom = (expense) => {
   return method || '';
 };
 
-export const generateMonthlyExcel = async (query) => {
+/**
+ * Assemble the shared monthly-detail report model (headers/rows/totals/styling
+ * metadata). Consumed by both the Excel and PDF generators so the two exports
+ * stay identical in content and layout.
+ */
+const buildMonthlyReportModel = async (query) => {
   const filter = buildExpenseQuery(query);
 
   const [entries, meta, companyCtx, companies] = await Promise.all([
@@ -557,14 +564,7 @@ export const generateMonthlyExcel = async (query) => {
 
   const totalsRow = [
     entries.length,
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
-    '',
+    '', '', '', '', '', '', '', '',
     totals.net,
     totals.cgst,
     totals.sgst,
@@ -572,36 +572,49 @@ export const generateMonthlyExcel = async (query) => {
     totals.gst,
     totals.tds,
     totals.gross,
-    '',
-    '',
-    '',
-    '',
-    '',
+    '', '', '', '', '',
   ];
 
-  const workbook = createMerWorkbook();
-  const monthLabel = query.month || 'All Months';
-
-  buildMerStyledSheet(workbook, {
-    sheetName: monthLabel,
-    title: buildDetailTitle(query, companyCtx),
+  return {
+    filename,
     reportNo,
+    companyCtx,
+    sheetName: query.month || 'All Months',
+    title: buildDetailTitle(query, companyCtx),
+    totalsLabel: buildTotalsLabel(query, companyCtx),
     headers: DETAIL_HEADERS,
     rows,
     totalsRow,
-    totalsLabel: buildTotalsLabel(query, companyCtx),
     grandTotal: totals.gross,
     footerAddress: companyCtx.address,
-    companyCtx,
     moneyColIndices: [9, 10, 11, 12, 13, 14, 15],
     gstColIndex: 13,
     tdsColIndex: 14,
     totalColIndex: 15,
     includeGrandTotal: false,
     includeAmountInWords: false,
-  });
+  };
+};
+
+export const generateMonthlyExcel = async (query) => {
+  const model = await buildMonthlyReportModel(query);
+  const { filename, sheetName, ...sheet } = model;
+
+  const workbook = createMerWorkbook();
+  buildMerStyledSheet(workbook, { sheetName, ...sheet });
 
   return { workbook, filename };
+};
+
+export const generateMonthlyPdf = async (query) => {
+  const model = await buildMonthlyReportModel(query);
+  const { filename, sheetName, ...rest } = model;
+  void sheetName;
+
+  const html = buildMonthlyReportHtml(rest);
+  const buffer = await renderHtmlToPdfBuffer(html);
+
+  return { buffer, filename: filename.replace(/\.xlsx$/i, '.pdf') };
 };
 
 export const generateSummaryExcel = async (query) => {

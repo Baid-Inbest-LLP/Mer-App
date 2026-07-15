@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import FilterSelect from '../common/FilterSelect';
 import EmptyState from '../common/EmptyState';
 import ReportOverviewTableSkeleton from '../common/ReportOverviewTableSkeleton';
-import { formatCurrency, buildMonthlyReportNo, buildMonthlyReportFilename, formatMonthFyPeriodLabel } from '../../utils/format';
+import { formatCurrency, buildMonthlyReportNo, formatMonthFyPeriodLabel } from '../../utils/format';
 
 const FY_MONTH_ORDER = [
   'April', 'May', 'June', 'July', 'August', 'September',
@@ -16,25 +16,11 @@ const REPORT_TYPES = [
   { key: 'combined', label: 'Combined' },
 ];
 
-const downloadIcon = (
-  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-  </svg>
-);
-
 const backIcon = (
   <svg className="w-4 h-4 transition-transform duration-150 group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
   </svg>
 );
-
-const cleanParams = (params) => {
-  const out = {};
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') out[key] = value;
-  });
-  return out;
-};
 
 const buildDetailUrl = ({ activeTableFY, month, company, merType }) => {
   const params = new URLSearchParams();
@@ -120,8 +106,6 @@ export default function MonthlyExpensesTable({
   fyOptions,
   onTableFyChange,
   initialMonth = null,
-  exporting,
-  onExport,
 }) {
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
 
@@ -155,13 +139,6 @@ export default function MonthlyExpensesTable({
       merType,
     });
 
-    const exportParams = cleanParams({
-      financialYear: activeTableFY,
-      month: selectedMonth,
-      company,
-      merType,
-    });
-
     return (
       <div className="monthly-report-cell">
         <Link
@@ -176,23 +153,6 @@ export default function MonthlyExpensesTable({
         >
           {reportNo || '—'}
         </Link>
-        <button
-          type="button"
-          disabled={exporting}
-          onClick={() => onExport(
-            exportParams,
-            buildMonthlyReportFilename({
-              companyCode: report.companyCode,
-              month: selectedMonth,
-              financialYear: activeTableFY,
-              merType,
-            }),
-          )}
-          className="monthly-report-download"
-          title={`Download ${merType} report`}
-        >
-          {downloadIcon}
-        </button>
       </div>
     );
   };

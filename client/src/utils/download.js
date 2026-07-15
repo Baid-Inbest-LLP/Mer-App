@@ -6,3 +6,7 @@ export const downloadBlob = (blob, filename) => {
   link.click();
   window.URL.revokeObjectURL(url);
 };
+
+/** Swap a filename's extension (e.g. report.xlsx -> report.pdf). */
+export const withExtension = (filename, ext) =>
+  String(filename || 'report').replace(/\.[^.]+$/i, '') + `.${ext}`;

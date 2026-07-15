@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import excelIconSrc from '../../assets/excel.svg';
+import pdfIconSrc from '../../assets/pdf.svg';
 
 const plusIcon = (
   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
@@ -18,10 +20,15 @@ const keyIcon = (
   </svg>
 );
 
+const excelIcon = <img src={excelIconSrc} alt="" className="w-5 h-5" aria-hidden />;
+const pdfIcon = <img src={pdfIconSrc} alt="" className="w-5 h-5" aria-hidden />;
+
 const resolveActionIcon = (icon) => {
   if (icon === false || icon === 'none') return null;
   if (icon === 'arrow') return arrowRightIcon;
   if (icon === 'key') return keyIcon;
+  if (icon === 'excel') return excelIcon;
+  if (icon === 'pdf') return pdfIcon;
   return plusIcon;
 };
 
@@ -44,8 +51,21 @@ const renderActionContent = (act) => {
   );
 };
 
-const actionClassName =
-  'inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary-800 rounded-xl text-sm font-bold hover:bg-primary-50 active:scale-95 transition-all duration-150 shadow-lg shadow-primary-900/30 flex-shrink-0';
+const actionBaseClassName =
+  'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed';
+
+const actionVariantClassName = {
+  default:
+    'bg-white text-primary-800 hover:bg-primary-50 shadow-lg shadow-primary-900/30 px-5 rounded-xl font-bold active:scale-95 transition-all duration-150',
+  pdf: 'text-red-800 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300',
+  excel: 'text-green-800 bg-green-50 border border-green-200 hover:bg-green-100 hover:border-green-300',
+};
+
+const resolveActionClassName = (act) => {
+  const variant = act.variant
+    || (act.icon === 'pdf' ? 'pdf' : act.icon === 'excel' ? 'excel' : 'default');
+  return `${actionBaseClassName} ${actionVariantClassName[variant] || actionVariantClassName.default}`;
+};
 
 export default function PageBanner({ title, subtitle, action = null, className = '' }) {
   const actionsList = Array.isArray(action) ? action : action ? [action] : [];
@@ -62,10 +82,10 @@ export default function PageBanner({ title, subtitle, action = null, className =
           <p className="text-primary-200 text-md">{subtitle}</p>
         </div>
         {actionsList.length > 0 && (
-          <div className="flex flex-wrap gap-2 justify-end flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-2 justify-end flex-shrink-0">
             {actionsList.map((act) =>
               act.to ? (
-                <Link key={`${act.to}-${act.label}`} to={act.to} className={actionClassName}>
+                <Link key={`${act.to}-${act.label}`} to={act.to} className={resolveActionClassName(act)}>
                   {renderActionContent(act)}
                 </Link>
               ) : (
@@ -73,7 +93,8 @@ export default function PageBanner({ title, subtitle, action = null, className =
                   key={act.label}
                   type="button"
                   onClick={act.onClick}
-                  className={actionClassName}
+                  disabled={act.disabled}
+                  className={resolveActionClassName(act)}
                 >
                   {renderActionContent(act)}
                 </button>

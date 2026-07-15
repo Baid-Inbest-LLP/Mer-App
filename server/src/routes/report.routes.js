@@ -12,5 +12,6 @@ router.get('/financial-year', reportController.getFinancialYearReport);
 router.get('/monthly/detailed', reportController.getMonthlyDetailed);
 router.get('/export/excel', reportController.exportSummaryExcel);
 router.get('/export/monthly', reportController.exportMonthlyExcel);
+router.get('/export/monthly/pdf', reportController.exportMonthlyPdf);
 
 export default router;
