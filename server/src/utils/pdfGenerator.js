@@ -21,42 +21,50 @@ const DETAIL_MERGE_END_IDX = 8; // Exp Type → Particulars
 
 /**
  * Preferred relative widths for the 21 detail-report columns.
- * Wider nowrap cols: S.No, Exp Type, Month, Co Name, Location, Payment Method.
- * Narrower: Invoice No.
+ * Slightly tighter: Sl No (wraps), Exp Type, Month, Loc.
+ * Narrower: Invoice No. Wider nowrap: Co Name, Payment Method.
  */
 const DETAIL_COL_WIDTHS = [
-  '3%',    // 0  S.No
-  '4%',    // 1  Exp Type
-  '4.2%',  // 2  Month
-  '7%',    // 3  Co Name
-  '5.2%',  // 4  Location
-  '4.8%',  // 5  Invoice Date
-  '5%',    // 6  Invoice No (narrower)
-  '5.2%',  // 7  Head of Exp
-  '8.5%',  // 8  Particulars
-  '4.8%',  // 9  Net Amt
-  '3.8%',  // 10 CGST
-  '3.8%',  // 11 SGST
-  '3.8%',  // 12 IGST
-  '4.2%',  // 13 Total GST
-  '3.8%',  // 14 TDS
-  '4.8%',  // 15 Gross Amt
-  '3.8%',  // 16 Paid By
+  '2.2%',  // 0  Sl No (narrow — header wraps to 2 lines)
+  '2.6%',  // 1  Exp Type (~2-4px tighter)
+  '3%',  // 2  Month
+  '7.5%',  // 3  Co Name
+  '2.6%',  // 4  Loc (narrower)
+  '4.2%',    // 5  Invoice Date
+  '5.2%',  // 6  Invoice No
+  '6.2%',  // 7  Head of Exp
+  '9%',    // 8  Particulars (absorbs freed space)
+  '4.2%',  // 9  Net Amt
+  '3.6%',  // 10 CGST
+  '3.6%',  // 11 SGST
+  '3.6%',  // 12 IGST
+  '4.0%',  // 13 Total GST
+  '3.6%',  // 14 TDS
+  '4.5%',  // 15 Gross Amt
+  '3.6%',  // 16 Paid By
   '4.8%',  // 17 Payment From
-  '5.2%',  // 18 Payment Method
-  '5.2%',  // 19 Payment Ref No
-  '4.3%',  // 20 Payment Date
+  '4.2%',  // 18 Payment Method
+  '7%',  // 19 Payment Ref No
+  '4.2%',  // 20 Payment Date
 ];
 
 /** Columns that must stay on one line (no word break). */
 const NOWRAP_HEADERS = new Set([
-  'S.No',
   'Exp\nType',
   'Month',
-  'Co\nName',
-  'Location',
+  'Loc',
   'Payment\nMethod',
 ]);
+
+/** Text columns that should wrap when content is long. */
+const WRAP_HEADERS = new Set([
+  'Co\nName',
+  'Head of\nExp',
+  'Particulars',
+]);
+
+/** Sl No header wraps to 2 lines; cell values stay short. */
+const HEADER_WRAP_HEADERS = new Set(['Sl\nNo']);
 
 const escapeHtml = (value) =>
   String(value ?? '')
@@ -114,7 +122,12 @@ const resolveAlign = (index, headers, moneyCols) => {
 /** Header text is always centered (incl. Co Name / Particulars). */
 const resolveHeaderAlign = () => 'center';
 
-const colClass = (header) => (NOWRAP_HEADERS.has(header) ? 'col-nowrap' : '');
+const colClass = (header) => {
+  const classes = [];
+  if (NOWRAP_HEADERS.has(header)) classes.push('col-nowrap');
+  if (HEADER_WRAP_HEADERS.has(header)) classes.push('col-header-wrap');
+  return classes.join(' ');
+};
 
 const renderColGroup = (headers) => {
   if (headers.length !== DETAIL_COL_WIDTHS.length) return '';
@@ -177,8 +190,9 @@ const renderBodyRows = (rows, headers, moneyCols, { gstColIndex, tdsColIndex, to
           if (i === tdsColIndex) classes.push('cell-tds');
           if (i === gstColIndex) classes.push('cell-gst');
           if (i === totalColIndex) classes.push('cell-total');
-          // Particulars may wrap; other left-align cols that are nowrap stay single-line.
-          if (align === 'left' && !NOWRAP_HEADERS.has(header)) classes.push('cell-wrap');
+          if (WRAP_HEADERS.has(header) || (align === 'left' && !NOWRAP_HEADERS.has(header))) {
+            classes.push('cell-wrap');
+          }
           const rendered = isMoney
             ? fmtMoney(value)
             : escapeHtml(value === 0 ? 0 : value || '');
@@ -344,6 +358,12 @@ export const buildMonthlyReportHtml = ({
         white-space: nowrap;
         word-break: normal;
         overflow-wrap: normal;
+      }
+      /* Sl No header stacks on two lines. */
+      table.report-table th.col-header-wrap {
+        white-space: normal;
+        line-height: 1.15;
+        word-break: normal;
       }
       /* Invoice No (7th data col) may wrap to avoid crowding neighbours. */
       table.report-table td:nth-child(7) {

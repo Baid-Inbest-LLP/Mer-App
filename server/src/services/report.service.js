@@ -459,11 +459,11 @@ export const getMonthlyDetailedReport = async (query) => {
 };
 
 const DETAIL_HEADERS = [
-  'S.No',
+  'Sl\nNo',
   'Exp\nType',
   'Month',
   'Co\nName',
-  'Location',
+  'Loc',
   'Invoice\nDate',
   'Invoice\nNo',
   'Head of\nExp',

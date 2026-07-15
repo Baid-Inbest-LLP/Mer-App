@@ -16,11 +16,11 @@ const LEFT_ALIGN_HEADERS = new Set(['Co\nName', 'Particulars']);
 /** Column widths for A–W (gap + 21 data cols + gap). */
 const SHEET_COLUMN_WIDTHS = [
   2,  // A gap
-  8,  // B S.No
-  10, // C Exp Type
-  10, // D Month
+  6,  // B Sl No (narrow — header wraps)
+  9,  // C Exp Type
+  9,  // D Month
   22, // E Co Name
-  10, // F Location
+  8,  // F Loc
   12, // G Invoice Date
   22, // H Invoice No
   18, // I Head of Exp
@@ -41,7 +41,10 @@ const SHEET_COLUMN_WIDTHS = [
 ];
 
 const HEADER_MIN_WIDTHS = {
-  'Exp\nType': 10,
+  'Sl\nNo': 6,
+  'Exp\nType': 9,
+  Month: 9,
+  Loc: 8,
   'Co\nName': 18,
   'Invoice\nDate': 12,
   'Invoice\nNo': 22,
