@@ -32,19 +32,19 @@ const DETAIL_COL_WIDTHS = [
   '2.8%',  // 4  Loc (narrower)
   '4%',    // 5  Invoice Date
   '5%',  // 6  Invoice No
-  '6%',  // 7  Head of Exp
+  '6.8%',  // 7  Head of Exp
   '9%',    // 8  Particulars (absorbs freed space)
-  '5.4%',  // 9  Net Amt
+  '5.6%',  // 9  Net Amt
   '4.6%',  // 10 CGST
   '4.6%',  // 11 SGST
   '4.6%',  // 12 IGST
-  '5%',  // 13 Total GST
+  '5.4%',    // 13 Total GST
   '4.6%',  // 14 TDS
-  '5.2%',  // 15 Gross Amt
+  '5.6%',  // 15 Gross Amt
   '3.6%',  // 16 Paid By
   '4.8%',  // 17 Payment From
   '4.2%',  // 18 Payment Method
-  '7.2%',  // 19 Payment Ref No
+  '5%',  // 19 Payment Ref No
   '4%',  // 20 Payment Date
 ];
 
@@ -53,6 +53,15 @@ const NOWRAP_HEADERS = new Set([
   'Exp\nType',
   'Month',
   'Loc',
+  'Invoice\nDate',
+  'Payment\nDate',
+  'Net\nAmt',
+  'CGST',
+  'SGST',
+  'IGST',
+  'Total\nGST',
+  'TDS',
+  'Gross\nAmt',
   'Payment\nMethod',
 ]);
 
@@ -61,6 +70,7 @@ const WRAP_HEADERS = new Set([
   'Co\nName',
   'Head of\nExp',
   'Particulars',
+  'Payment\nRef No',
 ]);
 
 /** Sl No header wraps to 2 lines; cell values stay short. */
@@ -293,7 +303,7 @@ export const buildMonthlyReportHtml = ({
     <meta charset="utf-8" />
     <title>${escapeHtml(reportNo || 'MER Report')}</title>
     <style>
-      @page { size: A4 landscape; margin: 8mm 6mm; }
+      @page { size: A4 landscape; margin: 8mm 4mm; }
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
       body {
