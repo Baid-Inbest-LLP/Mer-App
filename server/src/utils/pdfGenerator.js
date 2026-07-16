@@ -32,15 +32,15 @@ const DETAIL_COL_WIDTHS = [
   '2.8%',  // 4  Loc (narrower)
   '3.8%',    // 5  Invoice Date
   '5%',  // 6  Invoice No
-  '6.8%',  // 7  Head of Exp
+  '7.2%',  // 7  Head of Exp
   '8.2%',   // 8  Particulars (absorbs freed space)
-  '5.8%',  // 9  Net Amt
+  '6.2%',  // 9  Net Amt
   '4.6%',  // 10 CGST
   '4.6%',  // 11 SGST
   '4.6%',  // 12 IGST
   '5.4%',    // 13 Total GST
   '4.6%',  // 14 TDS
-  '5.8%',  // 15 Gross Amt
+  '6.2%',  // 15 Gross Amt
   '3.6%',  // 16 Paid By
   '5%',  // 17 Payment From
   '4.2%',  // 18 Payment Method
