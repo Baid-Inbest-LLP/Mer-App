@@ -41,8 +41,8 @@ const DETAIL_COL_WIDTHS = [
   '5.4%',    // 13 Total GST
   '4.6%',  // 14 TDS
   '6.2%',  // 15 Gross Amt
-  '3.6%',  // 16 Paid By
-  '5.4%',  // 17 Payment From
+  '3.4%',  // 16 Paid By
+  '6%',  // 17 Payment From
   '4.2%',  // 18 Payment Method
   '5%',  // 19 Payment Ref No
   '3.8%',  // 20 Payment Date
@@ -344,7 +344,7 @@ export const buildMonthlyReportHtml = ({
       table.report-table th,
       table.report-table td {
         border: 1px solid #000;
-        padding: 3px 2px;
+        padding: 3px 1px;
         font-size: 11px;
         vertical-align: middle;
         overflow: hidden;
@@ -389,9 +389,10 @@ export const buildMonthlyReportHtml = ({
         background: ${HEADER_BLUE};
         color: #fff;
         font-weight: 700;
-        font-size: 13px;
+        font-size: 12px;
+        padding: 6px 2px;
       }
-      .totals-label { font-size: 13px; }
+      .totals-label { font-size: 12px; }
 
       .grand-total-table {
         width: 100%;
