@@ -55,7 +55,7 @@ export default function FinancialYearDetailPage() {
 
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState(null);
+  const [exporting, setExporting] = useState({ pdf: false, excel: false });
 
   useEffect(() => {
     let active = true;
@@ -81,8 +81,8 @@ export default function FinancialYearDetailPage() {
   }, [financialYear, company, merType]);
 
   const runExport = async (format) => {
-    if (exporting) return;
-    setExporting(format);
+    if (exporting[format]) return;
+    setExporting((prev) => ({ ...prev, [format]: true }));
     const isPdf = format === 'pdf';
     try {
       const params = cleanParams({ financialYear, company, merType });
@@ -101,7 +101,7 @@ export default function FinancialYearDetailPage() {
     } catch {
       notifications.show({ message: `Failed to download ${isPdf ? 'PDF' : 'Excel'}`, color: 'red' });
     } finally {
-      setExporting(null);
+      setExporting((prev) => ({ ...prev, [format]: false }));
     }
   };
 
@@ -145,15 +145,15 @@ export default function FinancialYearDetailPage() {
           {
             label: 'PDF',
             icon: 'pdf',
-            loading: exporting === 'pdf',
-            disabled: Boolean(exporting) || loading || count === 0,
+            loading: exporting.pdf,
+            disabled: exporting.pdf || loading || count === 0,
             onClick: () => runExport('pdf'),
           },
           {
             label: 'Excel',
             icon: 'excel',
-            loading: exporting === 'excel',
-            disabled: Boolean(exporting) || loading || count === 0,
+            loading: exporting.excel,
+            disabled: exporting.excel || loading || count === 0,
             onClick: () => runExport('excel'),
           },
         ]}

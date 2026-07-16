@@ -42,7 +42,7 @@ export default function CustomizedReportPage() {
   const navigate = useNavigate();
   const { lookups } = useSelector((state) => state.common);
   const [downloadFilters, setDownloadFilters] = useState({});
-  const [exportingReport, setExportingReport] = useState(null);
+  const [exportingReport, setExportingReport] = useState({ pdf: false, excel: false });
   const [filtersKey, setFiltersKey] = useState(0);
   const [preview, setPreview] = useState(null);
   const [generating, setGenerating] = useState(false);
@@ -94,8 +94,8 @@ export default function CustomizedReportPage() {
   };
 
   const runExport = async (params, filenameHint, format = 'excel') => {
-    if (exportingReport) return;
-    setExportingReport(format);
+    if (exportingReport[format]) return;
+    setExportingReport((prev) => ({ ...prev, [format]: true }));
     const isPdf = format === 'pdf';
     try {
       const { data } = isPdf
@@ -108,7 +108,7 @@ export default function CustomizedReportPage() {
     } catch {
       notifications.show({ message: `Failed to download ${isPdf ? 'PDF' : 'Excel'}`, color: 'red' });
     } finally {
-      setExportingReport(null);
+      setExportingReport((prev) => ({ ...prev, [format]: false }));
     }
   };
 
@@ -265,11 +265,11 @@ export default function CustomizedReportPage() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 type="button"
-                disabled={Boolean(exportingReport) || preview.count === 0}
+                disabled={exportingReport.pdf || preview.count === 0}
                 onClick={() => runExport(preview.params, preview.filename, 'pdf')}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-red-800 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {exportingReport === 'pdf' ? (
+                {exportingReport.pdf ? (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -281,11 +281,11 @@ export default function CustomizedReportPage() {
               </button>
               <button
                 type="button"
-                disabled={Boolean(exportingReport) || preview.count === 0}
+                disabled={exportingReport.excel || preview.count === 0}
                 onClick={() => runExport(preview.params, preview.filename, 'excel')}
                 className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-green-800 bg-green-50 border border-green-200 hover:bg-green-100 hover:border-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {exportingReport === 'excel' ? (
+                {exportingReport.excel ? (
                   <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden>
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
