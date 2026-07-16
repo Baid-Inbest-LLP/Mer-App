@@ -4,7 +4,7 @@ import { amountToWordsINR } from './amountToWords.js';
 /**
  * HTML/Puppeteer PDF renderer that mirrors the styled MER Excel report
  * (see excelGenerator.js). Same header, title, table, totals, and footer
- * layout — just rendered as an A4 landscape PDF instead of a worksheet.
+ * layout — just rendered as a Legal landscape PDF instead of a worksheet.
  */
 
 const HEADER_BLUE = '#005887';
@@ -30,7 +30,7 @@ const DETAIL_COL_WIDTHS = [
   '3%',  // 2  Month
   '7.5%',  // 3  Co Name
   '2.8%',  // 4  Loc (narrower)
-  '4%',    // 5  Invoice Date
+  '3.8%',    // 5  Invoice Date
   '5%',  // 6  Invoice No
   '6.8%',  // 7  Head of Exp
   '8.2%',   // 8  Particulars (absorbs freed space)
@@ -45,7 +45,7 @@ const DETAIL_COL_WIDTHS = [
   '5%',  // 17 Payment From
   '4.2%',  // 18 Payment Method
   '5%',  // 19 Payment Ref No
-  '4%',  // 20 Payment Date
+  '3.8%',  // 20 Payment Date
 ];
 
 /** Columns that must stay on one line (no word break). */
@@ -303,13 +303,13 @@ export const buildMonthlyReportHtml = ({
     <meta charset="utf-8" />
     <title>${escapeHtml(reportNo || 'MER Report')}</title>
     <style>
-      @page { size: A6 landscape; margin: 8mm 4mm; }
+      @page { size: legal landscape; margin: 8mm 4mm; }
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
       body {
         font-family: Calibri, 'Segoe UI', Arial, sans-serif;
         color: #000;
-        font-size: 9px;
+        font-size: 10px;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
@@ -344,8 +344,8 @@ export const buildMonthlyReportHtml = ({
       table.report-table th,
       table.report-table td {
         border: 1px solid #000;
-        padding: 3px 3px;
-        font-size: 9px;
+        padding: 3px 2px;
+        font-size: 11px;
         vertical-align: middle;
         overflow: hidden;
       }
@@ -353,7 +353,7 @@ export const buildMonthlyReportHtml = ({
         background: ${HEADER_BLUE};
         color: #fff;
         font-weight: 700;
-        font-size: 9.5px;
+        font-size: 12px;
         text-align: center;
       }
       table.report-table tbody td { white-space: nowrap; }
@@ -389,9 +389,9 @@ export const buildMonthlyReportHtml = ({
         background: ${HEADER_BLUE};
         color: #fff;
         font-weight: 700;
-        font-size: 10px;
+        font-size: 13px;
       }
-      .totals-label { font-size: 11px; }
+      .totals-label { font-size: 13px; }
 
       .grand-total-table {
         width: 100%;
@@ -403,8 +403,8 @@ export const buildMonthlyReportHtml = ({
         background: ${HEADER_BLUE};
         color: #fff;
         font-weight: 700;
-        font-size: 14px;
-        padding: 5px 6px;
+        font-size: 13px;
+        padding: 3px 2px;
       }
       .grand-total-label { text-align: center; }
       .grand-total-amount { text-align: right; white-space: nowrap; }
@@ -423,7 +423,7 @@ export const buildMonthlyReportHtml = ({
         align-items: center;
         justify-content: space-between;
         margin-top: 12px;
-        font-size: 10px;
+        font-size: 12px;
         font-weight: 700;
       }
       .footer-dept { color: ${ACCOUNTS_RED}; }

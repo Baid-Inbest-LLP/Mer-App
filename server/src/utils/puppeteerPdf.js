@@ -84,7 +84,7 @@ const shutdown = async () => {
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);
 
-/** Render a full HTML document (landscape A4) to a PDF buffer. */
+/** Render a full HTML document (landscape Legal) to a PDF buffer. */
 export const renderHtmlToPdfBuffer = async (html) => {
   // On Render: launch a fresh browser per request (avoids stale/OOM singleton).
   const browser = usePackagedChromium ? await launchPackagedBrowser() : await getLocalBrowser();
@@ -112,7 +112,7 @@ export const renderHtmlToPdfBuffer = async (html) => {
       .catch(() => {});
 
     const buffer = await page.pdf({
-      format: 'A4',
+      format: 'Legal',
       landscape: true,
       printBackground: true,
       preferCSSPageSize: true,
