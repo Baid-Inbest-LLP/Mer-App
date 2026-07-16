@@ -32,8 +32,8 @@ const DETAIL_COL_WIDTHS = [
   '2.8%',  // 4  Loc (narrower)
   '4%',    // 5  Invoice Date
   '5%',  // 6  Invoice No
-  '6.4%',  // 7  Head of Exp
-  '8.6%',   // 8  Particulars (absorbs freed space)
+  '6.8%',  // 7  Head of Exp
+  '8.2%',   // 8  Particulars (absorbs freed space)
   '5.8%',  // 9  Net Amt
   '4.6%',  // 10 CGST
   '4.6%',  // 11 SGST
@@ -303,7 +303,7 @@ export const buildMonthlyReportHtml = ({
     <meta charset="utf-8" />
     <title>${escapeHtml(reportNo || 'MER Report')}</title>
     <style>
-      @page { size: A4 landscape; margin: 8mm 4mm; }
+      @page { size: A6 landscape; margin: 8mm 4mm; }
       * { box-sizing: border-box; }
       html, body { margin: 0; padding: 0; }
       body {
