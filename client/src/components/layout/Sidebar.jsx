@@ -220,11 +220,7 @@ const Sidebar = ({ isOpen = true }) => {
           className={`flex items-center ${isOpen ? 'gap-3' : 'justify-center'}`}
           title={!isOpen ? user?.name : undefined}
         >
-          <div
-            className={`sidebar-user-avatar text-lg font-semibold ${
-              showPhoto ? '' : 'bg-white/20 text-white'
-            }`}
-          >
+          <div className="sidebar-user-avatar text-lg font-semibold">
             {showPhoto ? (
               <img
                 src={avatarPreview}
