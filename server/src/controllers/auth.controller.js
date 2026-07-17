@@ -21,7 +21,18 @@ export const logout = asyncHandler(async (req, res) => {
 });
 
 export const getMe = asyncHandler(async (req, res) => {
-  ApiResponse.success(res, req.user, 'User profile');
+  const user = await authService.getProfile(req.user._id);
+  ApiResponse.success(res, user, 'User profile');
+});
+
+export const getMyAvatar = asyncHandler(async (req, res) => {
+  const result = await authService.getMyAvatar(req.user._id);
+  ApiResponse.success(res, result, 'Avatar');
+});
+
+export const updateProfile = asyncHandler(async (req, res) => {
+  const result = await authService.updateProfile(req.user._id, req.body);
+  ApiResponse.success(res, result, 'Profile updated');
 });
 
 export const forgotPassword = asyncHandler(async (req, res) => {

@@ -1,9 +1,15 @@
-import { cloneElement } from 'react';
-import { NavLink } from 'react-router-dom';
+import { cloneElement, useEffect, useState } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import inbestTextLogo from '../../assets/inbest_text_logo.png';
 import inbestWhiteLogo from '../../assets/white_inbest_logo.png';
 import { isAdmin } from '../../constants/roles';
+
+const chevronIcon = (
+  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+);
 
 const navItems = [
   {
@@ -35,36 +41,8 @@ const navItems = [
     ),
   },
   {
-    to: '/reports/monthly',
-    label: 'Monthly Report',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5M12 12.75h.008v.008H12v-.008z"
-        />
-      </svg>
-    ),
-  },
-  {
-    to: '/reports/financial-year',
-    label: 'FY Report',
-    icon: (
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M2.25 18 9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941"
-        />
-      </svg>
-    ),
-  },
-  {
-    to: '/reports/summary',
-    label: 'Summary Report',
+    label: 'Reports & Insights',
+    basePath: '/reports',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
@@ -75,6 +53,11 @@ const navItems = [
         />
       </svg>
     ),
+    children: [
+      { to: '/reports/monthly', label: 'Monthly Report' },
+      { to: '/reports/financial-year', label: 'FY Report' },
+      { to: '/reports/summary', label: 'Summary Report' },
+    ],
   },
   {
     to: '/control-center',
@@ -85,7 +68,7 @@ const navItems = [
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+          d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
         />
       </svg>
     ),
@@ -114,9 +97,28 @@ const roleLabel = (role) => {
   return role || '';
 };
 
+const linkClass = (isOpen, isActive) =>
+  `flex min-w-0 items-center overflow-hidden rounded-lg text-md font-medium transition-colors ${
+    isOpen ? 'gap-3 justify-start px-3 py-2' : 'justify-center px-2 py-2.5'
+  } ${
+    isActive
+      ? 'bg-white/75 text-[#0b2f81] shadow-sm'
+      : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
+  }`;
+
 const Sidebar = ({ isOpen = true }) => {
-  const { user } = useSelector((state) => state.auth);
+  const { user, avatarPreview } = useSelector((state) => state.auth);
+  const location = useLocation();
+  const navigate = useNavigate();
   const items = navItems.filter((item) => !item.adminOnly || isAdmin(user?.role));
+  const [reportsOpen, setReportsOpen] = useState(() => location.pathname.startsWith('/reports'));
+  const showPhoto = Boolean(user?.hasAvatar && avatarPreview);
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/reports')) {
+      setReportsOpen(true);
+    }
+  }, [location.pathname]);
 
   return (
     <aside
@@ -134,7 +136,7 @@ const Sidebar = ({ isOpen = true }) => {
           <img
             src={isOpen ? inbestTextLogo : inbestWhiteLogo}
             alt="inbest"
-            className={`object-contain object-center transition-[height,width] duration-200 ${
+            className={`sidebar-brand-logo object-contain object-center transition-[height,width] duration-200 ${
               isOpen ? 'h-9 w-auto max-w-[9.5rem]' : 'h-9 w-auto max-w-[3.25rem]'
             }`}
             decoding="async"
@@ -142,29 +144,75 @@ const Sidebar = ({ isOpen = true }) => {
         </div>
       </div>
 
-      <nav className={`flex-1 py-4 space-y-1 ${isOpen ? 'px-3' : 'px-2'}`}>
-        {items.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/'}
-            title={!isOpen ? item.label : undefined}
-            className={({ isActive }) =>
-              `flex items-center rounded-lg text-md font-medium transition-colors ${
-                isOpen ? 'gap-3 justify-start px-3 py-2' : 'justify-center px-2 py-2.5'
-              } ${
-                isActive
-                  ? 'bg-white/75 text-[#0b2f81] shadow-sm'
-                  : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
-              }`
-            }
-          >
-            {cloneElement(item.icon, {
-              className: `${isOpen ? 'w-5 h-5' : 'w-7 h-7'} flex-shrink-0`,
-            })}
-            {isOpen && <span className="whitespace-nowrap">{item.label}</span>}
-          </NavLink>
-        ))}
+      <nav className={`flex-1 overflow-x-hidden overflow-y-auto py-4 space-y-1 ${isOpen ? 'px-3' : 'px-2'}`}>
+        {items.map((item) => {
+          if (item.children) {
+            const isGroupActive = location.pathname.startsWith(item.basePath);
+            return (
+              <div key={item.label}>
+                <button
+                  type="button"
+                  title={!isOpen ? item.label : undefined}
+                  onClick={() =>
+                    isOpen ? setReportsOpen((prev) => !prev) : navigate(item.children[0].to)
+                  }
+                  className={`w-full border-0 cursor-pointer ${linkClass(isOpen, isGroupActive)}`}
+                >
+                  {cloneElement(item.icon, {
+                    className: `${isOpen ? 'w-5 h-5' : 'w-7 h-7'} flex-shrink-0`,
+                  })}
+                  {isOpen && (
+                    <span className="flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap">
+                      {item.label}
+                    </span>
+                  )}
+                  {isOpen &&
+                    cloneElement(chevronIcon, {
+                      className: `w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
+                        reportsOpen ? 'rotate-90' : ''
+                      }`,
+                    })}
+                </button>
+
+                {isOpen && reportsOpen && (
+                  <div className="mt-1 space-y-1 pl-4">
+                    {item.children.map((child) => (
+                      <NavLink
+                        key={child.to}
+                        to={child.to}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 rounded-lg pl-4 pr-3 py-2 text-sm font-medium transition-colors ${
+                            isActive
+                              ? 'bg-white/75 text-[#0b2f81] shadow-sm'
+                              : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
+                          }`
+                        }
+                      >
+                        <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current" />
+                        <span className="whitespace-nowrap">{child.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              title={!isOpen ? item.label : undefined}
+              className={({ isActive }) => linkClass(isOpen, isActive)}
+            >
+              {cloneElement(item.icon, {
+                className: `${isOpen ? 'w-5 h-5' : 'w-7 h-7'} flex-shrink-0`,
+              })}
+              {isOpen && <span className="whitespace-nowrap">{item.label}</span>}
+            </NavLink>
+          );
+        })}
       </nav>
 
       <div className={`py-4 border-t border-primary-800 ${isOpen ? 'px-4' : 'px-2'}`}>
@@ -172,13 +220,24 @@ const Sidebar = ({ isOpen = true }) => {
           className={`flex items-center ${isOpen ? 'gap-3' : 'justify-center'}`}
           title={!isOpen ? user?.name : undefined}
         >
-          <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-lg font-semibold">
-            {user?.name?.charAt(0).toUpperCase()}
+          <div
+            className={`sidebar-user-avatar text-lg font-semibold ${
+              showPhoto ? '' : 'bg-white/20 text-white'
+            }`}
+          >
+            {showPhoto ? (
+              <img
+                src={avatarPreview}
+                alt={user?.name || 'Profile'}
+              />
+            ) : (
+              user?.name?.charAt(0).toUpperCase()
+            )}
           </div>
           {isOpen && (
             <div className="flex-1 min-w-0">
               <p className="text-md font-medium text-white truncate">{user?.name}</p>
-              <p className="text-sm text-gray-400 truncate">{roleLabel(user?.role)}</p>
+              <p className="sidebar-user-role text-sm truncate">{roleLabel(user?.role)}</p>
             </div>
           )}
         </div>

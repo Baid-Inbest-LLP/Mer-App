@@ -143,55 +143,59 @@ export default function BankAccountsSection() {
         </div>
       ) : (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-gray-600">
-              <tr>
-                <th className="px-4 py-3 font-medium">Account</th>
-                <th className="px-4 py-3 font-medium">Company</th>
-                <th className="px-4 py-3 font-medium">Label</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                {canManage && <th className="px-4 py-3 font-medium text-right">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <tr key={item._id} className="border-t border-gray-100">
-                  <td className="px-4 py-3">
-                    <div className="font-semibold text-gray-900">{item.displayValue || `${item.bankName} - ${item.last4}`}</div>
-                    {item.accountName && <div className="text-xs text-gray-500">{item.accountName}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-gray-700">{item.companyName || '—'}</td>
-                  <td className="px-4 py-3 text-gray-700">{item.label || '—'}</td>
-                  <td className="px-4 py-3">
-                    <span className={item.isActive ? 'company-status-active' : 'company-status-inactive'}>
-                      {item.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  {canManage && (
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <button type="button" className="company-action-btn company-action-btn--edit" onClick={() => openEdit(item)} title="Edit">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className="company-action-btn company-action-btn--delete"
-                          onClick={() => setConfirmDelete({ id: item._id, name: item.displayValue || `${item.bankName} - ${item.last4}` })}
-                          title="Delete"
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  )}
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th className="text-left">Account</th>
+                  <th className="text-left">Company</th>
+                  <th className="text-left">Label</th>
+                  <th className="text-center">Status</th>
+                  {canManage && <th className="text-center">Actions</th>}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {items.map((item) => (
+                  <tr key={item._id}>
+                    <td className="text-left align-middle">
+                      <div className="font-semibold">{item.displayValue || `${item.bankName} - ${item.last4}`}</div>
+                      {item.accountName && (
+                        <div className="control-center-cell-muted text-xs">{item.accountName}</div>
+                      )}
+                    </td>
+                    <td className="text-left align-middle">{item.companyName || '—'}</td>
+                    <td className="text-left align-middle">{item.label || '—'}</td>
+                    <td className="text-center align-middle">
+                      <span className={item.isActive ? 'company-status-active' : 'company-status-inactive'}>
+                        {item.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    {canManage && (
+                      <td className="text-center align-middle">
+                        <div className="inline-flex items-center justify-center gap-2">
+                          <button type="button" className="company-action-btn company-action-btn--edit" onClick={() => openEdit(item)} title="Edit">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            className="company-action-btn company-action-btn--delete"
+                            onClick={() => setConfirmDelete({ id: item._id, name: item.displayValue || `${item.bankName} - ${item.last4}` })}
+                            title="Delete"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

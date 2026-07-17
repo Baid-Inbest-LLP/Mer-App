@@ -5,14 +5,18 @@ import { useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import { fetchLookups } from '../../store/slices/commonSlice';
-import { fetchMe } from '../../store/slices/authSlice';
+import { fetchAvatar, fetchMe } from '../../store/slices/authSlice';
 
 export default function AppLayout() {
   const dispatch = useDispatch();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchMe());
+    dispatch(fetchMe()).then((action) => {
+      if (fetchMe.fulfilled.match(action) && action.payload?.hasAvatar) {
+        dispatch(fetchAvatar());
+      }
+    });
     dispatch(fetchLookups());
   }, [dispatch]);
 

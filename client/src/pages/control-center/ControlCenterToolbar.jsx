@@ -15,8 +15,10 @@ export default function ControlCenterToolbar({
     <div className="card p-4 mb-4">
       <div className="flex gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          {subtitle ? <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p> : null}
+          <h2 className="control-center-toolbar-title text-lg font-semibold text-gray-900">{title}</h2>
+          {subtitle ? (
+            <p className="control-center-toolbar-subtitle text-sm text-gray-500 mt-0.5">{subtitle}</p>
+          ) : null}
         </div>
 
         <div className="flex sm:flex-row sm:items-center gap-2 w-full lg:w-auto">

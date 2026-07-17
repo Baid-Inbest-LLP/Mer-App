@@ -39,10 +39,10 @@ export default function ControlCenterPage() {
               to={tab.to}
               end={tab.end}
               className={({ isActive }) =>
-                `px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                `control-center-tab px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-[#0b2f81] text-white shadow-sm'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'control-center-tab--active bg-[#0b2f81] text-white shadow-sm'
+                    : 'control-center-tab--inactive text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                 }`
               }
             >

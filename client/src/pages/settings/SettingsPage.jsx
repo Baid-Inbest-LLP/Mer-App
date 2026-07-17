@@ -7,6 +7,7 @@ import { masterApi } from '../../api/master.api';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import PasswordInput from '../../components/common/PasswordInput';
 import PageBanner from '../../components/common/PageBanner';
+import ProfilePhotoModal from '../../components/common/ProfilePhotoModal';
 import Skeleton, { SkeletonText } from '../../components/common/Skeleton';
 import { isAdmin, isSuperAdmin } from '../../constants/roles';
 
@@ -37,6 +38,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
@@ -225,9 +227,12 @@ export default function SettingsPage() {
         }
         action={[
           { onClick: () => setShowPasswordModal(true), label: 'Change password', icon: 'key' },
+          { onClick: () => setShowPhotoModal(true), label: 'Upload DP', icon: 'none' },
           ...(canManageUsers ? [{ onClick: () => setShowCreate(true), label: 'Create User' }] : []),
         ]}
       />
+
+      <ProfilePhotoModal open={showPhotoModal} onClose={() => setShowPhotoModal(false)} />
 
       {canManageUsers && (
         <>
