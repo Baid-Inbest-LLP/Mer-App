@@ -6,14 +6,13 @@ import { notifications } from '@mantine/notifications';
 import { login, clearError } from '../../store/slices/authSlice';
 import inbestLogo from '../../assets/white_inbest_logo.png';
 import PasswordInput from '../../components/common/PasswordInput';
+import PixelBlast from '../../components/effects/PixelBlast';
 
 export default function LoginPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { loading, error, isAuthenticated } = useSelector((state) => state.auth);
-  const { theme } = useSelector((state) => state.common);
   const { register, handleSubmit, formState: { errors } } = useForm();
-  const isDark = theme === 'dark';
 
   useEffect(() => {
     if (isAuthenticated) navigate('/', { replace: true });
@@ -29,40 +28,48 @@ export default function LoginPage() {
   };
 
   return (
-    <div
-      className={`min-h-screen flex items-center justify-center p-4 ${
-        isDark
-          ? 'bg-[#1a1b1e]'
-          : 'bg-gradient-to-br from-[#0b2f81] via-[#1446a0] to-[#1d5fb3]'
-      }`}
-    >
-      <div className="w-full max-w-md">
-        <div className="text-center mb-4">
-          <div className="inline-flex items-center justify-center mb-4">
-            <img src={inbestLogo} alt="Inbest Logo" className="w-25 h-25 object-contain" />
-          </div>
-          <p className={`text-lg mt-1 ${isDark ? 'text-gray-400' : 'text-gray-400'}`}>
-            Monthly Expense Report System
-          </p>
-        </div>
+    <div className="login-page min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="login-page__bg" aria-hidden="true">
+        <PixelBlast
+          variant="circle"
+          pixelSize={6}
+          color="#8eb8ff"
+          patternScale={3}
+          patternDensity={1.2}
+          pixelSizeJitter={0.5}
+          enableRipples
+          rippleSpeed={0.4}
+          rippleThickness={0.12}
+          rippleIntensityScale={1.5}
+          liquid
+          liquidStrength={0.12}
+          liquidRadius={1.2}
+          liquidWobbleSpeed={5}
+          speed={0.6}
+          edgeFade={0.25}
+          transparent
+        />
+      </div>
 
-        <div
-          className={`rounded-2xl shadow-2xl p-8 ${
-            isDark ? 'bg-[#25262b] border border-[#373a40]' : 'bg-white'
-          }`}
-        >
-          <h2 className={`text-xl font-bold mb-6 text-center ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            Sign In
-          </h2>
+      <div className="login-page__overlay" aria-hidden="true" />
+
+      <div className="login-page__content w-full max-w-md">
+        <div className="bg-transparent border-2 border-white/20 backdrop-blur-[13px] px-6 py-8 rounded-xl shadow-[0_0_10px_rgba(0,0,0,0.1)]">
+          <div className="text-center mb-4">
+            <div className="inline-flex items-center justify-center mb-4">
+              <img src={inbestLogo} alt="Inbest Logo" className="w-25 h-25 object-contain" />
+            </div>
+            <p className="text-white/90 text-lg mt-1">Monthly Expense Report System</p>
+          </div>
+
+          <h2 className="text-2xl font-bold text-white mb-6 text-center">Sign In</h2>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Email
-              </label>
+              <label className="block text-sm font-medium text-white/90 mb-1">Email</label>
               <input
                 type="email"
-                className="input-field"
+                className="login-input"
                 placeholder="admin@mer.com"
                 {...register('email', { required: 'Email is required' })}
               />
@@ -70,10 +77,10 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className={`block text-sm font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Password
-              </label>
+              <label className="block text-sm font-medium text-white/90 mb-1">Password</label>
               <PasswordInput
+                className="login-input login-input--with-toggle"
+                toggleClassName="text-white hover:text-white focus:ring-white/40"
                 placeholder="••••••••"
                 autoComplete="current-password"
                 {...register('password', { required: 'Password is required' })}
@@ -93,7 +100,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full justify-center py-2.5 mt-2 inline-flex items-center rounded-lg px-4 text-sm font-semibold text-white bg-[#0b2f81] hover:bg-[#1446a0] active:bg-[#08306b] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="login-submit-btn"
             >
               {loading ? (
                 <span className="flex items-center gap-2">

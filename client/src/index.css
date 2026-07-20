@@ -93,6 +93,65 @@
     @apply w-full px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500;
   }
 
+  .login-input {
+    background: transparent;
+    width: 100%;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 30px;
+    padding: 20px;
+    font-size: 16px;
+    color: #fff;
+    outline: none;
+    transition: border-color 150ms ease;
+  }
+
+  .login-input::placeholder {
+    color: #fff;
+    font-size: 16px;
+  }
+
+  .login-input:focus {
+    border-color: rgba(255, 255, 255, 0.4);
+  }
+
+  .login-input--with-toggle {
+    padding-right: 45px;
+  }
+
+  .login-submit-btn {
+    @apply w-full justify-center py-2.5 mt-2 inline-flex items-center rounded-lg px-4 text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed;
+    background-color: #ffffff;
+    color: #0b2f81;
+  }
+
+  .login-page {
+    background: linear-gradient(160deg, #06142e 0%, #0b214a 45%, #143b7a 100%);
+  }
+
+  .login-page__bg {
+    position: absolute;
+    inset: 0;
+  }
+
+  .login-page__bg .pixel-blast-container {
+    opacity: 0.95;
+  }
+
+  .login-page__overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.08), transparent 28%),
+      radial-gradient(circle at 18% 20%, rgba(96, 165, 250, 0.12), transparent 30%),
+      radial-gradient(circle at 82% 78%, rgba(191, 219, 254, 0.08), transparent 26%);
+    pointer-events: none;
+  }
+
+  .login-page__content {
+    position: relative;
+    z-index: 1;
+  }
+
   .card {
     @apply bg-white rounded-xl border border-gray-200 shadow-sm;
   }
@@ -1007,6 +1066,11 @@
 [data-theme='dark'] body {
   background-color: #1a1b1e;
   color: #c1c2c5;
+}
+
+[data-theme='dark'] #root .login-submit-btn {
+  background-color: #ffffff;
+  color: #0b2f81;
 }
 
 [data-theme='dark'] #root .app-layout {
