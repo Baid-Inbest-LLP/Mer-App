@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Component, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useDispatch, useSelector } from 'react-redux';
@@ -6,7 +6,62 @@ import { notifications } from '@mantine/notifications';
 import { login, clearError } from '../../store/slices/authSlice';
 import inbestLogo from '../../assets/white_inbest_logo.png';
 import PasswordInput from '../../components/common/PasswordInput';
-import PixelBlast from '../../components/effects/PixelBlast';
+import Hyperspeed from '../../components/effects/Hyperspeed';
+
+class HyperspeedBoundary extends Component {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  componentDidCatch(error) {
+    console.warn('[Hyperspeed] render error:', error);
+  }
+
+  render() {
+    if (this.state.failed) return null;
+    return this.props.children;
+  }
+}
+
+const HYPERSPEED_OPTIONS = {
+  onSpeedUp: () => {},
+  onSlowDown: () => {},
+  distortion: 'turbulentDistortion',
+  length: 400,
+  roadWidth: 10,
+  islandWidth: 2,
+  lanesPerRoad: 3,
+  fov: 90,
+  fovSpeedUp: 150,
+  speedUp: 2,
+  carLightsFade: 0.4,
+  totalSideLightSticks: 20,
+  lightPairsPerRoadWay: 40,
+  shoulderLinesWidthPercentage: 0.05,
+  brokenLinesWidthPercentage: 0.1,
+  brokenLinesLengthPercentage: 0.5,
+  lightStickWidth: [0.12, 0.5],
+  lightStickHeight: [1.3, 1.7],
+  movingAwaySpeed: [60, 80],
+  movingCloserSpeed: [-120, -160],
+  carLightsLength: [400 * 0.03, 400 * 0.2],
+  carLightsRadius: [0.05, 0.14],
+  carWidthPercentage: [0.3, 0.5],
+  carShiftX: [-0.8, 0.8],
+  carFloorSeparation: [0, 5],
+  colors: {
+    roadColor: 0x080808,
+    islandColor: 0x0a0a0a,
+    background: 0x000000,
+    shoulderLines: 0xffffff,
+    brokenLines: 0xffffff,
+    leftCars: [0x8eb8ff, 0x1446a0, 0x1d5fb3],
+    rightCars: [0x03b3c3, 0x0e5ea5, 0x324555],
+    sticks: 0x8eb8ff,
+  },
+};
 
 export default function LoginPage() {
   const dispatch = useDispatch();
@@ -30,25 +85,9 @@ export default function LoginPage() {
   return (
     <div className="login-page min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
       <div className="login-page__bg" aria-hidden="true">
-        <PixelBlast
-          variant="circle"
-          pixelSize={6}
-          color="#8eb8ff"
-          patternScale={3}
-          patternDensity={1.2}
-          pixelSizeJitter={0.5}
-          enableRipples
-          rippleSpeed={0.4}
-          rippleThickness={0.12}
-          rippleIntensityScale={1.5}
-          liquid
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
-          speed={0.6}
-          edgeFade={0.25}
-          transparent
-        />
+        <HyperspeedBoundary>
+          <Hyperspeed effectOptions={HYPERSPEED_OPTIONS} />
+        </HyperspeedBoundary>
       </div>
 
       <div className="login-page__overlay" aria-hidden="true" />

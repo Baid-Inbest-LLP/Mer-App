@@ -125,7 +125,7 @@
   }
 
   .login-page {
-    background: linear-gradient(160deg, #06142e 0%, #0b214a 45%, #143b7a 100%);
+    background: #000000;
   }
 
   .login-page__bg {
@@ -133,17 +133,16 @@
     inset: 0;
   }
 
-  .login-page__bg .pixel-blast-container {
-    opacity: 0.95;
+  .login-page__bg #lights {
+    opacity: 1;
   }
 
   .login-page__overlay {
     position: absolute;
     inset: 0;
     background:
-      radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.08), transparent 28%),
-      radial-gradient(circle at 18% 20%, rgba(96, 165, 250, 0.12), transparent 30%),
-      radial-gradient(circle at 82% 78%, rgba(191, 219, 254, 0.08), transparent 26%);
+      radial-gradient(circle at 50% 45%, rgba(11, 33, 74, 0.35), transparent 40%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(6, 20, 46, 0.35) 100%);
     pointer-events: none;
   }
 
