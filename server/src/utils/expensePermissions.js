@@ -49,5 +49,6 @@ export const stripWorkflowFields = (data) => {
   delete cleaned.quarter;
   delete cleaned.slNo;
   delete cleaned.status;
+  // Keep purchaseOrderId / poNumber / source for PO-linked creates; strip on update below if needed
   return cleaned;
 };

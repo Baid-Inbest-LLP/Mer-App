@@ -14,6 +14,7 @@ const MER_FORM_FIELDS = new Set([
   'expenseType',
   'netAmount',
   'gstPercent',
+  'gstAmount',
   'useIGST',
   'hasBillOrReceipt',
   'cgst',
@@ -29,6 +30,10 @@ const MER_FORM_FIELDS = new Set([
   'merType',
   'paymentMethod',
   'isDraft',
+  'purchaseOrderId',
+  'poNumber',
+  'source',
+  'vendor',
 ]);
 
 const serializePayload = (data) => {

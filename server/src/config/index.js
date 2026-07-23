@@ -42,6 +42,8 @@ export const config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
   clientUrl: process.env.FRONTEND_URL || 'http://localhost:5174',
+  /** Read-only URI for PO-Software MongoDB (completed POs → MER expenses). */
+  poMongodbUri: process.env.PO_MONGODB_URI || '',
   upload: {
     dir: path.resolve(process.cwd(), process.env.UPLOAD_DIR || 'uploads'),
     maxSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 5 * 1024 * 1024,
@@ -79,7 +81,7 @@ export const EXPENSE_TYPES = ['Capital', 'Revenue'];
 export const PAYMENT_METHODS = ['UPI', 'NEFT', 'RTGS', 'IMPS', 'Card', 'Cash'];
 export const EXPENSE_STATUSES = ['Paid', 'Pending', 'Cancelled'];
 export const USER_ROLES = ['superadmin', 'admin', 'user'];
-export const APPROVAL_STATUSES = ['Pending', 'Approved', 'Completed'];
+export const APPROVAL_STATUSES = ['Pending', 'Completed', 'Approved'];
 
 // Indian financial year: April to March
 export const getFinancialYear = (date = new Date()) => {

@@ -9,6 +9,8 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ExpenseListPage from './pages/expenses/ExpenseListPage';
 import ExpenseFormPage from './pages/expenses/ExpenseFormPage';
+import ApprovedPurchaseOrdersPage from './pages/purchase-orders/ApprovedPurchaseOrdersPage';
+import PurchaseOrderDetailPage from './pages/purchase-orders/PurchaseOrderDetailPage';
 import SummaryReportPage from './pages/reports/SummaryReportPage';
 import MonthlyReportPage from './pages/reports/MonthlyReportPage';
 import FinancialYearReportPage from './pages/reports/FinancialYearReportPage';
@@ -65,6 +67,8 @@ export default function App() {
             </Suspense>
           } />
           <Route path="entries/:id/edit" element={<ExpenseFormPage />} />
+          <Route path="purchase-orders" element={<ApprovedPurchaseOrdersPage />} />
+          <Route path="purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
           <Route path="reports/summary" element={<SummaryReportPage />} />
           <Route path="reports/customized" element={<CustomizedReportPage />} />
           <Route path="reports/monthly" element={<MonthlyReportPage />} />

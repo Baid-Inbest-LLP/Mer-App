@@ -14,6 +14,7 @@ export const ROUTES = {
   ENTRY_NEW: '/entries/new',
   ENTRY_EDIT: '/entries/:id/edit',
   ENTRY_VIEW: '/entries/:id',
+  PURCHASE_ORDERS: '/purchase-orders',
   SUMMARY_REPORT: '/reports/summary',
   CUSTOMIZED_REPORT: '/reports/customized',
   FY_REPORT: '/reports/financial-year',

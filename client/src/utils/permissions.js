@@ -14,4 +14,4 @@ export const canApproveExpense = (expense, user) =>
   isAdmin(user?.role) && expense?.approvalStatus === APPROVAL_STATUS.PENDING && !expense?.isDraft;
 
 export const canCompleteExpense = (expense, user) =>
-  isSuperAdmin(user?.role) && expense?.approvalStatus === APPROVAL_STATUS.APPROVED;
+  isSuperAdmin(user?.role) && expense?.approvalStatus === APPROVAL_STATUS.COMPLETED;

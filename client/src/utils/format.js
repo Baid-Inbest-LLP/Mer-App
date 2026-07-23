@@ -330,10 +330,10 @@ export const getStatusColor = (status) => {
 
 export const getApprovalStatusColor = (status) => {
   switch (status) {
-    case 'Completed':
-      return 'green';
     case 'Approved':
       return 'blue';
+    case 'Completed':
+      return 'green';
     case 'Pending':
       return 'orange';
     default:
@@ -343,9 +343,9 @@ export const getApprovalStatusColor = (status) => {
 
 export const getApprovalStatusBadge = (status) => {
   switch (status) {
-    case 'Completed':
-      return 'badge-completed';
     case 'Approved':
+      return 'badge-completed';
+    case 'Completed':
       return 'badge-approved';
     case 'Pending':
       return 'badge-pending';
@@ -381,9 +381,9 @@ export const getPaymentStatusBadge = (status) => {
 
 export const getApprovalStatusGradient = (status) => {
   switch (status) {
-    case 'Completed':
-      return 'from-blue-500 to-indigo-600';
     case 'Approved':
+      return 'from-blue-500 to-indigo-600';
+    case 'Completed':
       return 'from-emerald-500 to-green-600';
     case 'Pending':
       return 'from-amber-500 to-orange-500';

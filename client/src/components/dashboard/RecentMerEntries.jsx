@@ -6,6 +6,7 @@ import {
   formatDate,
   formatMerSerial,
   getApprovalStatusBadge,
+  getEntryApprovalLabel,
 } from '../../utils/format';
 
 export default function RecentMerEntries({ entries = [], loading }) {
@@ -88,7 +89,7 @@ export default function RecentMerEntries({ entries = [], loading }) {
               <div>
                 <p className="recent-entries-amount">{formatCurrency(entry.grossAmount)}</p>
                 <span className={`${getApprovalStatusBadge(entry.approvalStatus)} !text-[10px]`}>
-                  {entry.approvalStatus || 'Pending'}
+                  {getEntryApprovalLabel(entry)}
                 </span>
               </div>
               <svg className="recent-entries-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

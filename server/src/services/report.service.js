@@ -91,7 +91,7 @@ const resolveCompanyContext = async (query) => {
 const baseMatch = (filter) => ({
   ...filter,
   isDraft: { $ne: true },
-  approvalStatus: 'Completed',
+  approvalStatus: 'Approved',
 });
 
 export const getReportSummary = async (query) => {

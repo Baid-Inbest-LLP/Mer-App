@@ -10,7 +10,8 @@
     "lint": "eslint src/",
     "seed:companies": "node src/seed/runCompanies.js",
     "seed:expenses": "node src/seed/seedExpensesAndPaymentInstruments.js",
-    "migrate:slno": "node scripts/migrate-expense-slno.js"
+    "migrate:slno": "node scripts/migrate-expense-slno.js",
+    "migrate:approval-status": "node scripts/migrate-approval-status.js"
   },
   "dependencies": {
     "@sparticuz/chromium": "^143.0.4",

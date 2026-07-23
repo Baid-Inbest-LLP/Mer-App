@@ -73,6 +73,7 @@ const sharedBodyRules = [
     .isFloat({ min: 0 })
     .withMessage('Net amount must be a positive number'),
   body('gstPercent').optional({ values: 'falsy' }).toFloat(),
+  body('gstAmount').optional({ values: 'falsy' }).toFloat(),
   body('tds').optional({ values: 'falsy' }).toFloat(),
   body('cgst').optional({ values: 'falsy' }).toFloat(),
   body('sgst').optional({ values: 'falsy' }).toFloat(),
@@ -94,6 +95,9 @@ const sharedBodyRules = [
   body('paymentRefNumber').optional({ values: 'falsy' }).trim(),
   body('bankAccountNumber').optional({ values: 'falsy' }).trim(),
   body('cardNumber').optional({ values: 'falsy' }).trim(),
+  body('purchaseOrderId').optional({ values: 'falsy' }).isMongoId().withMessage('Invalid purchase order ID'),
+  body('poNumber').optional({ values: 'falsy' }).trim(),
+  body('source').optional({ values: 'falsy' }).isIn(['manual', 'purchase_order']),
 ];
 
 export const createExpenseValidator = [
@@ -166,10 +170,14 @@ export const createExpenseValidator = [
     .optional({ values: 'falsy' })
     .isIn(MER_ENTRY_TYPES)
     .withMessage('Invalid MER type'),
+  body('purchaseOrderId').optional({ values: 'falsy' }).isMongoId().withMessage('Invalid purchase order ID'),
+  body('poNumber').optional({ values: 'falsy' }).trim(),
+  body('source').optional({ values: 'falsy' }).isIn(['manual', 'purchase_order']),
   ...paymentReferenceRules,
   paymentStatusRule,
   body('location').optional({ values: 'falsy' }).trim(),
   body('gstPercent').optional({ values: 'falsy' }).toFloat(),
+  body('gstAmount').optional({ values: 'falsy' }).toFloat(),
   body('tds').optional({ values: 'falsy' }).toFloat(),
   body('useIGST').optional({ values: 'falsy' }),
   body('hasBillOrReceipt').optional({ values: 'falsy' }),

@@ -4,10 +4,11 @@ export const ROLES = {
   USER: 'user',
 };
 
+/** Flow: Pending → Completed (admin) → Approved (superadmin). */
 export const APPROVAL_STATUS = {
   PENDING: 'Pending',
-  APPROVED: 'Approved',
   COMPLETED: 'Completed',
+  APPROVED: 'Approved',
 };
 
 export const APPROVAL_STATUSES = Object.values(APPROVAL_STATUS);

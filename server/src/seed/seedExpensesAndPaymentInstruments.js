@@ -208,7 +208,7 @@ const buildExpenseDoc = ({
     hasBillOrReceipt: chance(80),
     useIGST,
     status: 'Paid',
-    approvalStatus: chance(85) ? 'Completed' : chance(50) ? 'Approved' : 'Pending',
+    approvalStatus: chance(85) ? 'Approved' : chance(50) ? 'Completed' : 'Pending',
     financialYear,
     quarter: `Q${q}`,
     isDraft: false,

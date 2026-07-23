@@ -78,9 +78,9 @@ buildMerStyledSheet(wb, {
   rows: [
     [1, LONG_MER_NO, '15-06-2025', 'June', 'Baid Inbest Llp', 'Test Co',
       'Office Supplies', 'Printer paper and toner cartridges', 'Revenue',
-      largeNet, largeGst, largeTds, largeGross, 'Bank', 'Completed'],
+      largeNet, largeGst, largeTds, largeGross, 'Bank', 'Approved'],
     [2, 'EXP/BSIBPL/26-27/Jun/002', '20-06-2025', 'June', 'Baid Inbest Llp', 'Test Co 2',
-      'Travel', 'Cab fare', 'Revenue', 5000, 0, 100, 4900, 'UPI', 'Completed'],
+      'Travel', 'Cab fare', 'Revenue', 5000, 0, 100, 4900, 'UPI', 'Approved'],
   ],
   totalsRow: [
     '', 'Totals', '', '', '', '', '', '', '2 entries',

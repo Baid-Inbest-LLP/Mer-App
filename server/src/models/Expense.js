@@ -17,6 +17,14 @@ const expenseSchema = new mongoose.Schema(
     notes: { type: String, trim: true },
     terms: { type: String, trim: true },
     vendor: { type: String, trim: true },
+    /** Linked PO-Software purchase order (external id as string). */
+    purchaseOrderId: { type: String, trim: true, default: null },
+    poNumber: { type: String, trim: true, default: null },
+    source: {
+      type: String,
+      enum: ['manual', 'purchase_order'],
+      default: 'manual',
+    },
     expenseType: { type: String, enum: ['Capital', 'Revenue'], required: true },
     netAmount: { type: Number, required: true, default: 0 },
     gstPercent: { type: Number, default: 0 },
@@ -37,7 +45,8 @@ const expenseSchema = new mongoose.Schema(
     status: { type: String, enum: ['Paid', 'Pending', 'Cancelled'], default: 'Pending' },
     approvalStatus: {
       type: String,
-      enum: ['Pending', 'Approved', 'Completed'],
+      // Pending → Completed (admin) → Approved (superadmin)
+      enum: ['Pending', 'Completed', 'Approved'],
       default: 'Pending',
     },
     approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
@@ -72,6 +81,8 @@ expenseSchema.index({ merType: 1 });
 expenseSchema.index({ paymentMethod: 1 });
 expenseSchema.index({ expenseType: 1 });
 expenseSchema.index({ isDraft: 1 });
+expenseSchema.index({ purchaseOrderId: 1 }, { unique: true, sparse: true });
+expenseSchema.index({ poNumber: 1 }, { sparse: true });
 expenseSchema.index({ invoiceNo: 'text', vendor: 'text', particulars: 'text', company: 'text' });
 
 expenseSchema.pre('save', function setDerivedFields(next) {

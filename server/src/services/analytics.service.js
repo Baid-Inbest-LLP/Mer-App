@@ -44,7 +44,7 @@ export const getFyMonthContext = (requestedMonth = '') => {
 const baseMatch = (extra = {}) => ({
   isDraft: { $ne: true },
   status: { $ne: 'Cancelled' },
-  approvalStatus: 'Completed',
+  approvalStatus: 'Approved',
   ...extra,
 });
 

@@ -12,7 +12,7 @@ import {
 import { IconRefresh } from '@tabler/icons-react';
 import { useForm, Controller, useFormState } from 'react-hook-form';
 import { useSelector } from 'react-redux';
-import { calculateGST, calculateGross } from '../../utils/gst';
+import { calculateGST, calculateGSTFromAmount, calculateGross } from '../../utils/gst';
 import { normalizeBranchLabel } from '../../utils/locationFormat';
 import { expenseApi } from '../../api/expense.api';
 import FilterSelect from '../common/FilterSelect';
@@ -67,6 +67,7 @@ const defaultValues = {
   expenseType: null,
   netAmount: 0,
   gstPercent: 0,
+  gstAmount: 0,
   useIGST: false,
   tds: 0,
   paymentDate: null,
@@ -114,11 +115,16 @@ const buildInitialFormValues = (initialData) => {
 
   const { merType, paymentMethod } = normalizeExpensePaymentFields(initialData);
 
+  const isPoExpense = Boolean(initialData.purchaseOrderId || initialData.source === 'purchase_order');
+
   return {
     ...defaultValues,
     ...initialData,
     merType,
     paymentMethod,
+    gstAmount: isPoExpense
+      ? (initialData.gstAmount ?? initialData.totalGST ?? 0)
+      : (initialData.gstAmount ?? 0),
     invoiceDate: initialData.invoiceDate ? new Date(initialData.invoiceDate) : new Date(),
     paymentDate: initialData.paymentDate ? new Date(initialData.paymentDate) : null,
   };
@@ -180,6 +186,7 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
 
   const netAmount = watch('netAmount');
   const gstPercent = watch('gstPercent');
+  const gstAmount = watch('gstAmount');
   const useIGST = watch('useIGST');
   const tds = watch('tds');
   const selectedCompany = watch('company');
@@ -188,6 +195,9 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
   const invoiceDate = watch('invoiceDate');
   const merType = watch('merType');
   const paymentMethod = watch('paymentMethod');
+  const isPoExpense = Boolean(
+    initialData?.purchaseOrderId || initialData?.source === 'purchase_order',
+  );
 
   useEffect(() => {
     if (!shouldShowErrors) return;
@@ -274,14 +284,22 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
   }, [initialData, selectedCompany, selectedMonth, invoiceDate, merType]);
 
   useEffect(() => {
-    const gst = calculateGST(netAmount, gstPercent, useIGST);
-    const gross = calculateGross(netAmount, gst.totalGST, tds);
+    const gst = isPoExpense
+      ? calculateGSTFromAmount(gstAmount, useIGST)
+      : calculateGST(netAmount, gstPercent, useIGST);
+    const netForGross = isPoExpense ? Math.round(Number(netAmount) || 0) : Number(netAmount) || 0;
+    const gross = calculateGross(netForGross, gst.totalGST, tds);
     setValue('cgst', gst.cgst);
     setValue('sgst', gst.sgst);
     setValue('igst', gst.igst);
     setValue('totalGST', gst.totalGST);
     setValue('grossAmount', gross);
-  }, [netAmount, gstPercent, useIGST, tds, setValue]);
+    if (isPoExpense) {
+      const net = Number(netAmount) || 0;
+      const raw = Number(gstAmount) || 0;
+      setValue('gstPercent', net > 0 ? Number(((raw / net) * 100).toFixed(2)) : 0);
+    }
+  }, [netAmount, gstPercent, gstAmount, useIGST, tds, isPoExpense, setValue]);
 
   const selectData = (items) => (items || []).map((i) => ({ value: i, label: i }));
 
@@ -343,6 +361,9 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
   const igst = watch('igst') || 0;
   const totalGST = watch('totalGST') || 0;
   const grossAmount = watch('grossAmount') || 0;
+  const summaryNetAmount = isPoExpense ? Math.round(Number(netAmount) || 0) : (netAmount || 0);
+  const summaryGstAmount = isPoExpense ? Math.round(Number(gstAmount) || 0) : totalGST;
+  const summaryIgst = isPoExpense ? Math.round(Number(gstAmount) || 0) : igst;
 
   return (
     <form key={formResetKey} noValidate onSubmit={handleSubmit(onValidSubmit, onInvalidSubmit)}>
@@ -652,6 +673,8 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
                   required
                   min={0}
                   prefix="₹"
+                  decimalScale={isPoExpense ? 2 : undefined}
+                  fixedDecimalScale={false}
                   hideControls
                   classNames={TEXT_INPUT_CLASS_NAMES}
                   {...field}
@@ -673,20 +696,39 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
                 />
               )}
             />
-            <Controller
-              name="gstPercent"
-              control={control}
-              render={({ field }) => (
-                <NumberInput
-                  label="GST %"
-                  min={0}
-                  max={100}
-                  hideControls
-                  classNames={TEXT_INPUT_CLASS_NAMES}
-                  {...field}
-                />
-              )}
-            />
+            {isPoExpense ? (
+              <Controller
+                name="gstAmount"
+                control={control}
+                render={({ field }) => (
+                  <NumberInput
+                    label="GST Amount"
+                    min={0}
+                    prefix="₹"
+                    decimalScale={2}
+                    fixedDecimalScale={false}
+                    hideControls
+                    classNames={TEXT_INPUT_CLASS_NAMES}
+                    {...field}
+                  />
+                )}
+              />
+            ) : (
+              <Controller
+                name="gstPercent"
+                control={control}
+                render={({ field }) => (
+                  <NumberInput
+                    label="GST %"
+                    min={0}
+                    max={100}
+                    hideControls
+                    classNames={TEXT_INPUT_CLASS_NAMES}
+                    {...field}
+                  />
+                )}
+              />
+            )}
             <Controller
               name="useIGST"
               control={control}
@@ -739,15 +781,15 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
             Entry Summary
           </Text>
           <div className="space-y-3">
-            <SummaryRow label="Net Amount" value={netAmount || 0} large />
+            <SummaryRow label="Net Amount" value={summaryNetAmount} large />
 
             {useIGST ? (
-              <SummaryRow label="IGST" value={igst} />
+              <SummaryRow label="IGST" value={summaryIgst} />
             ) : (
               <>
                 <SummaryRow label="CGST" value={cgst} />
                 <SummaryRow label="SGST" value={sgst} />
-                <SummaryRow label="Total GST" value={totalGST} />
+                <SummaryRow label="Total GST" value={isPoExpense ? summaryGstAmount : totalGST} />
               </>
             )}
 
@@ -803,7 +845,7 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
               {loading ? <Loader size={16} color="white" /> : null}
               {initialData?.isDraft
                 ? 'Submit Entry'
-                : initialData
+                : initialData?._id
                   ? 'Update Entry'
                   : 'Create Entry'}
             </button>

@@ -64,25 +64,25 @@ const TIMELINE_EVENT_META = {
       </svg>
     ),
   },
-  approved: {
-    label: 'Approved',
+  completed: {
+    label: 'Completed',
     dotClass: 'bg-emerald-500',
     iconBg: 'bg-emerald-50',
     iconColor: 'text-emerald-600',
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
   },
-  completed: {
-    label: 'Completed',
+  approved: {
+    label: 'Approved',
     dotClass: 'bg-indigo-500',
     iconBg: 'bg-indigo-50',
     iconColor: 'text-indigo-600',
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
       </svg>
     ),
   },
@@ -99,18 +99,20 @@ function buildTimelineEvents(expense) {
       actor: expense.createdBy?.name,
     });
   }
+  // Admin step → Completed
   if (expense.approvedAt) {
     events.push({
-      key: 'approved',
-      ...TIMELINE_EVENT_META.approved,
+      key: 'completed',
+      ...TIMELINE_EVENT_META.completed,
       date: expense.approvedAt,
       actor: expense.approvedBy?.name,
     });
   }
+  // Superadmin step → Approved
   if (expense.completedAt) {
     events.push({
-      key: 'completed',
-      ...TIMELINE_EVENT_META.completed,
+      key: 'approved',
+      ...TIMELINE_EVENT_META.approved,
       date: expense.completedAt,
       actor: expense.completedBy?.name,
     });
@@ -327,6 +329,7 @@ export default function ExpenseViewPage() {
               }
             >
               <DetailRow label="Invoice No" value={e.invoiceNo} />
+              {e.poNumber ? <DetailRow label="PO Number" value={e.poNumber} /> : null}
               <DetailRow label="Company" value={e.company} />
               <DetailRow label="Location" value={e.location} />
               <DetailRow label="Head of Expense" value={e.headOfExpense} />
@@ -347,10 +350,14 @@ export default function ExpenseViewPage() {
               }
             >
               <DetailRow label="Net Amount" value={formatCurrency(e.netAmount)} />
-              <DetailRow label="GST %" value={`${e.gstPercent}%`} />
+              {e.purchaseOrderId || e.source === 'purchase_order' ? (
+                <DetailRow label="GST Amount" value={formatCurrency(e.totalGST)} />
+              ) : (
+                <DetailRow label="GST %" value={`${e.gstPercent}%`} />
+              )}
               {e.useIGST || Number(e.igst) > 0 ? (
                 <DetailRow label="IGST" value={formatCurrency(e.igst)} />
-              ) : (
+              ) : e.purchaseOrderId || e.source === 'purchase_order' ? null : (
                 <DetailRow label="Total GST" value={formatCurrency(e.totalGST)} />
               )}
               <DetailRow label="TDS" value={formatCurrency(e.tds)} />
