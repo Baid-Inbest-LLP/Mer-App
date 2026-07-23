@@ -13,6 +13,29 @@ const MIN_MONEY_COL_WIDTH = 16;
 const MIN_MER_NO_COL_WIDTH = 36;
 const LEFT_ALIGN_HEADERS = new Set(['Co\nName', 'Particulars']);
 
+/** Soft column fills for detail report body cells (ARGB). */
+const COL_FILL_CO_PARTICULARS = 'FFBFDBFE'; // light blue — Co Name, Particulars
+const COL_FILL_EXP_TYPE = 'FFFEF9C3'; // light yellow — Exp Type
+const COL_FILL_TOTAL_GST = 'FFE2EFDA'; // soft sage green — Total GST
+const COL_FILL_TDS = 'FFF4CCCC'; // soft coral red — TDS
+const COL_FILL_PAYMENT = 'FFD0E2F3'; // steel light blue — Gross Amt + payment cols
+
+const COLUMN_CELL_FILLS = new Map([
+  ['Co\nName', COL_FILL_CO_PARTICULARS],
+  ['Particulars', COL_FILL_CO_PARTICULARS],
+  ['Exp\nType', COL_FILL_EXP_TYPE],
+  ['Total\nGST', COL_FILL_TOTAL_GST],
+  ['TDS', COL_FILL_TDS],
+  ['Gross\nAmt', COL_FILL_PAYMENT],
+  ['Paid\nBy', COL_FILL_PAYMENT],
+  ['Payment\nFrom', COL_FILL_PAYMENT],
+  ['Payment\nMethod', COL_FILL_PAYMENT],
+  ['Payment\nRef No', COL_FILL_PAYMENT],
+  ['Payment\nDate', COL_FILL_PAYMENT],
+]);
+
+const solidFill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
+
 /** Column widths for A–W (gap + 21 data cols + gap). */
 const SHEET_COLUMN_WIDTHS = [
   2,  // A gap
@@ -277,6 +300,8 @@ const renderTable = (ws, r, {
   tdsColIndex = -1,
   totalColIndex = -1,
 }) => {
+  void gstColIndex;
+  void tdsColIndex;
   const tableStartRow = r;
   const colSpan = headers.length;
   const tableEndCol = DATA_FIRST_COL + colSpan - 1;
@@ -304,14 +329,14 @@ const renderTable = (ws, r, {
       const isMoney = moneyColIndices.includes(i);
       const isText = allTextCols.has(i);
       const isLeft = leftAlignCols.has(i);
+      const colFill = COLUMN_CELL_FILLS.get(headers[i]);
       c.value = isMoney ? toNumericAmount(v) : isText ? toTextCell(v) : v;
       c.font = {
         name: 'Calibri',
-        size: 12,
-        ...(i === tdsColIndex ? { color: { argb: 'FFB91C1C' }, bold: true } : {}),
-        ...(i === gstColIndex ? { color: { argb: 'FF047857' }, bold: true } : {}),
-        ...(i === totalColIndex ? { bold: true } : {}),
+        size: isMoney ? 13 : 12,
+        bold: isMoney || i === totalColIndex,
       };
+      if (colFill) c.fill = solidFill(colFill);
       c.alignment = {
         horizontal: resolveCellHorizontal(i, moneyColIndices, leftAlignCols),
         vertical: 'middle',

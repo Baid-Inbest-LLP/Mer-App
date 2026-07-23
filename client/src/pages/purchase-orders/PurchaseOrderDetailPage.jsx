@@ -8,6 +8,13 @@ import ActivityTimelineSidebar, {
 } from '../../components/common/ActivityTimelineSidebar';
 import Skeleton, { SkeletonText } from '../../components/common/Skeleton';
 import { formatAmountInWords, formatCurrency, formatDate } from '../../utils/format';
+import {
+  calcAmount,
+  calcDiscountAmt,
+  calcGstAmt,
+  calcLineTotal,
+  summarizePoAmounts,
+} from '../../utils/poAmounts';
 
 const formatExactAmount = (amount) =>
   new Intl.NumberFormat('en-IN', {
@@ -21,22 +28,6 @@ const formatRoundedAmount = (amount) =>
   formatCurrency(Math.round(Number(amount) || 0)).replace(/\.00$/, '');
 
 const formatCurrencyDisplay = formatRoundedAmount;
-
-const calcDiscountAmt = (item) => {
-  const base = (Number(item?.quantity) || 0) * (Number(item?.unitPrice) || 0);
-  return base * ((Number(item?.discount) || 0) / 100);
-};
-
-const calcGstAmt = (item) => {
-  const base = (Number(item?.quantity) || 0) * (Number(item?.unitPrice) || 0);
-  const discounted = base - calcDiscountAmt(item);
-  return discounted * ((Number(item?.gstRate) || 0) / 100);
-};
-
-const calcPreGstAmount = (item) => {
-  const base = (Number(item?.quantity) || 0) * (Number(item?.unitPrice) || 0);
-  return base - calcDiscountAmt(item);
-};
 
 const formatAddress = (address) => {
   if (!address) return [];
@@ -133,26 +124,12 @@ export default function PurchaseOrderDetailPage() {
   const vendorAddress = order.vendorAddress || {};
   const shippingAddress = order.shippingAddress || {};
 
-  const totals = lineItems.reduce(
-    (acc, item) => {
-      const qty = Number(item?.quantity) || 0;
-      const discountAmt = calcDiscountAmt(item);
-      const amount = calcPreGstAmount(item);
-      const gstAmt = Number(item?.gstAmount) > 0 ? Number(item.gstAmount) : calcGstAmt(item);
-      const lineTotal = Math.round(amount + gstAmt);
-      return {
-        qty: acc.qty + qty,
-        preGst: acc.preGst + amount,
-        discount: acc.discount + discountAmt,
-        gst: acc.gst + gstAmt,
-        total: acc.total + lineTotal,
-      };
-    },
-    { qty: 0, preGst: 0, discount: 0, gst: 0, total: 0 },
-  );
-
-  const roundedItemsTotal = totals.total;
-  const roundedGrandTotal = Math.round(order.totalAmount || totals.total);
+  const summary = summarizePoAmounts(lineItems, order.shippingCost);
+  const roundedSubtotal = summary.subtotal;
+  const roundedGstTotal = summary.gstTotal;
+  const roundedShipping = summary.shipping;
+  const roundedItemsTotal = summary.itemsTotal;
+  const roundedGrandTotal = summary.grandTotal;
   const timelineEvents = buildPurchaseOrderTimelineEvents(order);
 
   return (
@@ -307,9 +284,9 @@ export default function PurchaseOrderDetailPage() {
                 <tbody>
                   {lineItems.map((item, idx) => {
                     const discountAmt = calcDiscountAmt(item);
-                    const amount = calcPreGstAmount(item);
-                    const gstAmt = Number(item?.gstAmount) > 0 ? Number(item.gstAmount) : calcGstAmt(item);
-                    const lineTotal = Math.round(amount + gstAmt);
+                    const amount = calcAmount(item);
+                    const gstAmt = calcGstAmt(item);
+                    const lineTotal = calcLineTotal(item);
                     return (
                       <tr key={item._id || idx}>
                         <td className="text-center text-gray-400 font-medium">{idx + 1}</td>
@@ -343,14 +320,20 @@ export default function PurchaseOrderDetailPage() {
                   <tr className="border-t-2 border-gray-200 bg-blue-50">
                     <td className="text-center text-gray-400 align-middle text-base py-2 px-4" />
                     <td className="text-left font-bold text-gray-800 align-middle text-2xl py-2 px-4">Totals</td>
-                    <td className="text-right font-bold text-gray-800 align-middle text-base py-2 px-4" />
+                    <td className="text-right font-bold text-gray-800 align-middle text-base py-2 px-4">{summary.qty}</td>
                     <td className="text-center text-gray-400 align-middle text-base py-2 px-4" />
                     <td className="text-right text-gray-400 align-middle text-base py-2 px-4" />
                     <td className="text-right text-gray-400 align-middle text-base py-2 px-4" />
-                    <td className="text-right font-bold text-red-700 align-middle text-base py-2 px-4" />
-                    <td className="text-right font-bold text-slate-700 align-middle text-base py-2 px-4" />
+                    <td className="text-right font-bold text-red-700 align-middle text-base py-2 px-4">
+                      {summary.discount > 0 ? formatRoundedAmount(summary.discountRounded) : ''}
+                    </td>
+                    <td className="text-right font-bold text-slate-700 align-middle text-base py-2 px-4">
+                      {formatRoundedAmount(roundedSubtotal)}
+                    </td>
                     <td className="text-right text-gray-400 align-middle text-base py-3 px-4" />
-                    <td className="text-right font-bold text-emerald-700 align-middle text-base py-2 px-4" />
+                    <td className="text-right font-bold text-emerald-700 align-middle text-base py-2 px-4">
+                      {roundedGstTotal > 0 ? formatRoundedAmount(roundedGstTotal) : ''}
+                    </td>
                     <td className="text-right font-bold text-primary-700 align-middle text-lg py-2 px-4">
                       {formatRoundedAmount(roundedItemsTotal)}
                     </td>
@@ -360,7 +343,7 @@ export default function PurchaseOrderDetailPage() {
             </div>
 
             <div className="border-t border-gray-100 p-6">
-              <div className="flex lg:flex-row items-center justify-between gap-6">
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
                 <div className="flex-1 max-w-lg">
                   <div className="bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200 rounded-xl px-5 py-4">
                     <p className="text-[11px] text-primary-500 uppercase font-bold tracking-wider mb-2">Amount in Words</p>
@@ -371,16 +354,30 @@ export default function PurchaseOrderDetailPage() {
                 </div>
 
                 <div className="w-80 space-y-3">
-                  <div className="flex justify-between items-baseline">
-                    <span className="font-bold text-gray-900 text-lg">Grand Total</span>
-                    <span className="text-2xl font-bold text-primary-700 tracking-tight">
-                      {formatRoundedAmount(roundedGrandTotal)}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500 font-medium">Subtotal</span>
+                    <span className="font-bold text-gray-800 text-base">
+                      {formatRoundedAmount(roundedSubtotal)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500 font-medium">Shipping</span>
-                    <span className="font-bold text-gray-800 text-base">
-                      {formatRoundedAmount(order.shippingCost)}
+                    <span className="text-gray-500 font-medium">GST</span>
+                    <span className="font-bold text-emerald-700 text-base">
+                      {formatRoundedAmount(roundedGstTotal)}
+                    </span>
+                  </div>
+                  {roundedShipping > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-500 font-medium">Shipping</span>
+                      <span className="font-bold text-gray-800 text-base">
+                        {formatRoundedAmount(roundedShipping)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="border-t-2 border-gray-900 pt-3 flex justify-between items-baseline">
+                    <span className="font-bold text-gray-900 text-lg">Grand Total</span>
+                    <span className="text-2xl font-bold text-primary-700 tracking-tight">
+                      {formatRoundedAmount(roundedGrandTotal)}
                     </span>
                   </div>
                 </div>

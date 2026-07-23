@@ -9,8 +9,6 @@ import { amountToWordsINR } from './amountToWords.js';
 
 const HEADER_BLUE = '#005887';
 const COMPANY_CODE_BLUE = '#13AFCD';
-const TDS_RED = '#B91C1C';
-const GST_GREEN = '#047857';
 const TITLE_RED = '#EF4444';
 const WORDS_BLUE = '#0B2F81';
 const HIGHLIGHT_YELLOW = '#FFFF00';
@@ -18,6 +16,27 @@ const ACCOUNTS_RED = '#EF4444';
 
 const LEFT_ALIGN_HEADERS = new Set(['Co\nName', 'Particulars']);
 const DETAIL_MERGE_END_IDX = 8; // Exp Type → Particulars
+
+/** Soft column fills for detail report body cells (match Excel). */
+const COL_FILL_CO_PARTICULARS = '#BFDBFE'; // light blue — Co Name, Particulars
+const COL_FILL_EXP_TYPE = '#FEF9C3'; // light yellow — Exp Type
+const COL_FILL_TOTAL_GST = '#E2EFDA'; // soft sage green — Total GST
+const COL_FILL_TDS = '#F4CCCC'; // soft coral red — TDS
+const COL_FILL_PAYMENT = '#D0E2F3'; // steel light blue — Gross Amt + payment cols
+
+const COLUMN_CELL_FILLS = new Map([
+  ['Co\nName', COL_FILL_CO_PARTICULARS],
+  ['Particulars', COL_FILL_CO_PARTICULARS],
+  ['Exp\nType', COL_FILL_EXP_TYPE],
+  ['Total\nGST', COL_FILL_TOTAL_GST],
+  ['TDS', COL_FILL_TDS],
+  ['Gross\nAmt', COL_FILL_PAYMENT],
+  ['Paid\nBy', COL_FILL_PAYMENT],
+  ['Payment\nFrom', COL_FILL_PAYMENT],
+  ['Payment\nMethod', COL_FILL_PAYMENT],
+  ['Payment\nRef No', COL_FILL_PAYMENT],
+  ['Payment\nDate', COL_FILL_PAYMENT],
+]);
 
 /**
  * Preferred relative widths for the 21 detail-report columns.
@@ -188,7 +207,7 @@ const renderTableHead = (headers, moneyCols) => {
   return `<thead><tr>${cells}</tr></thead>`;
 };
 
-const renderBodyRows = (rows, headers, moneyCols, { gstColIndex, tdsColIndex, totalColIndex }) =>
+const renderBodyRows = (rows, headers, moneyCols, { totalColIndex }) =>
   rows
     .map((rowVals) => {
       const cells = headers
@@ -197,16 +216,20 @@ const renderBodyRows = (rows, headers, moneyCols, { gstColIndex, tdsColIndex, to
           const isMoney = moneyCols.has(i);
           const align = resolveAlign(i, headers, moneyCols);
           const classes = [colClass(header)];
-          if (i === tdsColIndex) classes.push('cell-tds');
-          if (i === gstColIndex) classes.push('cell-gst');
+          if (isMoney) classes.push('cell-money');
           if (i === totalColIndex) classes.push('cell-total');
           if (WRAP_HEADERS.has(header) || (align === 'left' && !NOWRAP_HEADERS.has(header))) {
             classes.push('cell-wrap');
           }
+          const fill = COLUMN_CELL_FILLS.get(header);
+          const style = [
+            `text-align:${align}`,
+            fill ? `background:${fill}` : '',
+          ].filter(Boolean).join(';');
           const rendered = isMoney
             ? fmtMoney(value)
             : escapeHtml(value === 0 ? 0 : value || '');
-          return `<td class="${classes.filter(Boolean).join(' ')}" style="text-align:${align}">${rendered}</td>`;
+          return `<td class="${classes.filter(Boolean).join(' ')}" style="${style}">${rendered}</td>`;
         })
         .join('');
       return `<tr>${cells}</tr>`;
@@ -286,6 +309,8 @@ export const buildMonthlyReportHtml = ({
   includeGrandTotal = true,
   includeAmountInWords = true,
 }) => {
+  void gstColIndex;
+  void tdsColIndex;
   const moneyCols = new Set(moneyColIndices);
   const assets = {
     shreeSrc: readAssetDataUri('Shree_black.png'),
@@ -293,7 +318,7 @@ export const buildMonthlyReportHtml = ({
   };
 
   const head = renderTableHead(headers, moneyCols);
-  const body = renderBodyRows(rows, headers, moneyCols, { gstColIndex, tdsColIndex, totalColIndex });
+  const body = renderBodyRows(rows, headers, moneyCols, { totalColIndex });
   const totals = renderTotalsRow(totalsRow, headers, moneyCols, totalsLabel);
   const colGroup = renderColGroup(headers);
 
@@ -381,8 +406,7 @@ export const buildMonthlyReportHtml = ({
         word-break: break-all;
         overflow-wrap: anywhere;
       }
-      .cell-tds { color: ${TDS_RED}; font-weight: 700; }
-      .cell-gst { color: ${GST_GREEN}; font-weight: 700; }
+      .cell-money { font-size: 12px; font-weight: 700; }
       .cell-total { font-weight: 700; }
 
       tr.totals-row .totals-cell {
