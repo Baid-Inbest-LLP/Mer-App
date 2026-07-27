@@ -44,8 +44,21 @@ const renderActionContent = (act) => {
   );
 };
 
-const actionClassName =
-  'inline-flex items-center gap-2 px-5 py-2.5 bg-white text-primary-800 rounded-xl text-sm font-bold hover:bg-primary-50 active:scale-95 transition-all duration-150 shadow-lg shadow-primary-900/30 flex-shrink-0';
+const actionBaseClassName =
+  'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed';
+
+const actionVariantClassName = {
+  default:
+    'page-banner-action bg-white text-primary-800 hover:bg-primary-50 shadow-lg shadow-primary-900/30 px-5 rounded-xl font-bold active:scale-95 transition-all duration-150',
+  pdf: 'page-banner-action-pdf text-red-800 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300',
+  excel: 'page-banner-action-excel text-green-800 bg-green-50 border border-green-200 hover:bg-green-100 hover:border-green-300',
+};
+
+const resolveActionClassName = (act) => {
+  const variant = act.variant
+    || (act.icon === 'pdf' ? 'pdf' : act.icon === 'excel' ? 'excel' : 'default');
+  return `${actionBaseClassName} ${actionVariantClassName[variant] || actionVariantClassName.default}`;
+};
 
 export default function PageBanner({ title, subtitle, action = null, className = '' }) {
   const actionsList = Array.isArray(action) ? action : action ? [action] : [];

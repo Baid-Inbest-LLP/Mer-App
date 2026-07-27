@@ -201,8 +201,12 @@ export const getStatusColor = (status) => {
   switch (status) {
     case 'Paid':
       return 'green';
+    case 'PartiallyPaid':
+      return 'blue';
     case 'Pending':
       return 'yellow';
+    case 'Hold':
+      return 'orange';
     case 'Cancelled':
       return 'red';
     default:
@@ -248,12 +252,27 @@ export const getEntryApprovalBadge = (expense) => {
   return getApprovalStatusBadge(expense?.approvalStatus);
 };
 
+export const getPaymentStatusLabel = (status) => {
+  switch (status) {
+    case 'PartiallyPaid':
+      return 'Partially Paid';
+    case 'Hold':
+      return 'On Hold';
+    default:
+      return status || 'Pending';
+  }
+};
+
 export const getPaymentStatusBadge = (status) => {
   switch (status) {
     case 'Paid':
       return 'badge-paid';
+    case 'PartiallyPaid':
+      return 'badge-partially-paid';
     case 'Pending':
       return 'badge-payment-pending';
+    case 'Hold':
+      return 'badge-hold';
     case 'Cancelled':
       return 'badge-cancelled';
     default:

@@ -6,6 +6,7 @@ import ForgotPasswordPage from '../pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/auth/ResetPasswordPage';
 import DashboardPage from '../pages/dashboard/DashboardPage';
 import ExpenseListPage from '../pages/expenses/ExpenseListPage';
+import DueExpensesPage from '../pages/expenses/DueExpensesPage';
 import ExpenseFormPage from '../pages/expenses/ExpenseFormPage';
 import ExpenseViewPage from '../pages/expenses/ExpenseViewPage';
 import SummaryReportPage from '../pages/reports/SummaryReportPage';
@@ -32,6 +33,7 @@ export default function AppRoutes() {
       >
         <Route index element={<DashboardPage />} />
         <Route path="entries" element={<ExpenseListPage />} />
+        <Route path="due-expenses" element={<DueExpensesPage />} />
         <Route path="entries/new" element={<ExpenseFormPage />} />
         <Route path="entries/:id/edit" element={<ExpenseFormPage />} />
         <Route path="entries/:id" element={<ExpenseViewPage />} />

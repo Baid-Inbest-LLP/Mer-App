@@ -21,6 +21,10 @@ export default function ExpenseFormPage() {
   const { current, loading } = useSelector((state) => state.expense);
   const { companies, loading: companiesLoading } = useSelector((state) => state.companies);
   const [submitting, setSubmitting] = useState(false);
+  const [poDraft, setPoDraft] = useState(null);
+  const [poMeta, setPoMeta] = useState(null);
+  const [loadedPoId, setLoadedPoId] = useState(null);
+  const poDraftLoading = Boolean(fromPoId) && !isEdit && loadedPoId !== fromPoId;
 
   useEffect(() => {
     dispatch(fetchCompanies({ isActive: true, limit: 100 }));
@@ -30,6 +34,33 @@ export default function ExpenseFormPage() {
     if (isEdit) dispatch(fetchExpense(id));
     return () => dispatch(clearCurrent());
   }, [dispatch, id, isEdit]);
+
+  useEffect(() => {
+    if (isEdit || !fromPoId) return undefined;
+
+    let cancelled = false;
+
+    purchaseOrderApi
+      .getExpenseDraft(fromPoId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setPoDraft(data.data.draft);
+        setPoMeta(data.data.po);
+        setLoadedPoId(fromPoId);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        notifications.show({
+          message: err.response?.data?.message || 'Failed to load purchase order',
+          color: 'red',
+        });
+        navigate('/entries', { replace: true });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fromPoId, isEdit, navigate]);
 
   const handleSubmit = async (data) => {
     setSubmitting(true);
@@ -79,9 +110,16 @@ export default function ExpenseFormPage() {
         title={
           isEdit
             ? current?.isDraft
-              ? 'Edit Draft Entry'
-              : 'Edit Expense Entry'
-            : 'New Expense Entry'
+              ? 'Edit Draft Expense'
+              : 'Edit Expense'
+            : poMeta
+              ? `New Expense/Bill from PO ${poMeta.poNumber}`
+              : 'New Expense/Bill'
+        }
+        subtitle={
+          poMeta
+            ? `Vendor: ${poMeta.vendor || '—'} · Amount: ₹${Number(poMeta.totalAmount || 0).toLocaleString('en-IN')}`
+            : undefined
         }
       />
       <ExpenseForm

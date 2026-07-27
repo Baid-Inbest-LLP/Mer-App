@@ -4,6 +4,8 @@ import { Loader, Center } from '@mantine/core';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchExpense, clearCurrent } from '../../store/slices/expenseSlice';
 import ApprovalActions from '../../components/expenses/ApprovalActions';
+import ExpensePaymentsPanel from '../../components/expenses/ExpensePaymentsPanel';
+import ExpenseViewSkeleton from '../../components/common/ExpenseViewSkeleton';
 import {
   formatAmountInWords,
   formatCurrency,
@@ -12,6 +14,8 @@ import {
   getEntryApprovalBadge,
   getEntryApprovalLabel,
   getApprovalStatusGradient,
+  getPaymentStatusBadge,
+  getPaymentStatusLabel,
 } from '../../utils/format';
 import { canEditExpense } from '../../utils/permissions';
 import { getPaymentMethodRules } from '../../utils/paymentMethods';
@@ -56,8 +60,8 @@ const TIMELINE_EVENT_META = {
   created: {
     label: 'Created',
     dotClass: 'bg-blue-500',
-    iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-600',
+    iconBg: 'expense-timeline-event-icon expense-timeline-event-icon--created',
+    iconColor: '',
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -67,8 +71,8 @@ const TIMELINE_EVENT_META = {
   approved: {
     label: 'Approved',
     dotClass: 'bg-emerald-500',
-    iconBg: 'bg-emerald-50',
-    iconColor: 'text-emerald-600',
+    iconBg: 'expense-timeline-event-icon expense-timeline-event-icon--completed',
+    iconColor: '',
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -78,8 +82,8 @@ const TIMELINE_EVENT_META = {
   completed: {
     label: 'Completed',
     dotClass: 'bg-indigo-500',
-    iconBg: 'bg-indigo-50',
-    iconColor: 'text-indigo-600',
+    iconBg: 'expense-timeline-event-icon expense-timeline-event-icon--approved',
+    iconColor: '',
     icon: (
       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -169,7 +173,7 @@ const isSafeInternalPath = (path) =>
 
 const getBackNav = (from) => {
   if (!isSafeInternalPath(from)) {
-    return { to: '/entries', label: 'Back to Expense Entries' };
+    return { to: '/entries', label: 'Back to Expenses' };
   }
   if (from.startsWith('/reports/monthly/detail')) {
     const params = new URLSearchParams(from.split('?')[1] || '');
@@ -196,6 +200,19 @@ export default function ExpenseViewPage() {
     return () => dispatch(clearCurrent());
   }, [dispatch, id]);
 
+  const shouldOpenPayment = location.hash === '#payments' || Boolean(location.state?.openPayment);
+
+  useEffect(() => {
+    if (loading || !current || !shouldOpenPayment) return undefined;
+    const timer = window.setTimeout(() => {
+      document.getElementById('expense-payments')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }, 120);
+    return () => window.clearTimeout(timer);
+  }, [loading, current, shouldOpenPayment, id]);
+
   if (loading || !current) {
     return (
       <Center py="xl">
@@ -207,6 +224,9 @@ export default function ExpenseViewPage() {
   const e = current;
   const paymentRules = getPaymentMethodRules(e.paymentMethod);
   const editable = canEditExpense(e, user);
+  const canManagePayments = isAdmin(user?.role)
+    || e.createdBy?._id === user?._id
+    || e.createdBy === user?._id;
   const serial = e.isDraft ? 'Draft Entry' : formatMerSerial(e.slNo);
   const gradient = e.isDraft ? 'from-slate-400 to-slate-600' : getApprovalStatusGradient(e.approvalStatus);
 
@@ -237,9 +257,12 @@ export default function ExpenseViewPage() {
               <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
                 <div>
                   <div className="flex flex-wrap items-center gap-3 mb-1">
-                    <h1 className="expense-view-title text-2xl font-bold tracking-tight">{serial || 'Expense Entry'}</h1>
+                    <h1 className="expense-view-title text-2xl font-bold tracking-tight">{serial || 'Expense'}</h1>
                     <span className={`${getEntryApprovalBadge(e)} !text-xs`}>
                       {getEntryApprovalLabel(e)}
+                    </span>
+                    <span className={`${getPaymentStatusBadge(e.status)} !text-xs`}>
+                      {getPaymentStatusLabel(e.status)}
                     </span>
                   </div>
                 </div>
@@ -338,6 +361,9 @@ export default function ExpenseViewPage() {
               <DetailRow label="Co Name" value={e.coNames} />
               <DetailRow label="MER Type" value={e.merType || e.paymentMethod} />
               <DetailRow label="Payment Method" value={e.paymentMethod} />
+              <DetailRow label="Nature" value={e.expenseNature || 'Variable'} />
+              <DetailRow label="Frequency" value={e.frequency || 'One-time'} />
+              <DetailRow label="Due Date" value={formatDate(e.dueDate)} />
             </DetailCard>
 
             <DetailCard
@@ -355,7 +381,13 @@ export default function ExpenseViewPage() {
               <DetailRow label="Total GST" value={formatCurrency(e.totalGST)} />
               <DetailRow label="TDS" value={formatCurrency(e.tds)} />
               <DetailRow label="Gross Amount" value={formatCurrency(e.grossAmount)} />
-              <DetailRow label="Payment Date" value={formatDate(e.paymentDate)} />
+              <DetailRow label="Amount Paid" value={formatCurrency(e.amountPaid)} />
+              <DetailRow label="Balance Due" value={formatCurrency(e.balanceDue)} />
+              <DetailRow label="Last Payment Date" value={formatDate(e.paymentDate)} />
+              <DetailRow
+                label="Bill / Receipt"
+                value={e.hasBillOrReceipt ? 'Available' : 'Not available'}
+              />
               {e.bankAccountNumber ? (
                 <DetailRow label="Bank Account" value={e.bankAccountNumber} />
               ) : null}
@@ -369,7 +401,7 @@ export default function ExpenseViewPage() {
           <div className="card overflow-hidden">
             <div className="p-6">
               <div className="flex items-center gap-2 mb-6">
-                <div className="expense-summary-icon detail-stat-icon w-8 h-8 rounded-lg bg-primary-100 text-primary-700">
+                <div className="expense-summary-icon detail-stat-icon w-8 h-8 rounded-lg">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path
                       strokeLinecap="round"
@@ -378,74 +410,112 @@ export default function ExpenseViewPage() {
                     />
                   </svg>
                 </div>
-                <h3 className="expense-summary-title text-sm font-bold text-gray-800 uppercase tracking-wide">Expense Summary</h3>
+                <h3 className="expense-summary-title text-sm font-bold uppercase tracking-wide">Expense Summary</h3>
               </div>
 
-              <div className="flex gap-4">
-                <div className="flex lg:flex-col items-stretch gap-4 w-full">
-                  <div className="flex-1 min-w-0">
+              <div className="flex xl:flex-row gap-4">
+                <div className="flex flex-col items-stretch gap-4 w-full min-w-0 flex-1">
+                  <div className="min-w-0">
                     <div className="px-4 py-2 relative overflow-hidden rounded-lg">
-                      <div className="absolute -top-8 -right-8 w-28 h-28 bg-primary-100/40 rounded-full expense-summary-decor" />
+                      <div className="absolute -top-8 -right-8 w-28 h-28 rounded-full expense-summary-decor" />
                       <div className="relative">
-                        <ul className="divide-y divide-primary-100/70 expense-summary-list">
+                        <ul className="divide-y expense-summary-list">
                           <li className="flex items-center justify-between gap-4 py-2.5">
-                            <span className="expense-summary-list-label text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
+                            <span className="expense-summary-list-label text-sm capitalize font-semibold tracking-wider whitespace-nowrap">
                               Head of Expense:
                             </span>
-                            <span className="expense-summary-list-value text-gray-700 text-md capitalize font-semibold">{e.headOfExpense ? e.headOfExpense : '—'}</span>
+                            <span className="expense-summary-list-value text-md capitalize font-semibold text-right">
+                              {e.headOfExpense ? e.headOfExpense : '—'}
+                            </span>
                           </li>
                           <li className="flex items-center justify-between gap-4 py-2.5">
-                            <span className="expense-summary-list-label text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
+                            <span className="expense-summary-list-label text-sm capitalize font-semibold tracking-wider whitespace-nowrap">
                               Particulars:
                             </span>
-                            <span className="expense-summary-list-value text-gray-700 text-md capitalize font-semibold">{e.particulars ? e.particulars : '—'}</span>
+                            <span className="expense-summary-list-value text-md capitalize font-semibold text-right">
+                              {e.particulars ? e.particulars : '—'}
+                            </span>
                           </li>
                           <li className="flex items-center justify-between gap-4 py-2.5">
-                            <span className="expense-summary-list-label text-sm text-gray-500 capitalize font-semibold tracking-wider whitespace-nowrap">
+                            <span className="expense-summary-list-label text-sm capitalize font-semibold tracking-wider whitespace-nowrap">
                               Co / Payee Name:
                             </span>
-                            <span className="expense-summary-list-value text-gray-700 text-md capitalize font-semibold">{e.coNames ? e.coNames : '—'}</span>
+                            <span className="expense-summary-list-value text-md capitalize font-semibold text-right">
+                              {e.coNames ? e.coNames : '—'}
+                            </span>
+                          </li>
+                          <li className="flex items-center justify-between gap-4 py-2.5">
+                            <span className="expense-summary-list-label text-sm capitalize font-semibold tracking-wider whitespace-nowrap">
+                              Bill / Receipt:
+                            </span>
+                            <span className="expense-summary-list-value text-md capitalize font-semibold text-right">
+                              {e.hasBillOrReceipt ? 'Available' : 'Not available'}
+                            </span>
                           </li>
                         </ul>
                       </div>
                     </div>
                   </div>
-
-                  <div className="expense-amount-words-box rounded-lg border border-gray-200 bg-gray-50/80 p-2">
-                    <p className="expense-amount-words-label text-[14px] text-gray-500 uppercase font-semibold tracking-wider">
-                      Amount in Words
-                    </p>
-                    <p className="expense-amount-words-value text-lg text-primary-700 font-bold leading-relaxed mt-1">
-                      {formatAmountInWords(e.grossAmount)}
-                    </p>
-                  </div>
                 </div>
-                <div className="expense-totals-box w-full lg:w-1/3 flex-shrink-0 rounded-2xl border border-gray-200 bg-gray-50/80 p-5 space-y-3">
-                  <div className="flex justify-between items-center text-sm py-1">
-                    <span className="expense-totals-row-label text-gray-500 font-medium">Net Amount</span>
-                    <span className="expense-totals-row-value font-bold text-gray-800 text-base">{formatCurrency(e.netAmount)}</span>
+                <div className="expense-totals-box w-full flex flex-col xl:max-w-sm xl:w-80 flex-shrink-0 rounded-2xl border p-5 space-y-3">
+                  <div className="flex justify-between items-center gap-3 text-sm py-1">
+                    <span className="expense-totals-row-label font-medium">Net Amount</span>
+                    <span className="expense-totals-row-value font-bold text-base tabular-nums">
+                      {formatCurrency(e.netAmount)}
+                    </span>
                   </div>
-                  <div className="flex justify-between items-center text-sm py-1">
-                    <span className="expense-totals-row-label text-gray-500 font-medium">Total GST</span>
-                    <span className="expense-totals-row-value-gst font-bold text-emerald-700 text-base">{formatCurrency(e.totalGST)}</span>
-                  </div>
-                  {Number(e.tds) > 0 && (
-                    <div className="flex justify-between items-center text-sm py-1">
-                      <span className="expense-totals-row-label text-gray-500 font-medium">TDS</span>
-                      <span className="expense-totals-row-value-tds font-bold text-red-700 text-base">{formatCurrency(e.tds)}</span>
+                  {e.useIGST || Number(e.igst) > 0 ? (
+                    <div className="flex justify-between items-center gap-3 text-sm py-1">
+                      <span className="expense-totals-row-label font-medium">IGST</span>
+                      <span className="expense-totals-row-value-gst font-bold text-base tabular-nums">
+                        {formatCurrency(e.igst)}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center gap-3 text-sm py-1">
+                      <span className="expense-totals-row-label font-medium">Total GST</span>
+                      <span className="expense-totals-row-value-gst font-bold text-base tabular-nums">
+                        {formatCurrency(e.totalGST)}
+                      </span>
                     </div>
                   )}
-                  <div className="expense-totals-gross-divider border-t-2 border-gray-900 pt-4 mt-2 flex justify-between items-baseline">
-                    <span className="expense-totals-gross-label font-bold text-gray-900 text-lg">Gross Total</span>
-                    <span className="expense-totals-gross-value text-2xl font-bold text-primary-700 tracking-tight">
+                  {Number(e.tds) > 0 && (
+                    <div className="flex justify-between items-center gap-3 text-sm py-1">
+                      <span className="expense-totals-row-label font-medium">TDS</span>
+                      <span className="expense-totals-row-value-tds font-bold text-base tabular-nums">
+                        {formatCurrency(e.tds)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="expense-totals-gross-divider border-t-2 pt-4 mt-2 flex justify-between items-baseline gap-3">
+                    <span className="expense-totals-gross-label font-bold text-lg">Gross Total</span>
+                    <span className="expense-totals-gross-value text-2xl font-bold tracking-tight tabular-nums">
                       {formatCurrency(e.grossAmount)}
                     </span>
                   </div>
                 </div>
               </div>
-
+              <div className="expense-amount-words-box rounded-lg border p-3 mt-4">
+                <p className="expense-amount-words-label text-[14px] uppercase font-semibold tracking-wider">
+                  Amount in Words
+                </p>
+                <p className="expense-amount-words-value text-lg font-bold leading-relaxed mt-1">
+                  {formatAmountInWords(e.grossAmount)}
+                </p>
+              </div>
             </div>
           </div>
+
+          {!e.isDraft && (
+            <div id="expense-payments" className="scroll-mt-4">
+              <ExpensePaymentsPanel
+                expense={e}
+                canManage={canManagePayments}
+                autoOpen={shouldOpenPayment}
+                onChanged={() => dispatch(fetchExpense(id))}
+              />
+            </div>
+          )}
 
         </div>
         <ActivityTimelineSidebar expense={e} />

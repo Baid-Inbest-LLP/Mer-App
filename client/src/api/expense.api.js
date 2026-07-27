@@ -4,6 +4,7 @@ const MER_FORM_FIELDS = new Set([
   'month',
   'coNames',
   'invoiceDate',
+  'dueDate',
   'location',
   'company',
   'invoiceNo',
@@ -12,6 +13,7 @@ const MER_FORM_FIELDS = new Set([
   'notes',
   'terms',
   'expenseType',
+  'expenseNature',
   'netAmount',
   'gstPercent',
   'useIGST',
@@ -26,6 +28,8 @@ const MER_FORM_FIELDS = new Set([
   'bankAccountNumber',
   'merType',
   'paymentMethod',
+  'initialPaymentAmount',
+  'recordPaymentNow',
   'isDraft',
 ]);
 
@@ -52,6 +56,7 @@ const serializePayload = (data) => {
 
 export const expenseApi = {
   list: (params) => api.get('/expenses', { params }),
+  due: (params) => api.get('/expenses/due', { params }),
   get: (id) => api.get(`/expenses/${id}`),
   create: (data) => api.post('/expenses', serializePayload(data)),
   update: (id, data) => api.put(`/expenses/${id}`, serializePayload(data)),
@@ -60,4 +65,8 @@ export const expenseApi = {
   complete: (id) => api.patch(`/expenses/${id}/complete`),
   nextSlNo: (params) => api.get('/expenses/next-slno', { params }),
   calculate: (data) => api.post('/expenses/calculate', data),
+  listPayments: (id) => api.get(`/expenses/${id}/payments`),
+  addPayment: (id, data) => api.post(`/expenses/${id}/payments`, data),
+  voidPayment: (id, paymentId) => api.delete(`/expenses/${id}/payments/${paymentId}`),
+  setHold: (id, hold) => api.patch(`/expenses/${id}/hold`, { hold }),
 };

@@ -1,4 +1,5 @@
 import { Expense } from '../models/Expense.js';
+import { ExpensePayment } from '../models/ExpensePayment.js';
 import { Company } from '../models/Company.js';
 import { getFinancialYear } from '../config/index.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -14,6 +15,8 @@ import {
   canCompleteExpense,
   stripWorkflowFields,
 } from '../utils/expensePermissions.js';
+import { EXPENSE_NATURES, RECURRING_FREQUENCIES, roundMoney } from '../constants/paymentStatus.js';
+import { addPayment, recalculateExpensePaymentState } from './payment.service.js';
 
 const asTrimmedString = (value) => {
   if (value == null || value === '') return '';
@@ -52,6 +55,9 @@ const resolveMerSerial = async ({ company, month, invoiceDate }) => {
 
   return buildMerSerial(base, count + 1);
 };
+
+/** Exported for recurring template generation. */
+export const resolveMerSerialForTemplate = resolveMerSerial;
 
 export const applyCalculations = (data) => {
   const useIGST = data.useIGST === true || data.useIGST === 'true';
@@ -102,7 +108,16 @@ export const getExpenseById = async (id) => {
     .populate('approvedBy', 'name email')
     .populate('completedBy', 'name email');
   if (!expense) throw ApiError.notFound('Expense not found');
-  return expense;
+
+  const payments = await ExpensePayment.find({ expenseId: id })
+    .sort({ paymentDate: -1, createdAt: -1 })
+    .populate('createdBy', 'name email')
+    .populate('voidedBy', 'name email')
+    .lean();
+
+  const obj = expense.toObject();
+  obj.payments = payments;
+  return obj;
 };
 
 export const createExpense = async (data, user) => {
@@ -110,15 +125,51 @@ export const createExpense = async (data, user) => {
   const calculated = applyCalculations(cleaned);
   const isDraft = cleaned.isDraft === true || cleaned.isDraft === 'true';
   const locationLabel = toLocationLabel(cleaned.location);
+  const purchaseOrderId = asTrimmedString(cleaned.purchaseOrderId) || null;
+  const poNumber = asTrimmedString(cleaned.poNumber) || null;
+  const source = purchaseOrderId ? 'purchase_order' : (cleaned.source || 'manual');
+
+  if (purchaseOrderId) {
+    const existing = await Expense.findOne({ purchaseOrderId }).select('_id slNo').lean();
+    if (existing) {
+      throw ApiError.conflict(
+        `This purchase order is already linked to MER entry ${existing.slNo || existing._id}`,
+      );
+    }
+  }
+
+  const grossAmount = roundMoney(calculated.grossAmount || 0);
+  const dueDate = cleaned.dueDate
+    ? new Date(cleaned.dueDate)
+    : (cleaned.invoiceDate ? new Date(cleaned.invoiceDate) : new Date());
+  const expenseNature = EXPENSE_NATURES.includes(cleaned.expenseNature)
+    ? cleaned.expenseNature
+    : 'Variable';
+  const frequency = RECURRING_FREQUENCIES.includes(cleaned.frequency)
+    ? cleaned.frequency
+    : 'One-time';
+
   const payload = {
     ...calculated,
     location: locationLabel || calculated.location,
-    status: cleaned.status || 'Pending',
+    dueDate,
+    expenseNature,
+    frequency,
+    amountPaid: 0,
+    balanceDue: grossAmount,
+    status: 'Pending',
     createdBy: user._id,
     updatedBy: user._id,
     isDraft,
     approvalStatus: APPROVAL_STATUS.PENDING,
+    source,
   };
+
+  // Sparse unique index on purchaseOrderId rejects multiple explicit nulls — omit when unset.
+  delete payload.purchaseOrderId;
+  delete payload.poNumber;
+  if (purchaseOrderId) payload.purchaseOrderId = purchaseOrderId;
+  if (poNumber) payload.poNumber = poNumber;
 
   if (isDraft) {
     payload.invoiceDate = payload.invoiceDate || new Date();
@@ -147,46 +198,102 @@ export const createExpense = async (data, user) => {
     });
   }
 
-  return Expense.create(payload);
+  const expense = await Expense.create(payload);
+
+  // Optional initial payment when creating with a payment date (full or part).
+  const recordPaymentNow = cleaned.recordPaymentNow === true
+    || cleaned.recordPaymentNow === 'true'
+    || Boolean(cleaned.paymentDate);
+  const initialAmountRaw = cleaned.initialPaymentAmount ?? cleaned.paymentAmount;
+  const hasExplicitAmount = initialAmountRaw !== undefined && initialAmountRaw !== null && initialAmountRaw !== '';
+
+  if (!isDraft && recordPaymentNow && cleaned.paymentMethod) {
+    const payAmount = hasExplicitAmount
+      ? roundMoney(initialAmountRaw)
+      : grossAmount;
+    if (payAmount > 0) {
+      try {
+        await addPayment(expense._id, {
+          amount: payAmount,
+          paymentDate: cleaned.paymentDate || new Date(),
+          paymentMethod: cleaned.paymentMethod,
+          paymentRefNumber: cleaned.paymentRefNumber,
+          bankAccountNumber: cleaned.bankAccountNumber,
+          cardNumber: cleaned.cardNumber,
+          merType: payload.merType,
+          notes: 'Initial payment on create',
+        }, user);
+      } catch (err) {
+        await ExpensePayment.deleteMany({ expenseId: expense._id });
+        await Expense.deleteOne({ _id: expense._id });
+        throw err;
+      }
+    }
+  }
+
+  return getExpenseById(expense._id);
 };
 
 export const updateExpense = async (id, data, user) => {
-  const expense = await getExpenseById(id);
-  assertCanEdit(expense, user);
+  const existing = await Expense.findById(id);
+  if (!existing) throw ApiError.notFound('Expense not found');
+  assertCanEdit(existing, user);
 
-  const wasDraft = expense.isDraft;
+  const wasDraft = existing.isDraft;
   const cleaned = stripWorkflowFields(data);
-  const calculated = applyCalculations({ ...expense.toObject(), ...cleaned });
+  // PO link is immutable after create
+  delete cleaned.purchaseOrderId;
+  delete cleaned.poNumber;
+  delete cleaned.source;
+  delete cleaned.recurringTemplateId;
+  delete cleaned.amountPaid;
+  delete cleaned.balanceDue;
+  delete cleaned.recordPaymentNow;
+  delete cleaned.initialPaymentAmount;
+  delete cleaned.paymentAmount;
+
+  const calculated = applyCalculations({ ...existing.toObject(), ...cleaned });
   if (cleaned.location != null) {
     calculated.location = toLocationLabel(cleaned.location) || calculated.location;
   }
-
-  const { status: _omitStatus, ...calculatedWithoutStatus } = calculated;
-  Object.assign(expense, calculatedWithoutStatus, { updatedBy: user._id });
-
-  if (data.isDraft !== undefined) {
-    expense.isDraft = data.isDraft === true || data.isDraft === 'true';
+  if (cleaned.dueDate) calculated.dueDate = new Date(cleaned.dueDate);
+  if (cleaned.expenseNature && EXPENSE_NATURES.includes(cleaned.expenseNature)) {
+    calculated.expenseNature = cleaned.expenseNature;
+  }
+  if (cleaned.frequency && RECURRING_FREQUENCIES.includes(cleaned.frequency)) {
+    calculated.frequency = cleaned.frequency;
   }
 
-  if (wasDraft && !expense.isDraft) {
-    expense.approvalStatus = APPROVAL_STATUS.PENDING;
+  const { status: _omitStatus, ...calculatedWithoutStatus } = calculated;
+  Object.assign(existing, calculatedWithoutStatus, { updatedBy: user._id });
 
-    if (!asTrimmedString(expense.slNo)) {
-      expense.slNo = await resolveMerSerial({
-        company: expense.company,
-        month: expense.month,
-        invoiceDate: expense.invoiceDate,
+  if (data.isDraft !== undefined) {
+    existing.isDraft = data.isDraft === true || data.isDraft === 'true';
+  }
+
+  if (wasDraft && !existing.isDraft) {
+    existing.approvalStatus = APPROVAL_STATUS.PENDING;
+
+    if (!asTrimmedString(existing.slNo)) {
+      existing.slNo = await resolveMerSerial({
+        company: existing.company,
+        month: existing.month,
+        invoiceDate: existing.invoiceDate,
+        merType: existing.merType,
       });
     }
   }
 
-  await expense.save();
-  return expense;
+  await existing.save();
+  await recalculateExpensePaymentState(existing._id);
+  return getExpenseById(existing._id);
 };
 
 export const deleteExpense = async (id, user) => {
-  const expense = await getExpenseById(id);
+  const expense = await Expense.findById(id);
+  if (!expense) throw ApiError.notFound('Expense not found');
   assertCanDelete(expense, user);
+  await ExpensePayment.deleteMany({ expenseId: id });
   await expense.deleteOne();
   return { id };
 };
@@ -196,7 +303,8 @@ export const approveExpense = async (id, user) => {
     throw ApiError.forbidden('Only admin can approve MER entries');
   }
 
-  const expense = await getExpenseById(id);
+  const expense = await Expense.findById(id);
+  if (!expense) throw ApiError.notFound('Expense not found');
   if (expense.isDraft) {
     throw ApiError.badRequest('Submit the entry before approval');
   }
@@ -209,7 +317,7 @@ export const approveExpense = async (id, user) => {
   expense.approvedAt = new Date();
   expense.updatedBy = user._id;
   await expense.save();
-  return expense;
+  return getExpenseById(id);
 };
 
 export const completeExpense = async (id, user) => {
@@ -217,9 +325,10 @@ export const completeExpense = async (id, user) => {
     throw ApiError.forbidden('Only superadmin can complete MER entries');
   }
 
-  const expense = await getExpenseById(id);
-  if (expense.approvalStatus !== APPROVAL_STATUS.APPROVED) {
-    throw ApiError.badRequest('Entry must be approved before completion');
+  const expense = await Expense.findById(id);
+  if (!expense) throw ApiError.notFound('Expense not found');
+  if (expense.approvalStatus !== APPROVAL_STATUS.COMPLETED) {
+    throw ApiError.badRequest('Entry must be Completed before approval');
   }
 
   expense.approvalStatus = APPROVAL_STATUS.COMPLETED;
@@ -227,7 +336,7 @@ export const completeExpense = async (id, user) => {
   expense.completedAt = new Date();
   expense.updatedBy = user._id;
   await expense.save();
-  return expense;
+  return getExpenseById(id);
 };
 
 /** Backfill approvalStatus for existing records. */

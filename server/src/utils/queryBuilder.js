@@ -46,6 +46,7 @@ export const buildExpenseQuery = (query) => {
   if (query.status) filter.status = query.status;
   if (query.approvalStatus) filter.approvalStatus = query.approvalStatus;
   if (query.expenseType) filter.expenseType = query.expenseType;
+  if (query.expenseNature) filter.expenseNature = query.expenseNature;
   if (query.paymentMethod) filter.paymentMethod = query.paymentMethod;
   if (query.headOfExpense) filter.headOfExpense = query.headOfExpense;
   if (query.financialYear) filter.financialYear = query.financialYear;
@@ -57,23 +58,22 @@ export const buildExpenseQuery = (query) => {
   if (query.bankAccountNumber) filter.bankAccountNumber = query.bankAccountNumber;
   if (query.coNames) filter.coNames = new RegExp(query.coNames, 'i');
 
-  if (query.merType === 'BANK') {
-    filter.$and = [...(filter.$and || []), {
-      $or: [
-        { merType: 'Bank' },
-        { merType: { $exists: false }, paymentMethod: 'Bank' },
-      ],
-    }];
+  if (query.openBalance === 'true') {
+    filter.balanceDue = { $gt: 0 };
+    filter.status = filter.status || { $in: ['Pending', 'PartiallyPaid', 'Hold'] };
   }
-  if (query.merType === 'CASH') {
-    filter.$and = [...(filter.$and || []), {
-      $or: [
-        { merType: 'Cash' },
-        { merType: { $exists: false }, paymentMethod: 'Cash' },
-      ],
-    }];
+
+  if (query.dueDateFrom || query.dueDateTo) {
+    filter.dueDate = {};
+    if (query.dueDateFrom) filter.dueDate.$gte = new Date(query.dueDateFrom);
+    if (query.dueDateTo) filter.dueDate.$lte = new Date(query.dueDateTo);
   }
-  if (query.merType === 'UPI') {
+
+  const merTypeParam = String(query.merType || '').trim().toLowerCase();
+  const reportMerFilter = buildReportMerTypeFilter(merTypeParam);
+  if (reportMerFilter) {
+    filter.$and = [...(filter.$and || []), reportMerFilter];
+  } else if (merTypeParam === 'upi') {
     filter.$and = [...(filter.$and || []), {
       $or: [
         { merType: 'UPI' },
