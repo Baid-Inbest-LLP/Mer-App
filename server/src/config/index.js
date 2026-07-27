@@ -79,7 +79,8 @@ export const EXPENSE_HEADS = [
 
 export const EXPENSE_TYPES = ['Capital', 'Revenue'];
 export const PAYMENT_METHODS = ['UPI', 'NEFT', 'RTGS', 'IMPS', 'Card', 'Cash'];
-export const EXPENSE_STATUSES = ['Paid', 'Pending', 'Cancelled'];
+export const EXPENSE_STATUSES = ['Paid', 'Pending', 'PartiallyPaid', 'Hold', 'Cancelled'];
+export const EXPENSE_NATURES = ['Fixed', 'Variable'];
 export const USER_ROLES = ['superadmin', 'admin', 'user'];
 export const APPROVAL_STATUSES = ['Pending', 'Completed', 'Approved'];
 

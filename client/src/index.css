@@ -199,8 +199,16 @@
     @apply badge bg-green-100 text-green-700;
   }
 
+  .badge-partially-paid {
+    @apply badge bg-sky-100 text-sky-700;
+  }
+
   .badge-payment-pending {
     @apply badge bg-yellow-100 text-yellow-700;
+  }
+
+  .badge-hold {
+    @apply badge bg-orange-100 text-orange-700;
   }
 
   .badge-cancelled {
@@ -484,6 +492,77 @@
 
   .expense-timeline-event-actor {
     @apply text-gray-800;
+  }
+
+  .expense-timeline-event-icon {
+    @apply flex items-center justify-center;
+  }
+
+  .expense-timeline-event-icon--created {
+    @apply bg-blue-50 text-blue-600;
+  }
+
+  .expense-timeline-event-icon--completed {
+    @apply bg-emerald-50 text-emerald-600;
+  }
+
+  .expense-timeline-event-icon--approved {
+    @apply bg-indigo-50 text-indigo-600;
+  }
+
+  .expense-summary-icon {
+    @apply bg-primary-100 text-primary-700 flex items-center justify-center;
+  }
+
+  .expense-summary-list {
+    @apply divide-primary-100/70;
+  }
+
+  .expense-summary-list-label {
+    @apply text-gray-500;
+  }
+
+  .expense-summary-list-value {
+    @apply text-gray-700;
+  }
+
+  .expense-summary-decor {
+    @apply bg-primary-100/40;
+  }
+
+  .expense-amount-words-box,
+  .expense-totals-box {
+    @apply border-gray-200 bg-gray-50/80;
+  }
+
+  .expense-amount-words-label,
+  .expense-totals-row-label {
+    @apply text-gray-500;
+  }
+
+  .expense-amount-words-value,
+  .expense-totals-gross-value {
+    @apply text-primary-700;
+  }
+
+  .expense-totals-row-value {
+    @apply text-gray-800;
+  }
+
+  .expense-totals-row-value-gst {
+    @apply text-emerald-700;
+  }
+
+  .expense-totals-row-value-tds {
+    @apply text-red-700;
+  }
+
+  .expense-totals-gross-divider {
+    @apply border-gray-900;
+  }
+
+  .expense-totals-gross-label {
+    @apply text-gray-900;
   }
 
   .expense-summary-title {
@@ -1296,7 +1375,15 @@
 [data-theme='dark'] #root .detail-card-title,
 [data-theme='dark'] #root .expense-summary-title,
 [data-theme='dark'] #root .report-table-title {
-  color: #c1c2c5;
+  color: #e9ecef;
+}
+
+[data-theme='dark'] #root .expense-stat-label,
+[data-theme='dark'] #root .detail-row-label,
+[data-theme='dark'] #root .expense-timeline-event-date,
+[data-theme='dark'] #root .expense-timeline-event-by,
+[data-theme='dark'] #root .expense-timeline-event-actor-label {
+  color: #a6a7ab;
 }
 
 [data-theme='dark'] #root .summary-head-report-subtitle {
@@ -1376,14 +1463,6 @@
   border-color: #373a40 !important;
 }
 
-[data-theme='dark'] #root .expense-stat-label,
-[data-theme='dark'] #root .detail-row-label,
-[data-theme='dark'] #root .expense-timeline-event-date,
-[data-theme='dark'] #root .expense-timeline-event-by,
-[data-theme='dark'] #root .expense-timeline-event-actor-label {
-  color: #909296;
-}
-
 [data-theme='dark'] #root .expense-section-divider,
 [data-theme='dark'] #root .detail-row,
 [data-theme='dark'] #root .expense-timeline-header {
@@ -1411,12 +1490,12 @@
 [data-theme='dark'] #root .expense-summary-list-label,
 [data-theme='dark'] #root .expense-amount-words-label,
 [data-theme='dark'] #root .expense-totals-row-label {
-  color: #909296 !important;
+  color: #adb5bd !important;
 }
 
 [data-theme='dark'] #root .expense-summary-list-value,
 [data-theme='dark'] #root .expense-totals-row-value {
-  color: #c1c2c5 !important;
+  color: #e9ecef !important;
 }
 
 [data-theme='dark'] #root .expense-amount-words-value,
@@ -1468,14 +1547,446 @@
   border-color: rgb(255 255 255 / 0.1) !important;
 }
 
+/* Expense form — light defaults for semantic classes */
+.expense-form-radio-group-label,
+.expense-form-field-label {
+  color: #374151;
+}
+
+.expense-form-radio-label {
+  color: #1f2937;
+}
+
+.expense-payment-strip {
+  background-color: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+.expense-payment-strip > * + * {
+  border-color: #e5e7eb;
+}
+
+.expense-payment-strip-label--gross {
+  color: #64748b;
+}
+
+.expense-payment-strip-value--gross {
+  color: #1e293b;
+}
+
+.expense-payment-strip-label--paid,
+.expense-payment-strip-value--paid {
+  color: #047857;
+}
+
+.expense-payment-strip-value--paid {
+  color: #065f46;
+}
+
+.expense-payment-strip-label--due {
+  color: #dc2626;
+}
+
+.expense-payment-strip-value--due {
+  color: #b91c1c;
+}
+
+.expense-payment-unpaid-hint {
+  border-color: #e5e7eb;
+  background-color: rgb(249 250 251 / 0.8);
+}
+
+.expense-amount-words-box {
+  border-color: #e5e7eb;
+  background-color: #f9fafb;
+}
+
+.expense-amount-words-label {
+  color: #374151;
+}
+
+.expense-amount-words-value {
+  color: #1d4ed8;
+}
+
+/* Expense form — dark mode */
+[data-theme='dark'] #root .expense-form-radio-group-label,
+[data-theme='dark'] #root .expense-form-field-label {
+  color: #c1c2c5 !important;
+}
+
+[data-theme='dark'] #root .expense-form-radio-label {
+  color: #e9ecef !important;
+}
+
+[data-theme='dark'] #root .expense-payment-strip {
+  background-color: rgb(255 255 255 / 0.04);
+  border-color: rgb(255 255 255 / 0.12);
+}
+
+[data-theme='dark'] #root .expense-payment-strip > * + * {
+  border-color: rgb(255 255 255 / 0.12);
+}
+
+[data-theme='dark'] #root .expense-payment-strip-label--gross {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .expense-payment-strip-value--gross {
+  color: #e9ecef !important;
+}
+
+[data-theme='dark'] #root .expense-payment-strip-label--paid {
+  color: #6ee7b7 !important;
+}
+
+[data-theme='dark'] #root .expense-payment-strip-value--paid {
+  color: #34d399 !important;
+}
+
+[data-theme='dark'] #root .expense-payment-strip-label--due {
+  color: #fca5a5 !important;
+}
+
+[data-theme='dark'] #root .expense-payment-strip-value--due {
+  color: #f87171 !important;
+}
+
+[data-theme='dark'] #root .expense-payment-unpaid-hint {
+  border-color: rgb(255 255 255 / 0.14);
+  background-color: rgb(255 255 255 / 0.04);
+}
+
+[data-theme='dark'] #root .expense-amount-words-box {
+  background-color: rgb(255 255 255 / 0.04);
+  border-color: rgb(255 255 255 / 0.1);
+}
+
+[data-theme='dark'] #root .expense-amount-words-label {
+  color: #909296 !important;
+}
+
+[data-theme='dark'] #root .expense-amount-words-value {
+  color: #74c0fc !important;
+}
+
+[data-theme='dark'] #root .form-btn-reset {
+  background-color: #25262b;
+  border-color: #373a40;
+  color: #c1c2c5;
+}
+
+[data-theme='dark'] #root .form-btn-reset:hover {
+  background-color: #2c2e33;
+}
+
+[data-theme='dark'] #root .form-btn-draft {
+  background-color: rgb(59 130 246 / 0.18);
+  color: #74c0fc;
+}
+
+[data-theme='dark'] #root .form-btn-draft:hover {
+  background-color: rgb(59 130 246 / 0.28);
+}
+
+[data-theme='dark'] #root .form-btn-submit {
+  background-color: #1d4ed8;
+  color: #fff;
+}
+
+[data-theme='dark'] #root .form-btn-submit:hover {
+  background-color: #1e40af;
+}
+
+[data-theme='dark'] #root .page-banner-action {
+  background-color: #ffffff !important;
+  color: #1e3a8a !important;
+  border: 1px solid rgb(255 255 255 / 0.35);
+  box-shadow: 0 10px 20px rgb(0 0 0 / 0.35);
+}
+
+[data-theme='dark'] #root .page-banner-action:hover {
+  background-color: #eff6ff !important;
+  color: #1e3a8a !important;
+}
+
+[data-theme='dark'] #root .page-banner-action-pdf {
+  background-color: rgb(248 113 113 / 0.16) !important;
+  border-color: rgb(248 113 113 / 0.4) !important;
+  color: #fecaca !important;
+}
+
+[data-theme='dark'] #root .page-banner-action-excel {
+  background-color: rgb(52 211 153 / 0.16) !important;
+  border-color: rgb(52 211 153 / 0.4) !important;
+  color: #a7f3d0 !important;
+}
+
+[data-theme='dark'] #root .btn-primary {
+  background-color: #1d4ed8;
+  color: #fff;
+}
+
+[data-theme='dark'] #root .btn-primary:hover {
+  background-color: #1e40af;
+}
+
 [data-theme='dark'] #root .expense-timeline-header-icon {
   background-color: #1e3a5f;
   color: #60a5fa;
 }
 
+[data-theme='dark'] #root .expense-timeline-event-icon--created {
+  background-color: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+[data-theme='dark'] #root .expense-timeline-event-icon--completed {
+  background-color: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+[data-theme='dark'] #root .expense-timeline-event-icon--approved {
+  background-color: rgba(129, 140, 248, 0.15);
+  color: #a5b4fc;
+}
+
 [data-theme='dark'] #root .expense-summary-icon {
   background-color: #1e3a5f;
   color: #60a5fa;
+}
+
+/* Payments panel on expense detail */
+.expense-payments-icon {
+  background-color: #ccfbf1;
+  color: #0d9488;
+}
+
+.expense-payments-meta {
+  color: #6b7280;
+}
+
+.expense-payments-stat--gross {
+  background-color: rgb(249 250 251 / 0.8);
+  border-color: #f3f4f6;
+}
+
+.expense-payments-stat--gross .expense-payments-stat-label {
+  color: #6b7280;
+}
+
+.expense-payments-stat--gross .expense-payments-stat-value {
+  color: #111827;
+}
+
+.expense-payments-stat--paid {
+  background-color: rgb(236 253 245 / 0.7);
+  border-color: #d1fae5;
+}
+
+.expense-payments-stat--paid .expense-payments-stat-label {
+  color: #047857;
+}
+
+.expense-payments-stat--paid .expense-payments-stat-value {
+  color: #065f46;
+}
+
+.expense-payments-stat--due {
+  background-color: rgb(255 251 235 / 0.7);
+  border-color: #fde68a;
+}
+
+.expense-payments-stat--due .expense-payments-stat-label {
+  color: #b45309;
+}
+
+.expense-payments-stat--due .expense-payments-stat-value {
+  color: #92400e;
+}
+
+.expense-payments-progress-meta {
+  color: #6b7280;
+}
+
+.expense-payments-progress-pct {
+  color: #374151;
+}
+
+.expense-payments-progress-track {
+  background-color: #f3f4f6;
+}
+
+.expense-payments-progress-fill--done {
+  background-color: #10b981;
+}
+
+.expense-payments-progress-fill--partial {
+  background-color: #0ea5e9;
+}
+
+.expense-payments-progress-fill--empty {
+  background-color: #d1d5db;
+}
+
+.expense-payments-form {
+  background-color: #fff;
+  border-color: #e5e7eb;
+}
+
+.expense-payments-form-title {
+  color: #1f2937;
+}
+
+.expense-payments-empty {
+  border-color: #e5e7eb;
+  background-color: rgb(249 250 251 / 0.5);
+}
+
+.expense-payments-empty-text {
+  color: #6b7280;
+}
+
+.expense-payments-empty-action {
+  color: #1d4ed8;
+}
+
+.expense-payments-list {
+  border-color: #f3f4f6;
+}
+
+.expense-payments-list > :not([hidden]) ~ :not([hidden]) {
+  border-color: #f3f4f6;
+}
+
+.expense-payments-item {
+  background-color: #fff;
+}
+
+.expense-payments-item--voided {
+  background-color: rgb(249 250 251 / 0.8);
+  opacity: 0.6;
+}
+
+.expense-payments-item-amount {
+  color: #111827;
+}
+
+.expense-payments-item-meta {
+  color: #6b7280;
+}
+
+.expense-payments-void-btn {
+  color: #dc2626;
+}
+
+.expense-payments-void-btn:hover {
+  color: #b91c1c;
+  background-color: #fef2f2;
+}
+
+[data-theme='dark'] #root .expense-payments-icon {
+  background-color: rgba(45, 212, 191, 0.14);
+  color: #2dd4bf;
+}
+
+[data-theme='dark'] #root .expense-payments-meta,
+[data-theme='dark'] #root .expense-payments-progress-meta,
+[data-theme='dark'] #root .expense-payments-item-meta,
+[data-theme='dark'] #root .expense-payments-empty-text {
+  color: #909296;
+}
+
+[data-theme='dark'] #root .expense-payments-stat--gross {
+  background-color: rgb(255 255 255 / 0.04);
+  border-color: rgb(255 255 255 / 0.1);
+}
+
+[data-theme='dark'] #root .expense-payments-stat--gross .expense-payments-stat-label {
+  color: #909296;
+}
+
+[data-theme='dark'] #root .expense-payments-stat--gross .expense-payments-stat-value {
+  color: #e9ecef;
+}
+
+[data-theme='dark'] #root .expense-payments-stat--paid {
+  background-color: rgba(52, 211, 153, 0.12);
+  border-color: rgba(52, 211, 153, 0.28);
+}
+
+[data-theme='dark'] #root .expense-payments-stat--paid .expense-payments-stat-label {
+  color: #6ee7b7;
+}
+
+[data-theme='dark'] #root .expense-payments-stat--paid .expense-payments-stat-value {
+  color: #34d399;
+}
+
+[data-theme='dark'] #root .expense-payments-stat--due {
+  background-color: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.28);
+}
+
+[data-theme='dark'] #root .expense-payments-stat--due .expense-payments-stat-label {
+  color: #fbbf24;
+}
+
+[data-theme='dark'] #root .expense-payments-stat--due .expense-payments-stat-value {
+  color: #fcd34d;
+}
+
+[data-theme='dark'] #root .expense-payments-progress-pct,
+[data-theme='dark'] #root .expense-payments-form-title,
+[data-theme='dark'] #root .expense-payments-item-amount {
+  color: #c1c2c5;
+}
+
+[data-theme='dark'] #root .expense-payments-progress-track {
+  background-color: #373a40;
+}
+
+[data-theme='dark'] #root .expense-payments-progress-fill--empty {
+  background-color: #495057;
+}
+
+[data-theme='dark'] #root .expense-payments-form {
+  background-color: #1a1b1e;
+  border-color: #373a40;
+}
+
+[data-theme='dark'] #root .expense-payments-empty {
+  border-color: rgb(255 255 255 / 0.14);
+  background-color: rgb(255 255 255 / 0.04);
+}
+
+[data-theme='dark'] #root .expense-payments-empty-action {
+  color: #74c0fc;
+}
+
+[data-theme='dark'] #root .expense-payments-list {
+  border-color: #373a40;
+}
+
+[data-theme='dark'] #root .expense-payments-list > :not([hidden]) ~ :not([hidden]) {
+  border-color: #373a40;
+}
+
+[data-theme='dark'] #root .expense-payments-item {
+  background-color: #25262b;
+}
+
+[data-theme='dark'] #root .expense-payments-item--voided {
+  background-color: #1a1b1e;
+}
+
+[data-theme='dark'] #root .expense-payments-void-btn {
+  color: #f87171;
+}
+
+[data-theme='dark'] #root .expense-payments-void-btn:hover {
+  color: #fca5a5;
+  background-color: rgba(248, 113, 113, 0.12);
 }
 
 [data-theme='dark'] #root .input-field {
@@ -1943,6 +2454,26 @@
 [data-theme='dark'] #root .badge-cancelled {
   background-color: rgba(248, 113, 113, 0.15);
   color: #fca5a5;
+}
+
+[data-theme='dark'] #root .badge-paid {
+  background-color: rgba(52, 211, 153, 0.18);
+  color: #6ee7b7;
+}
+
+[data-theme='dark'] #root .badge-partially-paid {
+  background-color: rgba(56, 189, 248, 0.18);
+  color: #7dd3fc;
+}
+
+[data-theme='dark'] #root .badge-payment-pending {
+  background-color: rgba(250, 204, 21, 0.16);
+  color: #fde047;
+}
+
+[data-theme='dark'] #root .badge-hold {
+  background-color: rgba(251, 146, 60, 0.18);
+  color: #fdba74;
 }
 
 [data-theme='dark'] ::-webkit-scrollbar-track {

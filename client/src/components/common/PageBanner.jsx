@@ -67,9 +67,9 @@ const actionBaseClassName =
 
 const actionVariantClassName = {
   default:
-    'bg-white text-primary-800 hover:bg-primary-50 shadow-lg shadow-primary-900/30 px-5 rounded-xl font-bold active:scale-95 transition-all duration-150',
-  pdf: 'text-red-800 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300',
-  excel: 'text-green-800 bg-green-50 border border-green-200 hover:bg-green-100 hover:border-green-300',
+    'page-banner-action bg-white text-primary-800 hover:bg-primary-50 shadow-lg shadow-primary-900/30 px-5 rounded-xl font-bold active:scale-95 transition-all duration-150',
+  pdf: 'page-banner-action-pdf text-red-800 bg-red-50 border border-red-200 hover:bg-red-100 hover:border-red-300',
+  excel: 'page-banner-action-excel text-green-800 bg-green-50 border border-green-200 hover:bg-green-100 hover:border-green-300',
 };
 
 const resolveActionClassName = (act) => {

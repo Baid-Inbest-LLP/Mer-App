@@ -15,6 +15,8 @@ import {
   formatMerSerial,
   getEntryApprovalBadge,
   getEntryApprovalLabel,
+  getPaymentStatusBadge,
+  getPaymentStatusLabel,
 } from '../../utils/format';
 import { canDeleteExpense, canEditExpense } from '../../utils/permissions';
 import { omitPaymentFilters, cleanFilterParams, stripExpenseListHiddenFilters } from '../../utils/filters';
@@ -67,9 +69,9 @@ export default function ExpenseListPage() {
     <div>
       <PageBanner
         className="mb-4"
-        title="Expense Entries"
-        subtitle={`Total Entries · ${pagination.total || list.length}`}
-        action={{ onClick: () => navigate('/entries/new'), label: 'Add Entry' }}
+        title="Expenses/Bills"
+        subtitle={`Total Expenses/Bills · ${pagination.total || list.length}`}
+        action={{ onClick: () => navigate('/entries/new'), label: 'Add Expense/Bill' }}
       />
 
       <FilterPanel
@@ -94,6 +96,7 @@ export default function ExpenseListPage() {
                   <th className="text-center">Co Name</th>
                   <th className="text-center">Head</th>
                   <th className="text-right">Gross</th>
+                  <th className="text-center">Payment</th>
                   <th className="text-center">Approval</th>
                   <th className="text-center">Actions</th>
                 </tr>
@@ -109,6 +112,7 @@ export default function ExpenseListPage() {
                     <td className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></td>
                     <td className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>
                     <td className="text-center"><Skeleton className="h-5 w-20 mx-auto rounded-full" /></td>
+                    <td className="text-center"><Skeleton className="h-5 w-20 mx-auto rounded-full" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></td>
                   </tr>
                 ))}
@@ -117,9 +121,9 @@ export default function ExpenseListPage() {
           </div>
         ) : list.length === 0 ? (
           <EmptyState
-            title="No entries"
-            description="Create your first expense entry"
-            actionLabel="Add entry"
+            title="No expenses/bills"
+            description="Create your first expense"
+            actionLabel="Add Expense/Bill"
             onAction={() => navigate('/entries/new')}
           />
         ) : (
@@ -134,6 +138,7 @@ export default function ExpenseListPage() {
                   <th className="text-center">Co Name</th>
                   <th className="text-center">Head</th>
                   <th className="text-right">Gross</th>
+                  <th className="text-center">Payment</th>
                   <th className="text-center">Approval</th>
                   <th className="text-center">Actions</th>
                 </tr>
@@ -173,6 +178,11 @@ export default function ExpenseListPage() {
                       <td className="text-center">{e.coNames || '—'}</td>
                       <td className="text-center">{e.headOfExpense}</td>
                       <td className="text-right font-medium">{formatCurrency(e.grossAmount)}</td>
+                      <td className="text-center">
+                        <span className={getPaymentStatusBadge(e.status)}>
+                          {getPaymentStatusLabel(e.status)}
+                        </span>
+                      </td>
                       <td className="text-center">
                         <span className={getEntryApprovalBadge(e)}>
                           {getEntryApprovalLabel(e)}
@@ -242,7 +252,7 @@ export default function ExpenseListPage() {
         onConfirm={handleDelete}
         loading={deleting}
         title="Delete entry"
-        message="Delete this expense entry permanently?"
+        message="Delete this expense permanently?"
         confirmLabel="Delete"
         variant="danger"
       />

@@ -9,6 +9,8 @@ const start = async () => {
   await ensureSuperAdminAccount();
   const { migrateApprovalStatus } = await import('./services/expense.service.js');
   await migrateApprovalStatus();
+  const { migratePaymentLedger } = await import('./services/payment.service.js');
+  await migratePaymentLedger();
   await bootstrapCompanies();
   app.listen(config.port, '0.0.0.0', () => {
     console.log(`MER Server running on port ${config.port} [${config.env}]`);

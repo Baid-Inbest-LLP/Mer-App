@@ -9,6 +9,7 @@ import companyRoutes from './company.routes.js';
 import bankAccountRoutes from './bankAccount.routes.js';
 import cardRoutes from './card.routes.js';
 import purchaseOrderRoutes from './purchaseOrder.routes.js';
+import recurringRoutes from './recurring.routes.js';
 
 const router = Router();
 
@@ -18,6 +19,7 @@ router.get('/health', (_req, res) => {
 
 router.use('/auth', authRoutes);
 router.use('/expenses', expenseRoutes);
+router.use('/recurring-templates', recurringRoutes);
 router.use('/purchase-orders', purchaseOrderRoutes);
 router.use('/dashboard', dashboardRoutes);
 router.use('/reports', reportRoutes);

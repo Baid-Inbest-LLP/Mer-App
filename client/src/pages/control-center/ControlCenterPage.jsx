@@ -6,11 +6,13 @@ import { fetchCompanies } from '../../store/slices/companiesSlice';
 import CompanyListPage from '../companies/CompanyListPage';
 import BankAccountsSection from './BankAccountsSection';
 import CardsSection from './CardsSection';
+import RecurringTemplatesSection from './RecurringTemplatesSection';
 
 const TABS = [
   { to: '/control-center/companies', label: 'Companies', end: true },
   { to: '/control-center/bank-accounts', label: 'Bank Accounts' },
   { to: '/control-center/cards', label: 'Cards' },
+  { to: '/control-center/recurring', label: 'Schedules' },
 ];
 
 export default function ControlCenterPage() {
@@ -25,7 +27,9 @@ export default function ControlCenterPage() {
     ? 'Manage payer bank accounts for expense entries'
     : location.pathname.includes('cards')
       ? 'Manage credit and debit cards for expense entries'
-      : 'Legal entities, locations, bank accounts, and cards';
+      : location.pathname.includes('recurring')
+        ? 'Fixed and variable expense schedules (one-time through yearly)'
+        : 'Legal entities, locations, bank accounts, and cards';
 
   return (
     <div>
@@ -57,6 +61,7 @@ export default function ControlCenterPage() {
         <Route path="companies" element={<CompanyListPage embedded />} />
         <Route path="bank-accounts" element={<BankAccountsSection />} />
         <Route path="cards" element={<CardsSection />} />
+        <Route path="recurring" element={<RecurringTemplatesSection />} />
       </Routes>
     </div>
   );

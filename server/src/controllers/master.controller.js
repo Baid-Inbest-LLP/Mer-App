@@ -11,7 +11,8 @@ import {
   BankAccount,
   Card,
 } from '../models/index.js';
-import { EXPENSE_HEADS, getFinancialYear, APPROVAL_STATUSES, USER_ROLES } from '../config/index.js';
+import { EXPENSE_HEADS, EXPENSE_NATURES, EXPENSE_STATUSES, getFinancialYear, APPROVAL_STATUSES, USER_ROLES } from '../config/index.js';
+import { RECURRING_FREQUENCIES } from '../constants/paymentStatus.js';
 import { normalizeBranchLabel } from '../utils/locationFormat.js';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -84,10 +85,12 @@ export const getLookupData = asyncHandler(async (_req, res) => {
     companyLocations,
     expenseHeads: heads.length ? heads.map((h) => h.name) : EXPENSE_HEADS,
     expenseTypes: ['Capital', 'Revenue'],
+    expenseNatures: EXPENSE_NATURES,
+    frequencies: RECURRING_FREQUENCIES,
     paymentMethods: PAYMENT_METHODS,
     bankAccounts: bankAccounts.map((b) => `${b.bankName} - ${b.last4}`),
     cards: cards.map((c) => `${c.issuer} - ${c.last4}`),
-    statuses: ['Paid', 'Pending', 'Cancelled'],
+    statuses: EXPENSE_STATUSES,
     approvalStatuses: APPROVAL_STATUSES,
     roles: USER_ROLES,
     months: [

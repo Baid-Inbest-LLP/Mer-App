@@ -25,8 +25,9 @@ export default function ExpenseFormPage() {
   const { companies, loading: companiesLoading } = useSelector((state) => state.companies);
   const [submitting, setSubmitting] = useState(false);
   const [poDraft, setPoDraft] = useState(null);
-  const [poDraftLoading, setPoDraftLoading] = useState(Boolean(fromPoId) && !isEdit);
   const [poMeta, setPoMeta] = useState(null);
+  const [loadedPoId, setLoadedPoId] = useState(null);
+  const poDraftLoading = Boolean(fromPoId) && !isEdit && loadedPoId !== fromPoId;
 
   useEffect(() => {
     dispatch(fetchCompanies({ isActive: true, limit: 100 }));
@@ -41,7 +42,6 @@ export default function ExpenseFormPage() {
     if (isEdit || !fromPoId) return undefined;
 
     let cancelled = false;
-    setPoDraftLoading(true);
 
     purchaseOrderApi
       .getExpenseDraft(fromPoId)
@@ -49,6 +49,7 @@ export default function ExpenseFormPage() {
         if (cancelled) return;
         setPoDraft(data.data.draft);
         setPoMeta(data.data.po);
+        setLoadedPoId(fromPoId);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -57,9 +58,6 @@ export default function ExpenseFormPage() {
           color: 'red',
         });
         navigate('/entries', { replace: true });
-      })
-      .finally(() => {
-        if (!cancelled) setPoDraftLoading(false);
       });
 
     return () => {
@@ -137,11 +135,11 @@ export default function ExpenseFormPage() {
         title={
           isEdit
             ? current?.isDraft
-              ? 'Edit Draft Entry'
-              : 'Edit Expense Entry'
+              ? 'Edit Draft Expense'
+              : 'Edit Expense'
             : poMeta
-              ? `New Expense from PO ${poMeta.poNumber}`
-              : 'New Expense Entry'
+              ? `New Expense/Bill from PO ${poMeta.poNumber}`
+              : 'New Expense/Bill'
         }
         subtitle={
           poMeta
