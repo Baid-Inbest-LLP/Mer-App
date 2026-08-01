@@ -7,8 +7,7 @@ import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
-import ExpenseListPage from './pages/expenses/ExpenseListPage';
-import DueExpensesPage from './pages/expenses/DueExpensesPage';
+import BillsPage from './pages/expenses/BillsPage';
 import ExpenseFormPage from './pages/expenses/ExpenseFormPage';
 import ApprovedPurchaseOrdersPage from './pages/purchase-orders/ApprovedPurchaseOrdersPage';
 import PurchaseOrderDetailPage from './pages/purchase-orders/PurchaseOrderDetailPage';
@@ -60,8 +59,9 @@ export default function App() {
           }
         >
           <Route index element={<DashboardPage />} />
-          <Route path="entries" element={<ExpenseListPage />} />
-          <Route path="due-expenses" element={<DueExpensesPage />} />
+          <Route path="bills" element={<BillsPage />} />
+          <Route path="entries" element={<Navigate to="/bills" replace />} />
+          <Route path="due-expenses" element={<Navigate to="/bills?tab=due" replace />} />
           <Route path="entries/new" element={<ExpenseFormPage />} />
           <Route path="entries/:id" element={
             <Suspense fallback={<ExpenseViewSkeleton />}>

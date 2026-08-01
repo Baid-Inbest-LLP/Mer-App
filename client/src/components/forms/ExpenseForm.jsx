@@ -44,15 +44,29 @@ const RADIO_CLASS_NAMES = {
   label: 'expense-form-radio-label cursor-pointer text-sm',
 };
 
-const FREQUENCY_OPTIONS = [
-  'One-time',
-  'Daily',
-  'Weekly',
-  'Monthly',
-  'Quarterly',
-  'Half-yearly',
-  'Yearly',
+// A Fixed bill recurs; a Variable bill is one-time.
+const FIXED_FREQUENCY_OPTIONS = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly'];
+const MONTH_OPTIONS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
 ];
+
+const monthNameFromDate = (value) => {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString('en-US', { month: 'long' });
+};
 
 const formatSummaryAmount = (value) => `₹${formatNumber(value, 2)}`;
 
@@ -85,7 +99,11 @@ const defaultValues = {
   particulars: '',
   expenseType: null,
   expenseNature: 'Variable',
+  amountType: 'Fixed',
   frequency: 'One-time',
+  recurringDueDay: 1,
+  recurringStartDate: null,
+  recurringEndDate: null,
   netAmount: 0,
   gstPercent: 0,
   gstAmount: 0,
@@ -129,10 +147,14 @@ const getLocationsForCompany = (company) => {
     });
 };
 
-const getEmptyFormValues = () => ({
-  ...defaultValues,
-  invoiceDate: new Date(),
-});
+const getEmptyFormValues = () => {
+  const invoiceDate = new Date();
+  return {
+    ...defaultValues,
+    invoiceDate,
+    month: monthNameFromDate(invoiceDate),
+  };
+};
 
 const buildInitialFormValues = (initialData) => {
   if (!initialData) return getEmptyFormValues();
@@ -149,10 +171,25 @@ const buildInitialFormValues = (initialData) => {
     gstAmount: isPoExpense
       ? (initialData.gstAmount ?? initialData.totalGST ?? 0)
       : (initialData.gstAmount ?? 0),
-    invoiceDate: initialData.invoiceDate ? new Date(initialData.invoiceDate) : new Date(),
-    dueDate: initialData.dueDate
+    invoiceDate: initialData.expenseNature === 'Fixed' && !initialData.invoiceDate
+      ? null
+      : (initialData.invoiceDate ? new Date(initialData.invoiceDate) : new Date()),
+    invoiceNo: initialData.expenseNature === 'Fixed' ? (initialData.invoiceNo || '') : (initialData.invoiceNo || ''),
+    dueDate: initialData.expenseNature === 'Fixed' && initialData.dueDate
       ? new Date(initialData.dueDate)
-      : (initialData.invoiceDate ? new Date(initialData.invoiceDate) : null),
+      : null,
+    recurringStartDate: initialData.recurringStartDate
+      ? new Date(initialData.recurringStartDate)
+      : null,
+    recurringEndDate: initialData.recurringEndDate
+      ? new Date(initialData.recurringEndDate)
+      : null,
+    month: initialData.month
+      || monthNameFromDate(
+        initialData.expenseNature === 'Fixed'
+          ? (initialData.recurringStartDate || initialData.dueDate || initialData.invoiceDate)
+          : (initialData.invoiceDate || new Date()),
+      ),
     paymentDate: initialData.paymentDate ? new Date(initialData.paymentDate) : null,
     paymentMode: (() => {
       const paid = Number(initialData.amountPaid || 0);
@@ -170,6 +207,7 @@ const buildInitialFormValues = (initialData) => {
     })(),
     recordPaymentNow: Boolean(initialData.paymentDate || Number(initialData.amountPaid || 0) > 0),
     expenseNature: initialData.expenseNature || 'Variable',
+    amountType: initialData.amountType || 'Fixed',
     frequency: initialData.frequency || 'One-time',
   };
 };
@@ -182,7 +220,14 @@ const getDefaultLocationValue = (company) => {
 
 const toSelectValue = (value) => (value === '' || value === undefined ? null : value);
 
-export default function ExpenseForm({ initialData, onSubmit, loading, companies = [], companiesLoading = false }) {
+export default function ExpenseForm({
+  initialData,
+  onSubmit,
+  loading,
+  companies = [],
+  companiesLoading = false,
+  onBillNoChange,
+}) {
   const { lookups } = useSelector((state) => state.common);
   const [slNo, setSlNo] = useState(initialData?.slNo);
   const [resetSpinKey, setResetSpinKey] = useState(0);
@@ -201,6 +246,7 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
     reset,
     getValues,
     trigger,
+    clearErrors,
   } = useForm({
     defaultValues: initialFormValues,
     mode: 'onSubmit',
@@ -228,6 +274,10 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
     setSlNo(initialData.slNo ?? null);
   }, [initialData, reset]);
 
+  useEffect(() => {
+    onBillNoChange?.(slNo ? formatMerSerial(slNo) : null);
+  }, [slNo, onBillNoChange]);
+
   const netAmount = watch('netAmount');
   const gstPercent = watch('gstPercent');
   const gstAmount = watch('gstAmount');
@@ -237,6 +287,7 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
   const selectedLocation = watch('location');
   const selectedMonth = watch('month');
   const invoiceDate = watch('invoiceDate');
+  const recurringStartDate = watch('recurringStartDate');
   const merType = watch('merType');
   const paymentMethod = watch('paymentMethod');
   const paymentMode = watch('paymentMode');
@@ -244,6 +295,12 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
   const isPoExpense = Boolean(
     initialData?.purchaseOrderId || initialData?.source === 'purchase_order',
   );
+  const expenseNature = watch('expenseNature');
+  const amountType = watch('amountType');
+  const isFixed = expenseNature === 'Fixed';
+  const isUsageAmount = isFixed && amountType === 'Usage';
+  const isExistingEntry = Boolean(initialData?._id);
+  const alreadyRecurring = Boolean(initialData?.recurringTemplateId);
 
   useEffect(() => {
     if (!shouldShowErrors) return;
@@ -351,12 +408,13 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
       .nextSlNo({
         company: selectedCompany,
         month: selectedMonth,
-        invoiceDate: invoiceDate?.toISOString?.() ?? invoiceDate,
+        invoiceDate: (isFixed ? (recurringStartDate || invoiceDate) : invoiceDate)?.toISOString?.()
+          ?? (isFixed ? (recurringStartDate || invoiceDate) : invoiceDate),
         merType,
       })
       .then(({ data }) => setSlNo(data.data.slNo))
       .catch(() => setSlNo(null));
-  }, [initialData, selectedCompany, selectedMonth, invoiceDate, merType]);
+  }, [initialData, selectedCompany, selectedMonth, invoiceDate, recurringStartDate, isFixed, merType]);
 
   useEffect(() => {
     const gst = isPoExpense
@@ -386,6 +444,13 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
   };
 
   const requirePositiveAmount = (value) => {
+    if (getValues('expenseNature') === 'Fixed' && getValues('amountType') === 'Usage') {
+      const amount = Number(value);
+      if (value === '' || value === null || value === undefined || Number.isNaN(amount) || amount < 0) {
+        return 'Amount cannot be negative';
+      }
+      return true;
+    }
     const amount = Number(value);
     if (value === '' || value === null || value === undefined || Number.isNaN(amount) || amount <= 0) {
       return 'Net amount is required';
@@ -393,11 +458,29 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
     return true;
   };
 
+  const requireInvoiceNo = (value) => {
+    if (getValues('expenseNature') === 'Fixed') return true;
+    return value?.trim() ? true : 'Invoice number is required';
+  };
+
+  const requireInvoiceDate = (value) => {
+    if (getValues('expenseNature') === 'Fixed') return true;
+    return value ? true : 'Invoice date is required';
+  };
+
+  const requireRecurringDueDay = (value) => {
+    if (getValues('expenseNature') !== 'Fixed') return true;
+    const day = Number(value);
+    if (!Number.isInteger(day) || day < 1 || day > 28) {
+      return 'Due day of month is required (1–28)';
+    }
+    return true;
+  };
+
   const submit = (data, isDraft = false) => {
     const payload = { ...data, isDraft };
-    if (!payload.dueDate && payload.invoiceDate) {
-      payload.dueDate = payload.invoiceDate;
-    }
+    // Due date is schedule-driven for Fixed bills; Variable bills don't use it.
+    payload.dueDate = null;
 
     const mode = payload.paymentMode || 'none';
     const recording = mode === 'full' || mode === 'partial';
@@ -421,6 +504,32 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
     if (payload.bankAccountNumber) {
       payload.bankAccountNumber = formatIssuerLast4(payload.bankAccountNumber);
     }
+
+    // Nature drives recurrence: Fixed => recurring schedule; Variable => one-time.
+    if (payload.expenseNature === 'Variable') {
+      payload.frequency = 'One-time';
+      payload.amountType = 'Fixed';
+    } else if (!payload.amountType) {
+      payload.amountType = 'Fixed';
+    }
+    const wantsRecurring = payload.expenseNature === 'Fixed'
+      && !isDraft
+      && payload.frequency
+      && payload.frequency !== 'One-time';
+    if (wantsRecurring) {
+      payload.recurringStartDate = payload.recurringStartDate instanceof Date
+        ? payload.recurringStartDate.toISOString()
+        : payload.recurringStartDate || undefined;
+      payload.recurringEndDate = payload.recurringEndDate instanceof Date
+        ? payload.recurringEndDate.toISOString()
+        : payload.recurringEndDate || undefined;
+    } else {
+      delete payload.recurringDueDay;
+      delete payload.recurringStartDate;
+      delete payload.recurringEndDate;
+      delete payload.scheduleName;
+    }
+
     onSubmit(payload);
   };
 
@@ -468,7 +577,219 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
     <form key={formResetKey} noValidate onSubmit={handleSubmit(onValidSubmit, onInvalidSubmit)} className="expense-form">
       <Paper withBorder p="md" mb="sm">
         <Text fw={600} mb="xs">
-          Basic details {slNo ? `(Expense No: ${formatMerSerial(slNo)})` : ''}
+          Bill Details
+        </Text>
+        <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md" mb="md" className="items-start">
+          <Controller
+            name="expenseType"
+            control={control}
+            rules={{ required: 'Expense type is required' }}
+            render={({ field, fieldState }) => (
+              <Radio.Group
+                label="Expense Type"
+                required
+                value={field.value || ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                error={showControllerError('expenseType', fieldState)}
+                classNames={RADIO_GROUP_CLASS_NAMES}
+                className="w-full"
+              >
+                <Group mt={6} gap="md" wrap="wrap">
+                  {(lookups?.expenseTypes || ['Capital', 'Revenue']).map((opt) => (
+                    <Radio
+                      key={opt}
+                      value={opt}
+                      label={opt}
+                      classNames={RADIO_CLASS_NAMES}
+                    />
+                  ))}
+                </Group>
+              </Radio.Group>
+            )}
+          />
+          <Controller
+            name="merType"
+            control={control}
+            rules={{ required: 'Payment type is required' }}
+            render={({ field, fieldState }) => (
+              <Radio.Group
+                label="Payment Type"
+                required
+                value={field.value || ''}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                error={showControllerError('merType', fieldState)}
+                classNames={RADIO_GROUP_CLASS_NAMES}
+                className="w-full"
+              >
+                <Group mt={6} gap="md" wrap="wrap">
+                  {merTypeOptions.map((opt) => (
+                    <Radio
+                      key={opt.value}
+                      value={opt.value}
+                      label={opt.label}
+                      classNames={RADIO_CLASS_NAMES}
+                    />
+                  ))}
+                </Group>
+              </Radio.Group>
+            )}
+          />
+          <Controller
+            name="expenseNature"
+            control={control}
+            rules={{ required: 'Bill nature is required' }}
+            render={({ field, fieldState }) => (
+              <Radio.Group
+                label="Bill Nature"
+                required
+                value={field.value || 'Variable'}
+                onChange={(value) => {
+                  const nextNature = value || 'Variable';
+                  field.onChange(nextNature);
+                  if (nextNature === 'Variable') {
+                    setValue('frequency', 'One-time');
+                    setValue('dueDate', null);
+                    setValue('amountType', 'Fixed');
+                    clearErrors(['dueDate', 'recurringDueDay', 'amountType', 'netAmount']);
+                    if (!getValues('invoiceDate')) {
+                      const today = new Date();
+                      setValue('invoiceDate', today);
+                      setValue('month', monthNameFromDate(today));
+                    }
+                  } else {
+                    clearErrors(['invoiceNo', 'invoiceDate']);
+                    const current = getValues('frequency');
+                    if (!current || !FIXED_FREQUENCY_OPTIONS.includes(current)) {
+                      setValue('frequency', 'Monthly');
+                    }
+                    if (!getValues('amountType')) {
+                      setValue('amountType', 'Fixed');
+                    }
+                    if (!getValues('recurringDueDay')) {
+                      setValue('recurringDueDay', 1);
+                    }
+                    if (!getValues('recurringStartDate')) {
+                      setValue('recurringStartDate', new Date());
+                    }
+                  }
+                }}
+                onBlur={field.onBlur}
+                error={showControllerError('expenseNature', fieldState)}
+                classNames={RADIO_GROUP_CLASS_NAMES}
+                className="w-full"
+              >
+                <Group mt={6} gap="md" wrap="wrap">
+                  {(lookups?.expenseNatures || ['Fixed', 'Variable']).map((opt) => (
+                    <Radio
+                      key={opt}
+                      value={opt}
+                      label={opt}
+                      classNames={RADIO_CLASS_NAMES}
+                    />
+                  ))}
+                </Group>
+              </Radio.Group>
+            )}
+          />
+          <Controller
+            name="month"
+            control={control}
+            rules={{ required: 'Billing month is required' }}
+            render={({ field, fieldState }) => (
+              <FilterSelect
+                label="Billing Month"
+                required
+                searchable
+                clearable
+                placeholder="Select month"
+                data={selectData(
+                  lookups?.months?.length ? lookups.months : MONTH_OPTIONS,
+                )}
+                value={toSelectValue(field.value)}
+                onChange={(value) => field.onChange(toSelectValue(value))}
+                onBlur={field.onBlur}
+                name={field.name}
+                ref={field.ref}
+                error={showControllerError('month', fieldState)}
+              />
+            )}
+          />
+        </SimpleGrid>
+
+        {isFixed && !isExistingEntry && !isPoExpense && (
+          <SimpleGrid cols={{ base: 1, sm: 2, md: 4 }} spacing="md">
+            <Controller
+              name="recurringDueDay"
+              control={control}
+              rules={{ validate: requireRecurringDueDay }}
+              render={({ field, fieldState }) => (
+                <NumberInput
+                  label="Due day of month"
+                  required
+                  min={1}
+                  max={28}
+                  hideControls
+                  classNames={TEXT_INPUT_CLASS_NAMES}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={showControllerError('recurringDueDay', fieldState)}
+                />
+              )}
+            />
+            <Controller
+              name="frequency"
+              control={control}
+              render={({ field }) => (
+                <FilterSelect
+                  label="Repeats"
+                  required
+                  data={selectData(FIXED_FREQUENCY_OPTIONS)}
+                  value={toSelectValue(FIXED_FREQUENCY_OPTIONS.includes(field.value) ? field.value : 'Monthly')}
+                  onChange={(value) => field.onChange(toSelectValue(value) || 'Monthly')}
+                />
+              )}
+            />
+            <Controller
+              name="recurringStartDate"
+              control={control}
+              render={({ field }) => (
+                <FormDateInput
+                  label="Start date"
+                  clearable
+                  popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+            <Controller
+              name="recurringEndDate"
+              control={control}
+              render={({ field }) => (
+                <FormDateInput
+                  label="End date"
+                  clearable
+                  popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </SimpleGrid>
+        )}
+
+        {isExistingEntry && alreadyRecurring && (
+          <Text size="sm" fw={500} className="mt-4">
+            This bill is part of a recurring schedule. Manage it under Bills → Recurring.
+          </Text>
+        )}
+      </Paper>
+
+      <Paper withBorder p="md" mb="sm">
+        <Text fw={600} mb="xs">
+          Basic Details
         </Text>
         <SimpleGrid cols={{ base: 1, sm: 3, md: 4 }}>
           <Controller
@@ -552,164 +873,31 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
 
           <TextInput
             label="Invoice No"
-            required
+            required={!isFixed}
             classNames={TEXT_INPUT_CLASS_NAMES}
-            {...register('invoiceNo', { required: 'Invoice number is required' })}
+            {...register('invoiceNo', { validate: requireInvoiceNo })}
             error={showRegisterError('invoiceNo')}
           />
 
           <Controller
             name="invoiceDate"
             control={control}
-            rules={{ required: 'Invoice date is required' }}
+            rules={{ validate: requireInvoiceDate }}
             render={({ field, fieldState }) => (
               <FormDateInput
                 label="Invoice Date"
-                required
+                required={!isFixed}
+                clearable={isFixed}
                 popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
                 value={field.value}
-                onChange={field.onChange}
+                onChange={(value) => {
+                  field.onChange(value);
+                  if (value && !isFixed) {
+                    setValue('month', monthNameFromDate(value));
+                  }
+                }}
                 onBlur={field.onBlur}
                 error={showControllerError('invoiceDate', fieldState)}
-              />
-            )}
-          />
-        </SimpleGrid>
-      </Paper>
-
-      <Paper withBorder p="md" mb="sm">
-        <Text fw={600} mb="xs">
-          Expense details
-        </Text>
-        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mb="md" className="items-start">
-          <Controller
-            name="merType"
-            control={control}
-            rules={{ required: 'MER type is required' }}
-            render={({ field, fieldState }) => (
-              <Radio.Group
-                label="MER Type"
-                required
-                value={field.value || ''}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                error={showControllerError('merType', fieldState)}
-                classNames={RADIO_GROUP_CLASS_NAMES}
-                className="w-full"
-              >
-                <Group mt={6} gap="md" wrap="wrap">
-                  {merTypeOptions.map((opt) => (
-                    <Radio
-                      key={opt.value}
-                      value={opt.value}
-                      label={opt.label}
-                      classNames={RADIO_CLASS_NAMES}
-                    />
-                  ))}
-                </Group>
-              </Radio.Group>
-            )}
-          />
-          <Controller
-            name="expenseType"
-            control={control}
-            rules={{ required: 'Expense type is required' }}
-            render={({ field, fieldState }) => (
-              <Radio.Group
-                label="Expense Type"
-                required
-                value={field.value || ''}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                error={showControllerError('expenseType', fieldState)}
-                classNames={RADIO_GROUP_CLASS_NAMES}
-                className="w-full"
-              >
-                <Group mt={6} gap="md" wrap="wrap">
-                  {(lookups?.expenseTypes || ['Capital', 'Revenue']).map((opt) => (
-                    <Radio
-                      key={opt}
-                      value={opt}
-                      label={opt}
-                      classNames={RADIO_CLASS_NAMES}
-                    />
-                  ))}
-                </Group>
-              </Radio.Group>
-            )}
-          />
-          <Controller
-            name="expenseNature"
-            control={control}
-            render={({ field, fieldState }) => (
-              <Radio.Group
-                label="Expense Nature"
-                value={field.value || 'Variable'}
-                onChange={(value) => field.onChange(value || 'Variable')}
-                onBlur={field.onBlur}
-                error={showControllerError('expenseNature', fieldState)}
-                classNames={RADIO_GROUP_CLASS_NAMES}
-                className="w-full"
-              >
-                <Group mt={6} gap="md" wrap="wrap">
-                  {(lookups?.expenseNatures || ['Fixed', 'Variable']).map((opt) => (
-                    <Radio
-                      key={opt}
-                      value={opt}
-                      label={opt}
-                      classNames={RADIO_CLASS_NAMES}
-                    />
-                  ))}
-                </Group>
-              </Radio.Group>
-            )}
-          />
-        </SimpleGrid>
-        <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }}>
-          <Controller
-            name="frequency"
-            control={control}
-            rules={{ required: 'Expense frequency is required' }}
-            render={({ field, fieldState }) => (
-              <FilterSelect
-                label="Expense Frequency"
-                required
-                data={selectData(lookups?.frequencies || FREQUENCY_OPTIONS)}
-                {...field}
-                value={toSelectValue(field.value || 'One-time')}
-                onChange={(value) => field.onChange(toSelectValue(value) || 'One-time')}
-                error={showControllerError('frequency', fieldState)}
-              />
-            )}
-          />
-          <Controller
-            name="month"
-            control={control}
-            rules={{ required: 'Month is required' }}
-            render={({ field, fieldState }) => (
-              <FilterSelect
-                label="Month"
-                required
-                data={selectData(lookups?.months)}
-                {...field}
-                value={toSelectValue(field.value)}
-                onChange={(value) => field.onChange(toSelectValue(value))}
-                error={showControllerError('month', fieldState)}
-              />
-            )}
-          />
-          <Controller
-            name="dueDate"
-            control={control}
-            render={({ field, fieldState }) => (
-              <FormDateInput
-                label="Due Date"
-                clearable
-                popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
-                value={field.value}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                error={showControllerError('dueDate', fieldState)}
               />
             )}
           />
@@ -722,14 +910,43 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
             <Text fw={600}>Amount & GST</Text>
           </div>
           <div className="flex flex-col gap-4 flex-1 content-start">
+            {isFixed && (
+              <Controller
+                name="amountType"
+                control={control}
+                rules={{ required: isFixed ? 'Amount type is required' : false }}
+                render={({ field, fieldState }) => (
+                  <Radio.Group
+                    label="Amount Type"
+                    required
+                    value={field.value || 'Fixed'}
+                    onChange={(value) => {
+                      const next = value || 'Fixed';
+                      field.onChange(next);
+                      if (next === 'Usage') {
+                        clearErrors('netAmount');
+                      }
+                    }}
+                    onBlur={field.onBlur}
+                    error={showControllerError('amountType', fieldState)}
+                    classNames={RADIO_GROUP_CLASS_NAMES}
+                  >
+                    <Group mt={6} gap="md" wrap="wrap">
+                      <Radio value="Fixed" label="Fixed amount" classNames={RADIO_CLASS_NAMES} />
+                      <Radio value="Usage" label="Usage-based" classNames={RADIO_CLASS_NAMES} />
+                    </Group>
+                  </Radio.Group>
+                )}
+              />
+            )}
             <Controller
               name="netAmount"
               control={control}
               rules={{ validate: requirePositiveAmount }}
               render={({ field, fieldState }) => (
                 <NumberInput
-                  label="Net Amount"
-                  required
+                  label={isUsageAmount ? 'Estimated / Current Amount' : 'Net Amount'}
+                  required={!isUsageAmount}
                   min={0}
                   prefix="₹"
                   decimalScale={isPoExpense ? 2 : undefined}
@@ -1041,10 +1258,42 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
             </div>
           )}
         </Paper>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3 items-stretch">
+        <Paper withBorder p="md" className="h-full flex flex-col">
+          <Text fw={600} mb="xs">Notes & Terms</Text>
+
+          <div className="mb-3">
+            <label htmlFor="expense-notes" className="expense-form-field-label block text-sm font-medium mb-1">
+              Notes
+            </label>
+            <textarea
+              id="expense-notes"
+              className="input-field cursor-text"
+              rows={7}
+              placeholder="Internal notes or special instructions..."
+              {...register('notes')}
+            />
+          </div>
+
+          <div className="flex-1 flex flex-col">
+            <label htmlFor="expense-terms" className="expense-form-field-label block text-sm font-medium mb-1">
+              Terms & Conditions
+            </label>
+            <textarea
+              id="expense-terms"
+              className="input-field cursor-text flex-1 min-h-[10rem]"
+              rows={7}
+              placeholder="Payment terms, delivery conditions..."
+              {...register('terms')}
+            />
+          </div>
+        </Paper>
 
         <Paper withBorder p="md" className="expense-form-summary flex flex-col h-full">
           <Text fw={600} mb="xs" className="expense-form-summary-title">
-            Entry Summary
+            Summary
           </Text>
           <div className="space-y-3 flex-1">
             <SummaryRow label="Net Amount" value={summaryNetAmount} large />
@@ -1115,36 +1364,6 @@ export default function ExpenseForm({ initialData, onSubmit, loading, companies 
                   ? 'Update Entry'
                   : 'Create'}
             </button>
-          </div>
-        </Paper>
-
-        <Paper withBorder p="md" className="h-full flex flex-col">
-          <Text fw={600} mb="xs">Notes & Terms</Text>
-
-          <div className="mb-3">
-            <label htmlFor="expense-notes" className="expense-form-field-label block text-sm font-medium mb-1">
-              Notes
-            </label>
-            <textarea
-              id="expense-notes"
-              className="input-field cursor-text"
-              rows={7}
-              placeholder="Internal notes or special instructions..."
-              {...register('notes')}
-            />
-          </div>
-
-          <div className="flex-1 flex flex-col">
-            <label htmlFor="expense-terms" className="expense-form-field-label block text-sm font-medium mb-1">
-              Terms & Conditions
-            </label>
-            <textarea
-              id="expense-terms"
-              className="input-field cursor-text flex-1 min-h-[10rem]"
-              rows={7}
-              placeholder="Payment terms, delivery conditions..."
-              {...register('terms')}
-            />
           </div>
         </Paper>
       </div>

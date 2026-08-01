@@ -1,6 +1,8 @@
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import * as expenseService from '../services/expense.service.js';
+import * as recurringService from '../services/recurring.service.js';
+import { Expense } from '../models/Expense.js';
 
 export const getExpenses = asyncHandler(async (req, res) => {
   const result = await expenseService.getExpenses(req.query);
@@ -14,7 +16,24 @@ export const getExpense = asyncHandler(async (req, res) => {
 
 export const createExpense = asyncHandler(async (req, res) => {
   const expense = await expenseService.createExpense(req.body, req.user);
-  ApiResponse.created(res, expense, 'MER entry created and submitted for approval');
+
+  // A Fixed bill is recurring by definition: spin up a linked schedule from the entry.
+  const isFixedRecurring = expense.expenseNature === 'Fixed'
+    && !expense.isDraft
+    && expense.frequency
+    && expense.frequency !== 'One-time';
+  let template = null;
+  if (isFixedRecurring) {
+    template = await recurringService.createTemplateFromExpense(expense, req.body, req.user);
+    await Expense.updateOne({ _id: expense._id }, { recurringTemplateId: template._id });
+    expense.recurringTemplateId = template._id;
+  }
+
+  ApiResponse.created(
+    res,
+    expense,
+    template ? 'Bill created and recurring schedule set up' : 'Bill created and submitted for approval',
+  );
 });
 
 export const updateExpense = asyncHandler(async (req, res) => {

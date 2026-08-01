@@ -23,29 +23,36 @@ import { omitPaymentFilters, cleanFilterParams, stripExpenseListHiddenFilters } 
 
 const PAGE_SIZE = 6;
 
-export default function ExpenseListPage() {
+export default function ExpenseListPage({ embedded = false, statusFilter = null, variant = 'all' }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { list, pagination, loading, queryParams } = useSelector((state) => state.expense);
   const { user } = useSelector((state) => state.auth);
   const { lookups } = useSelector((state) => state.common);
 
+  const isPaidView = variant === 'paid';
   const companyCode = (name) => lookups?.companyCodeByName?.[name] || name || '—';
   const [filters, setFilters] = useState(queryParams);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
   const load = (params = queryParams) => {
-    const cleaned = cleanFilterParams(
-      omitPaymentFilters({ limit: PAGE_SIZE, includeDrafts: true, ...params }),
-    );
+    const base = omitPaymentFilters({
+      limit: PAGE_SIZE,
+      includeDrafts: !isPaidView,
+      ...params,
+    });
+    if (statusFilter) base.status = statusFilter;
+    else delete base.status;
+    const cleaned = cleanFilterParams(base);
     dispatch(setQueryParams(cleaned));
     dispatch(fetchExpenses(cleaned));
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    load({ page: 1, limit: PAGE_SIZE });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, variant]);
 
   const handleApply = () =>
     load({ ...stripExpenseListHiddenFilters(omitPaymentFilters(filters)), page: 1 });
@@ -67,12 +74,18 @@ export default function ExpenseListPage() {
 
   return (
     <div>
-      <PageBanner
-        className="mb-4"
-        title="Expenses/Bills"
-        subtitle={`Total Expenses/Bills · ${pagination.total || list.length}`}
-        action={{ onClick: () => navigate('/entries/new'), label: 'Add Expense/Bill' }}
-      />
+      {!embedded && (
+        <PageBanner
+          className="mb-4"
+          title={isPaidView ? 'Expenses (Paid)' : 'Bills'}
+          subtitle={
+            isPaidView
+              ? `Paid bills · ${pagination.total || list.length}`
+              : `Total bills · ${pagination.total || list.length}`
+          }
+          action={{ onClick: () => navigate('/entries/new'), label: 'Add Bill' }}
+        />
+      )}
 
       <FilterPanel
         filters={filters}
@@ -80,7 +93,12 @@ export default function ExpenseListPage() {
         onApply={handleApply}
         onClear={handleClear}
         compact
-        hide={['timeframe', 'quarter', 'coNames']}
+        hide={[
+          'timeframe',
+          'quarter',
+          'coNames',
+          ...(isPaidView ? ['paymentMethod'] : []),
+        ]}
       />
 
       <div className="card overflow-hidden">
@@ -96,6 +114,8 @@ export default function ExpenseListPage() {
                   <th className="text-center">Co Name</th>
                   <th className="text-center">Head</th>
                   <th className="text-right">Gross</th>
+                  {isPaidView && <th className="text-center">Paid Date</th>}
+                  {isPaidView && <th className="text-right">Amount Paid</th>}
                   <th className="text-center">Payment</th>
                   <th className="text-center">Approval</th>
                   <th className="text-center">Actions</th>
@@ -121,10 +141,10 @@ export default function ExpenseListPage() {
           </div>
         ) : list.length === 0 ? (
           <EmptyState
-            title="No expenses/bills"
-            description="Create your first expense"
-            actionLabel="Add Expense/Bill"
-            onAction={() => navigate('/entries/new')}
+            title={isPaidView ? 'No paid bills yet' : 'No bills'}
+            description={isPaidView ? 'Bills appear here once fully paid' : 'Create your first bill'}
+            actionLabel={isPaidView ? undefined : 'Add Bill'}
+            onAction={isPaidView ? undefined : () => navigate('/entries/new')}
           />
         ) : (
           <div className="table-wrapper">
@@ -138,6 +158,8 @@ export default function ExpenseListPage() {
                   <th className="text-center">Co Name</th>
                   <th className="text-center">Head</th>
                   <th className="text-right">Gross</th>
+                  {isPaidView && <th className="text-center">Paid Date</th>}
+                  {isPaidView && <th className="text-right">Amount Paid</th>}
                   <th className="text-center">Payment</th>
                   <th className="text-center">Approval</th>
                   <th className="text-center">Actions</th>
@@ -178,6 +200,10 @@ export default function ExpenseListPage() {
                       <td className="text-center">{e.coNames || '—'}</td>
                       <td className="text-center">{e.headOfExpense}</td>
                       <td className="text-right font-medium">{formatCurrency(e.grossAmount)}</td>
+                      {isPaidView && <td className="text-center">{formatDate(e.paymentDate)}</td>}
+                      {isPaidView && (
+                        <td className="text-right text-emerald-700">{formatCurrency(e.amountPaid)}</td>
+                      )}
                       <td className="text-center">
                         <span className={getPaymentStatusBadge(e.status)}>
                           {getPaymentStatusLabel(e.status)}
@@ -252,7 +278,7 @@ export default function ExpenseListPage() {
         onConfirm={handleDelete}
         loading={deleting}
         title="Delete entry"
-        message="Delete this expense permanently?"
+        message="Delete this bill permanently?"
         confirmLabel="Delete"
         variant="danger"
       />

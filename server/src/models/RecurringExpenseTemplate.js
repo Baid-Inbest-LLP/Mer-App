@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { ALL_PAYMENT_METHODS, MER_TYPES } from '../constants/paymentMethods.js';
-import { EXPENSE_NATURES, RECURRING_FREQUENCIES } from '../constants/paymentStatus.js';
+import { EXPENSE_NATURES, AMOUNT_TYPES, RECURRING_FREQUENCIES } from '../constants/paymentStatus.js';
 
 const recurringExpenseTemplateSchema = new mongoose.Schema(
   {
@@ -15,6 +15,11 @@ const recurringExpenseTemplateSchema = new mongoose.Schema(
     expenseNature: {
       type: String,
       enum: EXPENSE_NATURES,
+      default: 'Fixed',
+    },
+    amountType: {
+      type: String,
+      enum: AMOUNT_TYPES,
       default: 'Fixed',
     },
     netAmount: { type: Number, required: true, default: 0 },

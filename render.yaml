@@ -46,6 +46,24 @@ services:
       - key: FRONTEND_URL
         value: https://mer-app.onrender.com
 
+  # Daily job: generate recurring bills that have come due (reminder mode).
+  # They land in the Due Bills board for review; nothing is auto-approved.
+  - type: cron
+    name: mer-generate-due
+    runtime: node
+    plan: starter
+    region: singapore
+    repo: https://github.com/Baid-Inbest-LLP/Mer-App
+    branch: main
+    schedule: "30 2 * * *" # 02:30 UTC daily (~08:00 IST)
+    buildCommand: pnpm install --frozen-lockfile
+    startCommand: pnpm --filter server exec node scripts/generate-due.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+
   - type: web
     name: mer-client
     runtime: static

@@ -1,4 +1,5 @@
 import { Expense } from '../models/Expense.js';
+import { ExpensePayment } from '../models/ExpensePayment.js';
 import { Company } from '../models/Company.js';
 import { buildExpenseQuery } from '../utils/queryBuilder.js';
 import { getFinancialYear } from '../config/index.js';
@@ -54,10 +55,20 @@ export const getDashboardKPIs = async () => {
   const fy = getFinancialYear(now);
   const [startYear] = fy.split('-').map(Number);
   const fyStart = new Date(startYear, 3, 1);
+  const fyEnd = new Date(startYear + 1, 3, 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
-  const [thisMonth, lastMonth, fyTotal, pendingCount, totals] = await Promise.all([
+  const [
+    thisMonth,
+    lastMonth,
+    fyTotal,
+    pendingCount,
+    totals,
+    paidThisMonthAgg,
+    paidThisFYAgg,
+    outstandingAgg,
+  ] = await Promise.all([
     Expense.aggregate([
       { $match: { ...baseMatch(), invoiceDate: { $gte: thisMonthStart } } },
       { $group: { _id: null, gross: { $sum: '$grossAmount' } } },
@@ -90,6 +101,21 @@ export const getDashboardKPIs = async () => {
         },
       },
     ]),
+    // Cash basis: money actually paid this month (active payment rows).
+    ExpensePayment.aggregate([
+      { $match: { status: 'Active', paymentDate: { $gte: thisMonthStart } } },
+      { $group: { _id: null, paid: { $sum: '$amount' } } },
+    ]),
+    // Cash basis: money actually paid this financial year.
+    ExpensePayment.aggregate([
+      { $match: { status: 'Active', paymentDate: { $gte: fyStart, $lt: fyEnd } } },
+      { $group: { _id: null, paid: { $sum: '$amount' } } },
+    ]),
+    // Still owed across approved, non-cancelled bills.
+    Expense.aggregate([
+      { $match: { ...baseMatch(), balanceDue: { $gt: 0 } } },
+      { $group: { _id: null, balance: { $sum: '$balanceDue' } } },
+    ]),
   ]);
 
   const thisMonthExpense = thisMonth[0]?.gross || 0;
@@ -108,6 +134,10 @@ export const getDashboardKPIs = async () => {
     totalTDS: totals[0]?.totalTDS || 0,
     grossAmount: totals[0]?.grossAmount || 0,
     currentFinancialYear: fy,
+    // Cash-basis figures (actual money out / still owed).
+    paidThisMonth: paidThisMonthAgg[0]?.paid || 0,
+    paidThisFY: paidThisFYAgg[0]?.paid || 0,
+    outstanding: outstandingAgg[0]?.balance || 0,
   };
 };
 

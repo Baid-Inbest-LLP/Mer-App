@@ -75,7 +75,7 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
   const onSubmit = async (values) => {
     setSaving(true);
     try {
-      await expenseApi.addPayment(expense._id, {
+      const res = await expenseApi.addPayment(expense._id, {
         amount: values.amount,
         paymentDate: values.paymentDate instanceof Date
           ? values.paymentDate.toISOString()
@@ -87,7 +87,13 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
         notes: values.notes || undefined,
         merType: expense.merType,
       });
-      notifications.show({ message: 'Payment recorded', color: 'green' });
+      const paidInFull = res.data?.data?.expense?.status === 'Paid';
+      notifications.show({
+        message: paidInFull
+          ? 'Fully paid — marked Completed and moved to Expenses'
+          : 'Payment recorded',
+        color: 'green',
+      });
       setOpen(false);
       onChanged?.();
     } catch (err) {

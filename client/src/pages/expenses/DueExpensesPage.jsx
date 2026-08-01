@@ -2,12 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { notifications } from '@mantine/notifications';
 import { expenseApi } from '../../api/expense.api';
-import { recurringApi } from '../../api/recurring.api';
 import PageBanner from '../../components/common/PageBanner';
 import EmptyState from '../../components/common/EmptyState';
 import Pagination from '../../components/common/Pagination';
 import Skeleton from '../../components/common/Skeleton';
-import FilterSelect from '../../components/common/FilterSelect';
+import FilterPanel from '../../components/common/FilterPanel';
 import {
   formatCurrency,
   formatDate,
@@ -15,9 +14,12 @@ import {
   getPaymentStatusBadge,
   getPaymentStatusLabel,
 } from '../../utils/format';
+import { cleanFilterParams } from '../../utils/filters';
 import { useSelector } from 'react-redux';
 
 const PAGE_SIZE = 10;
+
+const DEFAULT_FILTERS = { bucket: 'all' };
 
 const BUCKETS = [
   { value: 'all', label: 'All open' },
@@ -29,28 +31,27 @@ const BUCKETS = [
   { value: 'hold', label: 'On hold' },
 ];
 
-export default function DueExpensesPage() {
+export default function DueExpensesPage({ embedded = false }) {
   const navigate = useNavigate();
   const { lookups } = useSelector((state) => state.common);
+  const companyCode = (name) => lookups?.companyCodeByName?.[name] || name || '—';
   const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
   const [rows, setRows] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 0, total: 0, limit: PAGE_SIZE });
   const [summary, setSummary] = useState(null);
-  const [bucket, setBucket] = useState('all');
-  const [expenseNature, setExpenseNature] = useState(null);
-  const [company, setCompany] = useState(null);
+  const [filters, setFilters] = useState(DEFAULT_FILTERS);
+  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_FILTERS);
   const [page, setPage] = useState(1);
 
-  const load = async (nextPage = page) => {
+  const load = async (nextPage = page, filterParams = appliedFilters) => {
     setLoading(true);
     try {
+      const cleaned = cleanFilterParams(filterParams);
       const res = await expenseApi.due({
         page: nextPage,
         limit: PAGE_SIZE,
-        bucket,
-        expenseNature: expenseNature || undefined,
-        company: company || undefined,
+        bucket: cleaned.bucket || 'all',
+        ...cleaned,
         sortBy: 'dueDate',
         sortOrder: 'asc',
       });
@@ -68,45 +69,38 @@ export default function DueExpensesPage() {
   };
 
   useEffect(() => {
-    load(1);
-    setPage(1);
+    load(1, DEFAULT_FILTERS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bucket, expenseNature, company]);
+  }, []);
 
-  const handleGenerate = async () => {
-    setGenerating(true);
-    try {
-      const res = await recurringApi.generateDue({});
-      const created = res.data?.data?.created ?? 0;
-      notifications.show({
-        message: created ? `Generated ${created} recurring expense(s)` : 'No due templates to generate',
-        color: 'green',
-      });
-      load(page);
-    } catch (err) {
-      notifications.show({
-        message: err?.response?.data?.message || 'Failed to generate recurring expenses',
-        color: 'red',
-      });
-    } finally {
-      setGenerating(false);
-    }
+  const handleApply = () => {
+    setAppliedFilters(filters);
+    setPage(1);
+    load(1, filters);
+  };
+
+  const handleClear = () => {
+    setFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
+    setPage(1);
+    load(1, DEFAULT_FILTERS);
   };
 
   const totals = summary?.totals || {};
 
   return (
     <div>
-      <PageBanner
-        className="mb-4"
-        title="Due Bills"
-        subtitle="Track unpaid, partially paid, and held expenses"
-        action={{ onClick: handleGenerate, label: generating ? 'Generating…' : 'Generate Due' }}
-      />
+      {!embedded && (
+        <PageBanner
+          className="mb-4"
+          title="Due Bills"
+          subtitle="Track unpaid, partially paid, and held bills"
+        />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <div className="card p-4">
-          <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Open items</p>
+          <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Unpaid Bills</p>
           <p className="text-2xl font-bold text-gray-900 mt-1">{totals.count || 0}</p>
         </div>
         <div className="card p-4">
@@ -119,36 +113,15 @@ export default function DueExpensesPage() {
         </div>
       </div>
 
-      <div className="card p-3 mb-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <FilterSelect
-            label="Bucket"
-            data={BUCKETS}
-            value={bucket}
-            onChange={(v) => setBucket(v || 'all')}
-          />
-          <FilterSelect
-            label="Nature"
-            clearable
-            placeholder="All natures"
-            data={(lookups?.expenseNatures || ['Fixed', 'Variable']).map((n) => ({
-              value: n,
-              label: n,
-            }))}
-            value={expenseNature}
-            onChange={setExpenseNature}
-          />
-          <FilterSelect
-            label="Company"
-            clearable
-            searchable
-            placeholder="All companies"
-            data={(lookups?.companies || []).map((c) => ({ value: c, label: c }))}
-            value={company}
-            onChange={setCompany}
-          />
-        </div>
-      </div>
+      <FilterPanel
+        filters={filters}
+        onChange={setFilters}
+        onApply={handleApply}
+        onClear={handleClear}
+        compact
+        hide={['timeframe', 'quarter', 'coNames', 'approvalStatus', 'paymentMethod']}
+        dueBucketOptions={BUCKETS}
+      />
 
       <div className="card overflow-hidden">
         {loading ? (
@@ -160,8 +133,8 @@ export default function DueExpensesPage() {
         ) : rows.length === 0 ? (
           <EmptyState
             title="No due bills"
-            description="Open obligations will appear here once expenses are unpaid or partially paid"
-            actionLabel="Add expense"
+            description="Open obligations appear here once bills are unpaid or partially paid"
+            actionLabel="Add Bill"
             onAction={() => navigate('/entries/new')}
           />
         ) : (
@@ -199,7 +172,11 @@ export default function DueExpensesPage() {
                         {formatDate(e.dueDate)}
                       </td>
                       <td className="text-center">{e.expenseNature || 'Variable'}</td>
-                      <td className="text-center">{e.company || '—'}</td>
+                      <td className="text-center">
+                        <span className="font-mono text-xs bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded-md">
+                          {companyCode(e.company)}
+                        </span>
+                      </td>
                       <td className="text-center">{e.headOfExpense}</td>
                       <td className="text-right">{formatCurrency(e.grossAmount)}</td>
                       <td className="text-right text-emerald-700">{formatCurrency(e.amountPaid)}</td>

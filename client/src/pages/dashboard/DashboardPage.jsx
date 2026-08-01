@@ -101,6 +101,45 @@ export default function DashboardPage() {
         />
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+        <StatCard
+          label="Paid This Month"
+          value={formatCurrency(kpis?.paidThisMonth)}
+          color="text-emerald-700"
+          iconBg="bg-emerald-100"
+          accent="bg-emerald-500"
+          icon={
+            <svg className={`${iconClass} text-emerald-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Paid This FY"
+          value={formatCurrency(kpis?.paidThisFY)}
+          color="text-teal-700"
+          iconBg="bg-teal-100"
+          accent="bg-teal-500"
+          icon={
+            <svg className={`${iconClass} text-teal-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2m-6-4h8m0 0l-2-2m2 2l-2 2" />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Outstanding"
+          value={formatCurrency(kpis?.outstanding)}
+          color="text-rose-700"
+          iconBg="bg-rose-100"
+          accent="bg-rose-500"
+          icon={
+            <svg className={`${iconClass} text-rose-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          }
+        />
+      </div>
+
       <div className="dashboard-grid-trend-company">
         <ExpenseTrendChart data={data?.trends} loading={loading} />
         <CompanyWiseChart

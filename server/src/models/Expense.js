@@ -1,14 +1,20 @@
 import mongoose from 'mongoose';
 import { getFinancialYear } from '../config/index.js';
 import { MER_TYPES, ALL_PAYMENT_METHODS } from '../constants/paymentMethods.js';
-import { EXPENSE_NATURES, PAYMENT_STATUSES, RECURRING_FREQUENCIES } from '../constants/paymentStatus.js';
+import {
+  EXPENSE_NATURES,
+  AMOUNT_TYPES,
+  PAYMENT_STATUSES,
+  RECURRING_FREQUENCIES,
+  FIXED_FREQUENCIES,
+} from '../constants/paymentStatus.js';
 
 const expenseSchema = new mongoose.Schema(
   {
     slNo: { type: String, trim: true },
     month: { type: String, required: true },
     coNames: { type: String, required: true, trim: true },
-    invoiceDate: { type: Date, required: true },
+    invoiceDate: { type: Date },
     /** When payment is expected; used by Due Bills board. */
     dueDate: { type: Date },
     location: { type: String, trim: true },
@@ -38,6 +44,12 @@ const expenseSchema = new mongoose.Schema(
       type: String,
       enum: EXPENSE_NATURES,
       default: 'Variable',
+    },
+    /** Fixed bills only: Fixed = same amount each period; Usage = amount varies (e.g. AWS). */
+    amountType: {
+      type: String,
+      enum: AMOUNT_TYPES,
+      default: 'Fixed',
     },
     /** How often this bill/expense recurs (informational on the entry; templates own scheduling). */
     frequency: {
@@ -114,20 +126,27 @@ expenseSchema.index({ poNumber: 1 }, { sparse: true });
 expenseSchema.index({ invoiceNo: 'text', vendor: 'text', particulars: 'text', company: 'text' });
 
 expenseSchema.pre('save', function setDerivedFields(next) {
-  if (this.invoiceDate) {
-    this.financialYear = getFinancialYear(this.invoiceDate);
-    const month = new Date(this.invoiceDate).getMonth();
+  const anchorDate = this.invoiceDate || this.dueDate;
+  if (anchorDate) {
+    this.financialYear = getFinancialYear(anchorDate);
+    const month = new Date(anchorDate).getMonth();
     const q = Math.floor(month / 3) + 1;
     this.quarter = `Q${q}`;
   }
-  if (!this.month && this.invoiceDate) {
-    this.month = new Date(this.invoiceDate).toLocaleString('en-US', { month: 'long' });
+  if (!this.month && anchorDate) {
+    this.month = new Date(anchorDate).toLocaleString('en-US', { month: 'long' });
   }
-  if (!this.dueDate && this.invoiceDate) {
-    this.dueDate = this.invoiceDate;
-  }
+  // Due date applies to recurring (Fixed) bills only; do not copy from billing date.
   if (!this.merType && this.paymentMethod) {
     this.merType = this.paymentMethod === 'Cash' ? 'Cash' : 'Bank';
+  }
+  // Nature drives recurrence: Variable is always one-time; Fixed must be recurring.
+  if (this.expenseNature === 'Variable') {
+    this.frequency = 'One-time';
+  } else if (this.expenseNature === 'Fixed') {
+    if (!this.frequency || !FIXED_FREQUENCIES.includes(this.frequency)) {
+      this.frequency = 'Monthly';
+    }
   }
   if (this.isNew && (this.balanceDue == null || this.balanceDue === 0) && !this.amountPaid) {
     this.amountPaid = this.amountPaid || 0;

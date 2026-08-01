@@ -23,6 +23,14 @@ export const EXPENSE_NATURE = {
   VARIABLE: 'Variable',
 };
 
+/** For Fixed (recurring) bills: constant amount vs usage-based (e.g. AWS). */
+export const AMOUNT_TYPES = ['Fixed', 'Usage'];
+
+export const AMOUNT_TYPE = {
+  FIXED: 'Fixed',
+  USAGE: 'Usage',
+};
+
 export const PAYMENT_RECORD_STATUSES = ['Active', 'Voided'];
 
 export const RECURRING_FREQUENCIES = [
@@ -34,6 +42,9 @@ export const RECURRING_FREQUENCIES = [
   'Half-yearly',
   'Yearly',
 ];
+
+/** Frequencies allowed for a Fixed (recurring) bill. Variable bills are always One-time. */
+export const FIXED_FREQUENCIES = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly'];
 
 export const MONEY_EPSILON = 0.01;
 

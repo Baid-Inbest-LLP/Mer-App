@@ -6,9 +6,22 @@ import {
   requiresPaymentRef,
   requiresCardNumber,
 } from '../constants/paymentMethods.js';
-import { RECURRING_FREQUENCIES } from '../constants/paymentStatus.js';
+import { RECURRING_FREQUENCIES, FIXED_FREQUENCIES, AMOUNT_TYPES } from '../constants/paymentStatus.js';
 
 const isDraftRequest = (req) => req.body?.isDraft === true || req.body?.isDraft === 'true';
+
+const isFixedBill = (req) => req.body?.expenseNature === 'Fixed';
+
+const isVariableBill = (req) => !isFixedBill(req);
+
+const isUsageAmount = (req) => req.body?.amountType === 'Usage';
+
+const isFixedAmountRequired = (req) => {
+  if (isDraftRequest(req)) return false;
+  // Usage-based Fixed bills may start at 0 until actual usage is known.
+  if (isFixedBill(req) && isUsageAmount(req)) return false;
+  return true;
+};
 
 const isRecordingPayment = (req) => {
   if (isDraftRequest(req)) return false;
@@ -74,6 +87,10 @@ const sharedBodyRules = [
     .optional({ values: 'falsy' })
     .isIn(['Fixed', 'Variable'])
     .withMessage('Invalid expense nature'),
+  body('amountType')
+    .optional({ values: 'falsy' })
+    .isIn(AMOUNT_TYPES)
+    .withMessage('Invalid amount type'),
   body('frequency')
     .optional({ values: 'falsy' })
     .isIn(RECURRING_FREQUENCIES)
@@ -136,7 +153,12 @@ export const createExpenseValidator = [
     .notEmpty()
     .withMessage('Co name is required'),
   body('invoiceDate')
-    .if((_, { req }) => !isDraftRequest(req))
+    .if((_, { req }) => !isDraftRequest(req) && isVariableBill(req))
+    .isISO8601()
+    .withMessage('Valid invoice date is required'),
+  body('invoiceDate')
+    .if((_, { req }) => !isDraftRequest(req) && isFixedBill(req))
+    .optional({ values: 'falsy' })
     .isISO8601()
     .withMessage('Valid invoice date is required'),
   body('invoiceDate')
@@ -144,6 +166,15 @@ export const createExpenseValidator = [
     .optional({ values: 'falsy' })
     .isISO8601()
     .withMessage('Valid invoice date is required'),
+  body('invoiceNo')
+    .if((_, { req }) => !isDraftRequest(req) && isVariableBill(req))
+    .trim()
+    .notEmpty()
+    .withMessage('Invoice number is required'),
+  body('invoiceNo')
+    .if((_, { req }) => !isDraftRequest(req) && isFixedBill(req))
+    .optional({ values: 'falsy' })
+    .trim(),
   body('headOfExpense')
     .if((_, { req }) => !isDraftRequest(req))
     .trim()
@@ -161,16 +192,27 @@ export const createExpenseValidator = [
     .isIn(['Capital', 'Revenue'])
     .withMessage('Invalid expense type'),
   body('netAmount')
-    .if((_, { req }) => !isDraftRequest(req))
+    .if((_, { req }) => isFixedAmountRequired(req))
     .toFloat()
-    .isFloat({ min: 0 })
-    .withMessage('Net amount must be a positive number'),
+    .isFloat({ min: 0.01 })
+    .withMessage('Net amount is required'),
   body('netAmount')
-    .if((_, { req }) => isDraftRequest(req))
+    .if((_, { req }) => !isFixedAmountRequired(req))
     .optional({ values: 'falsy' })
     .toFloat()
     .isFloat({ min: 0 })
     .withMessage('Net amount must be a positive number'),
+  body('amountType')
+    .if((_, { req }) => !isDraftRequest(req) && isFixedBill(req))
+    .notEmpty()
+    .withMessage('Amount type is required for fixed bills')
+    .isIn(AMOUNT_TYPES)
+    .withMessage('Invalid amount type'),
+  body('amountType')
+    .if((_, { req }) => isDraftRequest(req) || isVariableBill(req))
+    .optional({ values: 'falsy' })
+    .isIn(AMOUNT_TYPES)
+    .withMessage('Invalid amount type'),
   body('paymentMethod')
     .if((_, { req }) => !isDraftRequest(req))
     .custom((value, { req }) => {
@@ -200,18 +242,69 @@ export const createExpenseValidator = [
     .optional({ values: 'falsy' })
     .isIn(MER_ENTRY_TYPES)
     .withMessage('Invalid MER type'),
-  body('dueDate').optional({ values: 'falsy' }).isISO8601().withMessage('Valid due date is required'),
+  body('dueDate')
+    .if((_, { req }) => !isDraftRequest(req))
+    .optional({ values: 'falsy' })
+    .isISO8601()
+    .withMessage('Valid due date is required'),
+  body('dueDate')
+    .if((_, { req }) => isDraftRequest(req))
+    .optional({ values: 'falsy' })
+    .isISO8601()
+    .withMessage('Valid due date is required'),
   body('expenseNature')
+    .if((_, { req }) => !isDraftRequest(req))
+    .notEmpty()
+    .withMessage('Bill nature is required')
+    .isIn(['Fixed', 'Variable'])
+    .withMessage('Invalid expense nature'),
+  body('expenseNature')
+    .if((_, { req }) => isDraftRequest(req))
     .optional({ values: 'falsy' })
     .isIn(['Fixed', 'Variable'])
     .withMessage('Invalid expense nature'),
+  body('recurringDueDay')
+    .if((_, { req }) => !isDraftRequest(req) && isFixedBill(req))
+    .notEmpty()
+    .withMessage('Due day of month is required')
+    .toInt()
+    .isInt({ min: 1, max: 28 })
+    .withMessage('Due day must be between 1 and 28'),
+  // Nature drives recurrence: Fixed must be recurring, Variable must be one-time.
   body('frequency')
+    .if((_, { req }) => !isDraftRequest(req))
+    .custom((value, { req }) => {
+      const nature = req.body?.expenseNature;
+      if (nature === 'Fixed') {
+        if (!value || !FIXED_FREQUENCIES.includes(value)) {
+          throw new Error(`A fixed bill must recur (${FIXED_FREQUENCIES.join(', ')})`);
+        }
+      } else if (nature === 'Variable') {
+        if (value && value !== 'One-time') {
+          throw new Error('A variable bill must be one-time');
+        }
+      } else if (value && !RECURRING_FREQUENCIES.includes(value)) {
+        throw new Error('Invalid expense frequency');
+      }
+      return true;
+    }),
+  body('frequency')
+    .if((_, { req }) => isDraftRequest(req))
     .optional({ values: 'falsy' })
     .isIn(RECURRING_FREQUENCIES)
     .withMessage('Invalid expense frequency'),
   body('initialPaymentAmount').optional({ values: 'falsy' }).toFloat(),
   body('paymentAmount').optional({ values: 'falsy' }).toFloat(),
   body('recordPaymentNow').optional({ values: 'falsy' }),
+  body('scheduleName').optional({ values: 'falsy' }).trim(),
+  body('recurringDueDay')
+    .if((_, { req }) => isDraftRequest(req) || isVariableBill(req))
+    .optional({ values: 'falsy' })
+    .toInt()
+    .isInt({ min: 1, max: 28 })
+    .withMessage('Due day must be between 1 and 28'),
+  body('recurringStartDate').optional({ values: 'falsy' }).isISO8601().withMessage('Valid start date is required'),
+  body('recurringEndDate').optional({ values: 'falsy' }).isISO8601().withMessage('Valid end date is required'),
   body('purchaseOrderId').optional({ values: 'falsy' }).isMongoId().withMessage('Invalid purchase order ID'),
   body('poNumber').optional({ values: 'falsy' }).trim(),
   body('source').optional({ values: 'falsy' }).isIn(['manual', 'purchase_order', 'recurring']),
@@ -227,6 +320,33 @@ export const createExpenseValidator = [
 
 export const updateExpenseValidator = [
   param('id').isMongoId().withMessage('Invalid expense ID'),
+  body('invoiceDate')
+    .if((_, { req }) => isVariableBill(req))
+    .optional({ values: 'falsy' })
+    .isISO8601()
+    .withMessage('Valid invoice date is required')
+    .custom((value) => {
+      if (!value) throw new Error('Invoice date is required');
+      return true;
+    }),
+  body('invoiceDate')
+    .if((_, { req }) => isFixedBill(req))
+    .optional({ values: 'falsy' })
+    .isISO8601()
+    .withMessage('Valid invoice date is required'),
+  body('invoiceNo')
+    .if((_, { req }) => isVariableBill(req))
+    .trim()
+    .notEmpty()
+    .withMessage('Invoice number is required'),
+  body('invoiceNo')
+    .if((_, { req }) => isFixedBill(req))
+    .optional({ values: 'falsy' })
+    .trim(),
+  body('dueDate')
+    .optional({ values: 'falsy' })
+    .isISO8601()
+    .withMessage('Valid due date is required'),
   ...sharedBodyRules,
   ...paymentReferenceRules,
 ];

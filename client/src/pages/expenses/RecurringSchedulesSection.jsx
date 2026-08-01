@@ -24,6 +24,7 @@ const emptyForm = {
   particulars: '',
   expenseType: 'Revenue',
   expenseNature: 'Fixed',
+  amountType: 'Fixed',
   netAmount: 0,
   gstPercent: 0,
   useIGST: false,
@@ -38,9 +39,10 @@ const emptyForm = {
   isActive: true,
 };
 
-export default function RecurringTemplatesSection() {
+export default function RecurringSchedulesSection() {
   const { lookups } = useSelector((state) => state.common);
   const { companies } = useSelector((state) => state.companies);
+  const companyCode = (name) => lookups?.companyCodeByName?.[name] || name || '—';
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
   const [open, setOpen] = useState(false);
@@ -48,6 +50,7 @@ export default function RecurringTemplatesSection() {
   const [saving, setSaving] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [togglingId, setTogglingId] = useState(null);
 
   const { control, register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
     defaultValues: emptyForm,
@@ -67,7 +70,7 @@ export default function RecurringTemplatesSection() {
       setRows(res.data?.data || []);
     } catch (err) {
       notifications.show({
-        message: err?.response?.data?.message || 'Failed to load templates',
+        message: err?.response?.data?.message || 'Failed to load schedules',
         color: 'red',
       });
     } finally {
@@ -106,16 +109,16 @@ export default function RecurringTemplatesSection() {
       };
       if (editing) {
         await recurringApi.update(editing._id, payload);
-        notifications.show({ message: 'Template updated', color: 'green' });
+        notifications.show({ message: 'Schedule updated', color: 'green' });
       } else {
         await recurringApi.create(payload);
-        notifications.show({ message: 'Template created', color: 'green' });
+        notifications.show({ message: 'Schedule created', color: 'green' });
       }
       setOpen(false);
       load();
     } catch (err) {
       notifications.show({
-        message: err?.response?.data?.message || 'Failed to save template',
+        message: err?.response?.data?.message || 'Failed to save schedule',
         color: 'red',
       });
     } finally {
@@ -127,16 +130,35 @@ export default function RecurringTemplatesSection() {
     setDeleting(true);
     try {
       await recurringApi.remove(deleteId);
-      notifications.show({ message: 'Template deleted', color: 'green' });
+      notifications.show({ message: 'Schedule deleted', color: 'green' });
       setDeleteId(null);
       load();
     } catch (err) {
       notifications.show({
-        message: err?.response?.data?.message || 'Failed to delete template',
+        message: err?.response?.data?.message || 'Failed to delete schedule',
         color: 'red',
       });
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleToggleActive = async (row) => {
+    setTogglingId(row._id);
+    try {
+      await recurringApi.update(row._id, { isActive: !row.isActive });
+      notifications.show({
+        message: row.isActive ? 'Schedule paused' : 'Schedule resumed',
+        color: 'green',
+      });
+      load();
+    } catch (err) {
+      notifications.show({
+        message: err?.response?.data?.message || 'Failed to update schedule',
+        color: 'red',
+      });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -147,7 +169,7 @@ export default function RecurringTemplatesSection() {
       notifications.show({
         message: skipped
           ? `Skipped: ${res.data?.data?.reason || 'not due'}`
-          : 'Expense generated from template',
+          : 'Bill generated from schedule',
         color: skipped ? 'yellow' : 'green',
       });
       load();
@@ -176,8 +198,8 @@ export default function RecurringTemplatesSection() {
           </div>
         ) : rows.length === 0 ? (
           <EmptyState
-            title="No expense schedules"
-            description="Create fixed or variable schedules like rent, utilities, or subscriptions"
+            title="No recurring schedules"
+            description="Mark a bill as recurring when you add it, or create a schedule here for rent, utilities, or subscriptions"
             actionLabel="Add schedule"
             onAction={openCreate}
           />
@@ -189,10 +211,11 @@ export default function RecurringTemplatesSection() {
                   <th className="text-left">Name</th>
                   <th className="text-center">Company</th>
                   <th className="text-center">Nature</th>
+                  <th className="text-center">Amount</th>
                   <th className="text-center">Frequency</th>
                   <th className="text-center">Next due</th>
                   <th className="text-right">Net</th>
-                  <th className="text-center">Active</th>
+                  <th className="text-center">Status</th>
                   <th className="text-center">Actions</th>
                 </tr>
               </thead>
@@ -200,20 +223,33 @@ export default function RecurringTemplatesSection() {
                 {rows.map((row) => (
                   <tr key={row._id}>
                     <td className="text-left font-medium">{row.name}</td>
-                    <td className="text-center">{row.company}</td>
+                    <td className="text-center">
+                      <span className="font-mono text-xs bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded-md">
+                        {companyCode(row.company)}
+                      </span>
+                    </td>
                     <td className="text-center">{row.expenseNature}</td>
+                    <td className="text-center">{row.amountType === 'Usage' ? 'Usage-based' : 'Fixed'}</td>
                     <td className="text-center">{row.frequency}</td>
                     <td className="text-center">{formatDate(row.nextDueDate)}</td>
                     <td className="text-right">{formatCurrency(row.netAmount)}</td>
                     <td className="text-center">
                       <span className={row.isActive ? 'badge-paid' : 'badge-cancelled'}>
-                        {row.isActive ? 'Yes' : 'No'}
+                        {row.isActive ? 'Active' : 'Paused'}
                       </span>
                     </td>
                     <td className="text-center">
                       <div className="inline-flex gap-2">
                         <button type="button" className="text-sm text-primary-700 hover:underline" onClick={() => handleGenerateOne(row._id)}>
                           Generate
+                        </button>
+                        <button
+                          type="button"
+                          className="text-sm text-amber-700 hover:underline disabled:opacity-50"
+                          disabled={togglingId === row._id}
+                          onClick={() => handleToggleActive(row)}
+                        >
+                          {row.isActive ? 'Pause' : 'Resume'}
                         </button>
                         <button type="button" className="text-sm text-gray-700 hover:underline" onClick={() => openEdit(row)}>
                           Edit
@@ -234,7 +270,7 @@ export default function RecurringTemplatesSection() {
       {open && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-10 bg-black/40 backdrop-blur-sm overflow-y-auto">
           <div className="card w-full max-w-3xl p-6">
-            <h3 className="text-lg font-bold mb-4">{editing ? 'Edit schedule' : 'New expense schedule'}</h3>
+            <h3 className="text-lg font-bold mb-4">{editing ? 'Edit schedule' : 'New recurring schedule'}</h3>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <TextInput label="Name" required {...register('name', { required: 'Name is required' })} error={errors.name?.message} />
@@ -310,6 +346,21 @@ export default function RecurringTemplatesSection() {
                   )}
                 />
                 <Controller
+                  name="amountType"
+                  control={control}
+                  render={({ field }) => (
+                    <FilterSelect
+                      label="Amount Type"
+                      data={[
+                        { value: 'Fixed', label: 'Fixed amount' },
+                        { value: 'Usage', label: 'Usage-based' },
+                      ]}
+                      value={toSelectValue(field.value || 'Fixed')}
+                      onChange={(v) => field.onChange(toSelectValue(v) || 'Fixed')}
+                    />
+                  )}
+                />
+                <Controller
                   name="frequency"
                   control={control}
                   render={({ field }) => (
@@ -332,9 +383,15 @@ export default function RecurringTemplatesSection() {
                 <Controller
                   name="netAmount"
                   control={control}
-                  rules={{ required: true }}
                   render={({ field }) => (
-                    <NumberInput label="Net Amount" min={0} prefix="₹" hideControls value={field.value} onChange={field.onChange} />
+                    <NumberInput
+                      label={watch('amountType') === 'Usage' ? 'Estimated Amount' : 'Net Amount'}
+                      min={0}
+                      prefix="₹"
+                      hideControls
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
                   )}
                 />
                 <Controller
@@ -349,7 +406,7 @@ export default function RecurringTemplatesSection() {
                   control={control}
                   render={({ field }) => (
                     <FilterSelect
-                      label="MER Type"
+                      label="Payment Type"
                       data={MER_ENTRY_TYPE_OPTIONS}
                       value={toSelectValue(field.value)}
                       onChange={(v) => field.onChange(toSelectValue(v))}
@@ -410,8 +467,8 @@ export default function RecurringTemplatesSection() {
         onCancel={() => setDeleteId(null)}
         onConfirm={handleDelete}
         loading={deleting}
-        title="Delete template"
-        message="Delete this expense schedule permanently?"
+        title="Delete schedule"
+        message="Delete this recurring schedule permanently? Bills already generated are kept."
         confirmLabel="Delete"
         variant="danger"
       />

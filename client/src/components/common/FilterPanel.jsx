@@ -14,7 +14,15 @@ const TIMEFRAMES = [
   { value: 'year', label: 'This year' },
 ];
 
-export default function FilterPanel({ filters, onChange, onApply, onClear, compact, hide = [] }) {
+export default function FilterPanel({
+  filters,
+  onChange,
+  onApply,
+  onClear,
+  compact,
+  hide = [],
+  dueBucketOptions = null,
+}) {
   const { lookups } = useSelector((state) => state.common);
   const [resetKey, setResetKey] = useState(0);
   const isHidden = (key) => hide.includes(key);
@@ -72,6 +80,14 @@ export default function FilterPanel({ filters, onChange, onApply, onClear, compa
             onChange={(v) => update('timeframe', v)}
           />
         )}
+        {dueBucketOptions && (
+          <FilterSelect
+            placeholder="Due bucket"
+            data={dueBucketOptions}
+            value={filters.bucket || 'all'}
+            onChange={(v) => update('bucket', v || 'all')}
+          />
+        )}
         <FilterSelect
           placeholder="Financial year"
           clearable
@@ -113,13 +129,15 @@ export default function FilterPanel({ filters, onChange, onApply, onClear, compa
           value={selectValue('expenseType')}
           onChange={(v) => update('expenseType', v)}
         />
-        <FilterSelect
-          placeholder="Payment method"
-          clearable
-          data={selectData(lookups?.paymentMethods)}
-          value={selectValue('paymentMethod')}
-          onChange={(v) => update('paymentMethod', v)}
-        />
+        {!isHidden('paymentMethod') && (
+          <FilterSelect
+            placeholder="Payment method"
+            clearable
+            data={selectData(lookups?.paymentMethods)}
+            value={selectValue('paymentMethod')}
+            onChange={(v) => update('paymentMethod', v)}
+          />
+        )}
         <FilterSelect
           placeholder="Head of expense"
           clearable

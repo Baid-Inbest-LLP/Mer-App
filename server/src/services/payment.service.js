@@ -11,7 +11,7 @@ import {
   requiresCardNumber,
   requiresPaymentRef,
 } from '../constants/paymentMethods.js';
-import { isAdminRole } from '../constants/roles.js';
+import { APPROVAL_STATUS, isAdminRole } from '../constants/roles.js';
 
 const asTrimmed = (value) => {
   if (value == null || value === '') return '';
@@ -89,6 +89,16 @@ export const recalculateExpensePaymentState = async (expenseId, { preserveHold =
   expense.amountPaid = amountPaid;
   expense.balanceDue = balanceDue;
   expense.status = nextStatus;
+
+  // Fully paid bills become expenses: mark approval Completed (Pending → Completed).
+  // Leave Completed/Approved as-is; do not demote if a payment is later voided.
+  if (
+    nextStatus === PAYMENT_STATUS.PAID
+    && expense.approvalStatus === APPROVAL_STATUS.PENDING
+  ) {
+    expense.approvalStatus = APPROVAL_STATUS.COMPLETED;
+    if (!expense.approvedAt) expense.approvedAt = new Date();
+  }
 
   const latest = payments[0];
   if (latest) {
@@ -409,6 +419,70 @@ export const migratePaymentLedger = async () => {
     console.log(
       `Payment ledger migration: ${expenses.length} expense(s), ${paidMissing.length} synthetic payment(s)`,
     );
+  } catch (err) {
+    await migrations.deleteOne({ _id: MIGRATION_ID });
+    throw err;
+  }
+};
+
+/**
+ * One-time: fully paid bills that are still Pending approval become Completed
+ * (they are expenses once paid in full).
+ */
+export const migratePaidBillsToCompleted = async () => {
+  const MIGRATION_ID = 'paid-bills-auto-completed-v1';
+  const migrations = Expense.db.collection('migrations');
+
+  const existing = await migrations.findOne({ _id: MIGRATION_ID });
+  if (existing?.status === 'done') return;
+
+  if (existing?.status === 'running') {
+    const claimedAt = existing.claimedAt ? new Date(existing.claimedAt).getTime() : 0;
+    if (Date.now() - claimedAt < 2 * 60 * 1000) return;
+    await migrations.deleteOne({ _id: MIGRATION_ID });
+  }
+
+  try {
+    await migrations.insertOne({
+      _id: MIGRATION_ID,
+      status: 'running',
+      claimedAt: new Date(),
+    });
+  } catch {
+    return;
+  }
+
+  try {
+    const result = await Expense.updateMany(
+      {
+        status: PAYMENT_STATUS.PAID,
+        approvalStatus: APPROVAL_STATUS.PENDING,
+        isDraft: { $ne: true },
+      },
+      {
+        $set: {
+          approvalStatus: APPROVAL_STATUS.COMPLETED,
+          approvedAt: new Date(),
+        },
+      },
+    );
+
+    await migrations.updateOne(
+      { _id: MIGRATION_ID },
+      {
+        $set: {
+          status: 'done',
+          appliedAt: new Date(),
+          updated: result.modifiedCount || 0,
+        },
+      },
+    );
+
+    if (result.modifiedCount) {
+      console.log(
+        `Paid→Completed migration: marked ${result.modifiedCount} fully paid bill(s) as Completed`,
+      );
+    }
   } catch (err) {
     await migrations.deleteOne({ _id: MIGRATION_ID });
     throw err;

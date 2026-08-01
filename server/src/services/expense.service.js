@@ -8,7 +8,9 @@ import {
   buildMerSerial,
   buildMerSerialBase,
   buildMerSerialPattern,
+  monthToDateInFy,
 } from '../utils/merSerial.js';
+import { getFinancialYear } from '../config/index.js';
 import { toLocationLabel } from '../utils/locationFormat.js';
 import { APPROVAL_STATUS } from '../constants/roles.js';
 import {
@@ -18,7 +20,7 @@ import {
   canCompleteExpense,
   stripWorkflowFields,
 } from '../utils/expensePermissions.js';
-import { EXPENSE_NATURES, RECURRING_FREQUENCIES, roundMoney } from '../constants/paymentStatus.js';
+import { EXPENSE_NATURES, AMOUNT_TYPES, AMOUNT_TYPE, RECURRING_FREQUENCIES, roundMoney } from '../constants/paymentStatus.js';
 import { addPayment, recalculateExpensePaymentState } from './payment.service.js';
 
 const asTrimmedString = (value) => {
@@ -165,22 +167,28 @@ export const createExpense = async (data, user) => {
     }
   }
 
-  const grossAmount = roundMoney(calculated.grossAmount || 0);
-  const dueDate = cleaned.dueDate
-    ? new Date(cleaned.dueDate)
-    : (cleaned.invoiceDate ? new Date(cleaned.invoiceDate) : new Date());
   const expenseNature = EXPENSE_NATURES.includes(cleaned.expenseNature)
     ? cleaned.expenseNature
     : 'Variable';
+  const isFixedNature = expenseNature === 'Fixed';
+  const amountType = isFixedNature && AMOUNT_TYPES.includes(cleaned.amountType)
+    ? cleaned.amountType
+    : AMOUNT_TYPE.FIXED;
   const frequency = RECURRING_FREQUENCIES.includes(cleaned.frequency)
     ? cleaned.frequency
     : 'One-time';
 
+  const grossAmount = roundMoney(calculated.grossAmount || 0);
+  let dueDate;
+  if (isFixedNature && cleaned.dueDate) {
+    dueDate = new Date(cleaned.dueDate);
+  }
+
   const payload = {
     ...calculated,
     location: locationLabel || calculated.location,
-    dueDate,
     expenseNature,
+    amountType,
     frequency,
     amountPaid: 0,
     balanceDue: grossAmount,
@@ -192,6 +200,15 @@ export const createExpense = async (data, user) => {
     source,
   };
 
+  if (dueDate) payload.dueDate = dueDate;
+
+  if (isFixedNature) {
+    if (!asTrimmedString(cleaned.invoiceNo)) delete payload.invoiceNo;
+    if (!cleaned.invoiceDate) delete payload.invoiceDate;
+  } else {
+    delete payload.dueDate;
+  }
+
   // Sparse unique index on purchaseOrderId rejects multiple explicit nulls — omit when unset.
   delete payload.purchaseOrderId;
   delete payload.poNumber;
@@ -199,9 +216,15 @@ export const createExpense = async (data, user) => {
   if (poNumber) payload.poNumber = poNumber;
 
   if (isDraft) {
-    payload.invoiceDate = payload.invoiceDate || new Date();
+    if (!isFixedNature) {
+      payload.invoiceDate = payload.invoiceDate || new Date();
+    } else {
+      delete payload.invoiceDate;
+    }
     payload.month = asTrimmedString(payload.month)
-      || new Date(payload.invoiceDate).toLocaleString('en-US', { month: 'long' });
+      || (payload.invoiceDate
+        ? new Date(payload.invoiceDate).toLocaleString('en-US', { month: 'long' })
+        : new Date().toLocaleString('en-US', { month: 'long' }));
     payload.coNames = asTrimmedString(payload.coNames) || 'Draft';
     payload.headOfExpense = asTrimmedString(payload.headOfExpense) || 'Draft';
     payload.expenseType = payload.expenseType || 'Revenue';
@@ -211,18 +234,22 @@ export const createExpense = async (data, user) => {
   if (cleaned.merType) payload.merType = cleaned.merType;
   if (cleaned.paymentMethod) payload.paymentMethod = cleaned.paymentMethod;
 
+  const serialAnchorDate = data.invoiceDate
+    || (isFixedNature ? (cleaned.recurringStartDate || cleaned.dueDate) : undefined)
+    || (data.month ? monthToDateInFy(data.month, getFinancialYear(new Date())) : undefined);
+
   if (!isDraft) {
     payload.slNo = await resolveMerSerial({
       company: payload.company,
       month: data.month,
-      invoiceDate: data.invoiceDate,
+      invoiceDate: serialAnchorDate,
       merType: payload.merType,
     });
   } else if (payload.company && asTrimmedString(data.month) && resolveMerType(payload.merType)) {
     payload.slNo = await resolveMerSerial({
       company: payload.company,
       month: data.month,
-      invoiceDate: data.invoiceDate,
+      invoiceDate: serialAnchorDate,
       merType: payload.merType,
     });
   }
@@ -289,12 +316,24 @@ export const updateExpense = async (id, data, user) => {
   if (cleaned.expenseNature && EXPENSE_NATURES.includes(cleaned.expenseNature)) {
     calculated.expenseNature = cleaned.expenseNature;
   }
+  if (cleaned.amountType && AMOUNT_TYPES.includes(cleaned.amountType)) {
+    calculated.amountType = cleaned.amountType;
+  } else if (calculated.expenseNature !== 'Fixed') {
+    calculated.amountType = AMOUNT_TYPE.FIXED;
+  }
   if (cleaned.frequency && RECURRING_FREQUENCIES.includes(cleaned.frequency)) {
     calculated.frequency = cleaned.frequency;
   }
 
   const { status: _omitStatus, ...calculatedWithoutStatus } = calculated;
   Object.assign(existing, calculatedWithoutStatus, { updatedBy: user._id });
+
+  if (existing.expenseNature === 'Fixed') {
+    if (!asTrimmedString(cleaned.invoiceNo)) existing.invoiceNo = undefined;
+    if (!cleaned.invoiceDate) existing.invoiceDate = undefined;
+  } else {
+    existing.dueDate = undefined;
+  }
 
   if (data.isDraft !== undefined) {
     existing.isDraft = data.isDraft === true || data.isDraft === 'true';

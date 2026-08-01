@@ -22,7 +22,7 @@ const FILTER_LABELS = {
   coNames: 'Co Name',
   location: 'Location',
   expenseType: 'Expense Type',
-  merType: 'MER Type',
+  merType: 'Payment Type',
 };
 
 const filterChipValue = (key, value, companyCodeByName = {}) => {
@@ -154,7 +154,7 @@ export default function CustomizedReportPage() {
         <div className="flex items-center gap-2 mb-3">
           <div>
             <p className="summary-head-report-subtitle text-sm text-gray-700">
-              Select a Financial Year (required), then optionally filter by Month, Company, Co Name, Expense Type, or MER Type. Location / Branch unlocks after you select a Company.
+              Select a Financial Year (required), then optionally filter by Month, Company, Co Name, Expense Type, or Payment Type. Location / Branch unlocks after you select a Company.
             </p>
           </div>
         </div>
@@ -208,7 +208,7 @@ export default function CustomizedReportPage() {
             onChange={(v) => updateFilter('expenseType', v)}
           />
           <FilterSelect
-            placeholder="MER type"
+            placeholder="Payment type"
             clearable
             disabled={!optionalFiltersEnabled}
             data={MER_ENTRY_TYPE_OPTIONS}

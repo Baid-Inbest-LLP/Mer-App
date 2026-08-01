@@ -219,6 +219,7 @@ export default function ExpenseViewPage() {
   }
 
   const e = current;
+  const isFixedBill = e.expenseNature === 'Fixed';
   const paymentRules = getPaymentMethodRules(e.paymentMethod);
   const editable = canEditExpense(e, user);
   const canManagePayments = isAdmin(user?.role)
@@ -293,7 +294,7 @@ export default function ExpenseViewPage() {
                   <StatItem
                     iconBg="bg-blue-50"
                     iconColor="text-blue-600"
-                    label="Month"
+                    label="Billing Month"
                     value={e.month}
                     icon={
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -304,8 +305,8 @@ export default function ExpenseViewPage() {
                   <StatItem
                     iconBg="bg-purple-50"
                     iconColor="text-purple-600"
-                    label="Invoice Date"
-                    value={formatDate(e.invoiceDate)}
+                    label={isFixedBill ? 'Due Date' : 'Billing Date'}
+                    value={formatDate(isFixedBill ? e.dueDate : e.invoiceDate)}
                     icon={
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -357,11 +358,21 @@ export default function ExpenseViewPage() {
               <DetailRow label="Head of Expense" value={e.headOfExpense} />
               <DetailRow label="Particulars" value={e.particulars} />
               <DetailRow label="Co Name" value={e.coNames} />
-              <DetailRow label="MER Type" value={e.merType || e.paymentMethod} />
+              <DetailRow label="Billing Month" value={e.month} />
+              <DetailRow
+                label={isFixedBill ? 'Due Date' : 'Billing Date'}
+                value={formatDate(isFixedBill ? e.dueDate : e.invoiceDate)}
+              />
+              <DetailRow label="Payment Type" value={e.merType || e.paymentMethod} />
               <DetailRow label="Payment Method" value={e.paymentMethod} />
               <DetailRow label="Nature" value={e.expenseNature || 'Variable'} />
+              {isFixedBill && (
+                <DetailRow
+                  label="Amount Type"
+                  value={e.amountType === 'Usage' ? 'Usage-Based' : 'Fixed'}
+                />
+              )}
               <DetailRow label="Frequency" value={e.frequency || 'One-time'} />
-              <DetailRow label="Due Date" value={formatDate(e.dueDate)} />
             </DetailCard>
 
             <DetailCard

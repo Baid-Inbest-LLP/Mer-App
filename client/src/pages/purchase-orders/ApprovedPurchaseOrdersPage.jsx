@@ -202,7 +202,7 @@ export default function ApprovedPurchaseOrdersPage() {
                             onClick={() => handleAddAsExpense(po._id)}
                             className="btn-primary text-xs px-3 py-1.5 disabled:opacity-60"
                           >
-                            {addingId === po._id ? 'Opening…' : 'Add as Expense'}
+                            {addingId === po._id ? 'Opening…' : 'Add as Bill'}
                           </button>
                         )}
                       </div>

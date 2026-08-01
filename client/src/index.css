@@ -2263,6 +2263,18 @@
   color: #a6a7ab;
 }
 
+[data-theme='dark'] #root .bills-page-tab:not(.bills-page-tab--active) {
+  color: #4b5563 !important;
+}
+
+[data-theme='dark'] #root .bills-page-tab:not(.bills-page-tab--active):hover {
+  color: #374151 !important;
+}
+
+[data-theme='dark'] #root .bills-page-tab--active {
+  color: #ffffff !important;
+}
+
 [data-theme='dark'] #root .text-gray-500 {
   color: #909296;
 }

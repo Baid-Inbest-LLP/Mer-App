@@ -1,6 +1,6 @@
 import { Expense } from '../models/Expense.js';
 import { OPEN_PAYMENT_STATUSES, PAYMENT_STATUS } from '../constants/paymentStatus.js';
-import { buildPagination, buildSort } from '../utils/queryBuilder.js';
+import { buildExpenseQuery, buildPagination, buildSort } from '../utils/queryBuilder.js';
 
 const startOfDay = (d = new Date()) => {
   const x = new Date(d);
@@ -33,16 +33,19 @@ export const getDueExpenses = async (query = {}) => {
   const in7 = endOfDay(addDays(todayStart, 7));
   const monthEnd = endOfDay(new Date(todayStart.getFullYear(), todayStart.getMonth() + 1, 0));
 
-  const filter = {
-    isDraft: { $ne: true },
-    status: { $in: OPEN_PAYMENT_STATUSES },
-    balanceDue: { $gt: 0 },
-  };
+  // Reuse the shared expense filter builder so the Due board supports the same
+  // filters as the main list (search, financial year, month, expense type,
+  // payment method, head of expense, company, location, etc.). The payment
+  // status and open-balance scope are always enforced by the Due board itself.
+  const baseQuery = { ...query };
+  delete baseQuery.status;
+  delete baseQuery.bucket;
+  delete baseQuery.openBalance;
 
-  if (query.expenseNature) filter.expenseNature = query.expenseNature;
-  if (query.company) filter.company = query.company;
-  if (query.status) filter.status = query.status;
-  if (query.headOfExpense) filter.headOfExpense = query.headOfExpense;
+  const filter = buildExpenseQuery(baseQuery);
+  filter.isDraft = { $ne: true };
+  filter.status = { $in: OPEN_PAYMENT_STATUSES };
+  filter.balanceDue = { $gt: 0 };
 
   const bucket = String(query.bucket || 'all').toLowerCase();
   switch (bucket) {
@@ -78,11 +81,7 @@ export const getDueExpenses = async (query = {}) => {
     Expense.countDocuments(filter),
     Expense.aggregate([
       {
-        $match: {
-          isDraft: { $ne: true },
-          status: { $in: OPEN_PAYMENT_STATUSES },
-          balanceDue: { $gt: 0 },
-        },
+        $match: filter,
       },
       {
         $facet: {

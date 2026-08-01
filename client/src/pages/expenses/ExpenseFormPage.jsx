@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Loader, Center } from '@mantine/core';
 import { useDispatch, useSelector } from 'react-redux';
@@ -27,7 +27,12 @@ export default function ExpenseFormPage() {
   const [poDraft, setPoDraft] = useState(null);
   const [poMeta, setPoMeta] = useState(null);
   const [loadedPoId, setLoadedPoId] = useState(null);
+  const [billNo, setBillNo] = useState(null);
   const poDraftLoading = Boolean(fromPoId) && !isEdit && loadedPoId !== fromPoId;
+
+  const handleBillNoChange = useCallback((nextBillNo) => {
+    setBillNo(nextBillNo);
+  }, []);
 
   useEffect(() => {
     dispatch(fetchCompanies({ isActive: true, limit: 100 }));
@@ -128,19 +133,21 @@ export default function ExpenseFormPage() {
 
   const formInitialData = isEdit ? current : poDraft;
 
+  const baseTitle = isEdit
+    ? current?.isDraft
+      ? 'Edit Draft Bill'
+      : 'Edit Bill'
+    : poMeta
+      ? `New Bill from PO ${poMeta.poNumber}`
+      : 'New Bill';
+
+  const title = billNo ? `${baseTitle} (Bill No: ${billNo})` : baseTitle;
+
   return (
     <>
       <PageBanner
         className="mb-4"
-        title={
-          isEdit
-            ? current?.isDraft
-              ? 'Edit Draft Expense'
-              : 'Edit Expense'
-            : poMeta
-              ? `New Expense/Bill from PO ${poMeta.poNumber}`
-              : 'New Expense/Bill'
-        }
+        title={title}
         subtitle={
           poMeta
             ? `Vendor: ${poMeta.vendor || '—'} · Amount: ₹${Number(poMeta.totalAmount || 0).toLocaleString('en-IN')}`
@@ -154,6 +161,7 @@ export default function ExpenseFormPage() {
         loading={submitting}
         companies={companies}
         companiesLoading={companiesLoading}
+        onBillNoChange={handleBillNoChange}
       />
     </>
   );

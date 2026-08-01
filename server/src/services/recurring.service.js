@@ -3,7 +3,7 @@ import { Expense } from '../models/Expense.js';
 import { ApiError } from '../utils/ApiError.js';
 import { applyCalculations, resolveMerSerialForTemplate } from './expense.service.js';
 import { APPROVAL_STATUS } from '../constants/roles.js';
-import { EXPENSE_NATURE, roundMoney } from '../constants/paymentStatus.js';
+import { EXPENSE_NATURE, AMOUNT_TYPE, AMOUNT_TYPES, roundMoney } from '../constants/paymentStatus.js';
 
 const asTrimmed = (value) => {
   if (value == null || value === '') return '';
@@ -85,6 +85,7 @@ export const createTemplate = async (data, user) => {
     expenseNature: data.expenseNature === EXPENSE_NATURE.VARIABLE
       ? EXPENSE_NATURE.VARIABLE
       : EXPENSE_NATURE.FIXED,
+    amountType: AMOUNT_TYPES.includes(data.amountType) ? data.amountType : AMOUNT_TYPE.FIXED,
     netAmount: roundMoney(data.netAmount),
     gstPercent: Number(data.gstPercent) || 0,
     useIGST: data.useIGST === true || data.useIGST === 'true',
@@ -103,11 +104,64 @@ export const createTemplate = async (data, user) => {
   });
 };
 
+/**
+ * Create a recurring schedule seeded from an already-created expense entry.
+ * The entry itself represents the current period, so nextDueDate is set to the
+ * NEXT occurrence. Used for the inline "Make this recurring" flow on the form.
+ */
+export const createTemplateFromExpense = async (expense, data, user) => {
+  const frequency = expense.frequency && expense.frequency !== 'One-time'
+    ? expense.frequency
+    : (data.frequency && data.frequency !== 'One-time' ? data.frequency : 'Monthly');
+
+  const baseDue = expense.dueDate
+    ? new Date(expense.dueDate)
+    : (expense.invoiceDate ? new Date(expense.invoiceDate) : new Date());
+  const dueDayOfMonth = clampDueDay(data.recurringDueDay || baseDue.getDate());
+  const startDate = data.recurringStartDate ? new Date(data.recurringStartDate) : baseDue;
+  const endDate = data.recurringEndDate ? new Date(data.recurringEndDate) : undefined;
+  const nextDueDate = advanceNextDueDate(baseDue, frequency, dueDayOfMonth);
+  const isActive = !(endDate && nextDueDate > endDate);
+
+  return RecurringExpenseTemplate.create({
+    name: asTrimmed(data.scheduleName)
+      || asTrimmed(expense.particulars)
+      || asTrimmed(expense.coNames)
+      || 'Recurring bill',
+    company: asTrimmed(expense.company),
+    location: asTrimmed(expense.location),
+    coNames: asTrimmed(expense.coNames),
+    headOfExpense: asTrimmed(expense.headOfExpense),
+    particulars: asTrimmed(expense.particulars),
+    vendor: asTrimmed(expense.vendor),
+    expenseType: expense.expenseType || 'Revenue',
+    expenseNature: EXPENSE_NATURE.FIXED,
+    amountType: AMOUNT_TYPES.includes(expense.amountType) ? expense.amountType : AMOUNT_TYPE.FIXED,
+    netAmount: roundMoney(
+      expense.amountType === AMOUNT_TYPE.USAGE ? 0 : expense.netAmount,
+    ),
+    gstPercent: Number(expense.gstPercent) || 0,
+    useIGST: Boolean(expense.useIGST),
+    tds: roundMoney(expense.tds),
+    merType: expense.merType || 'Bank',
+    paymentMethod: expense.paymentMethod || undefined,
+    frequency,
+    dueDayOfMonth,
+    startDate,
+    endDate,
+    nextDueDate,
+    isActive,
+    notes: asTrimmed(expense.notes),
+    createdBy: user._id,
+    updatedBy: user._id,
+  });
+};
+
 export const updateTemplate = async (id, data, user) => {
   const template = await getTemplateById(id);
   const fields = [
     'name', 'company', 'location', 'coNames', 'headOfExpense', 'particulars', 'vendor',
-    'expenseType', 'expenseNature', 'netAmount', 'gstPercent', 'useIGST', 'tds',
+    'expenseType', 'expenseNature', 'amountType', 'netAmount', 'gstPercent', 'useIGST', 'tds',
     'merType', 'paymentMethod', 'frequency', 'notes', 'isActive',
   ];
 
@@ -182,11 +236,16 @@ export const generateFromTemplate = async (templateId, user, { asOf = new Date()
     return { skipped: true, reason: 'already_exists', expenseId: existing._id, template };
   }
 
+  const amountType = AMOUNT_TYPES.includes(template.amountType)
+    ? template.amountType
+    : AMOUNT_TYPE.FIXED;
+  const templateNet = amountType === AMOUNT_TYPE.USAGE ? 0 : template.netAmount;
+
   const calculated = applyCalculations({
-    netAmount: template.netAmount,
+    netAmount: templateNet,
     gstPercent: template.gstPercent,
     useIGST: template.useIGST,
-    tds: template.tds,
+    tds: amountType === AMOUNT_TYPE.USAGE ? 0 : template.tds,
   });
 
   const month = dueDate.toLocaleString('en-US', { month: 'long' });
@@ -212,6 +271,7 @@ export const generateFromTemplate = async (templateId, user, { asOf = new Date()
     vendor: template.vendor,
     expenseType: template.expenseType,
     expenseNature: template.expenseNature || EXPENSE_NATURE.FIXED,
+    amountType,
     frequency: template.frequency || 'Monthly',
     merType,
     paymentMethod: template.paymentMethod,

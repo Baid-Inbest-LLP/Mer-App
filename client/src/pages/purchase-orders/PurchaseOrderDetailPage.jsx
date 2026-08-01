@@ -184,7 +184,7 @@ export default function PurchaseOrderDetailPage() {
                       onClick={handleAddAsExpense}
                       className="btn-primary text-sm disabled:opacity-60"
                     >
-                      {adding ? 'Opening…' : 'Add as Expense'}
+                      {adding ? 'Opening…' : 'Add as Bill'}
                     </button>
                   )}
                 </div>
