@@ -108,7 +108,7 @@ export const getExpenses = async (query) => {
   const { page, limit, skip } = buildPagination(query);
   const sort = buildSort(query);
 
-  const [expenses, total] = await Promise.all([
+  const [expenses, total, summaryRows] = await Promise.all([
     Expense.find(filter)
       .sort(sort)
       .skip(skip)
@@ -118,7 +118,26 @@ export const getExpenses = async (query) => {
       .populate('completedBy', 'name email')
       .lean(),
     Expense.countDocuments(filter),
+    Expense.aggregate([
+      { $match: filter },
+      {
+        $group: {
+          _id: null,
+          count: { $sum: 1 },
+          grossAmount: { $sum: { $ifNull: ['$grossAmount', 0] } },
+          amountPaid: { $sum: { $ifNull: ['$amountPaid', 0] } },
+          balanceDue: { $sum: { $ifNull: ['$balanceDue', 0] } },
+        },
+      },
+    ]),
   ]);
+
+  const totals = summaryRows[0] || {
+    count: 0,
+    grossAmount: 0,
+    amountPaid: 0,
+    balanceDue: 0,
+  };
 
   return {
     expenses,
@@ -128,6 +147,7 @@ export const getExpenses = async (query) => {
       total,
       totalPages: Math.ceil(total / limit),
     },
+    summary: { totals },
   };
 };
 
@@ -234,6 +254,18 @@ export const createExpense = async (data, user) => {
   if (cleaned.merType) payload.merType = cleaned.merType;
   if (cleaned.paymentMethod) payload.paymentMethod = cleaned.paymentMethod;
 
+  const wantsAutoPay = isFixedNature
+    && (cleaned.autoPay === true || cleaned.autoPay === 'true');
+  if (wantsAutoPay) {
+    payload.autoPay = true;
+    payload.paymentMethod = 'Card';
+    payload.autoPayCardNumber = asTrimmedString(cleaned.autoPayCardNumber || cleaned.cardNumber);
+    if (payload.autoPayCardNumber) payload.cardNumber = payload.autoPayCardNumber;
+  } else {
+    payload.autoPay = false;
+    payload.autoPayCardNumber = '';
+  }
+
   const serialAnchorDate = data.invoiceDate
     || (isFixedNature ? (cleaned.recurringStartDate || cleaned.dueDate) : undefined)
     || (data.month ? monthToDateInFy(data.month, getFinancialYear(new Date())) : undefined);
@@ -272,12 +304,16 @@ export const createExpense = async (data, user) => {
         await addPayment(expense._id, {
           amount: payAmount,
           paymentDate: cleaned.paymentDate || new Date(),
-          paymentMethod: cleaned.paymentMethod,
-          paymentRefNumber: cleaned.paymentRefNumber,
+          paymentMethod: wantsAutoPay ? 'Card' : cleaned.paymentMethod,
+          paymentRefNumber: wantsAutoPay
+            ? (asTrimmedString(cleaned.paymentRefNumber) || 'AUTO-PAY')
+            : cleaned.paymentRefNumber,
           bankAccountNumber: cleaned.bankAccountNumber,
-          cardNumber: cleaned.cardNumber,
+          cardNumber: cleaned.cardNumber || payload.autoPayCardNumber,
           merType: payload.merType,
-          notes: 'Initial payment on create',
+          notes: wantsAutoPay
+            ? 'Auto-pay — full balance by credit card'
+            : 'Initial payment on create',
         }, user);
       } catch (err) {
         await ExpensePayment.deleteMany({ expenseId: expense._id });

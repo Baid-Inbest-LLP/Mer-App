@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NumberInput, Textarea, TextInput } from '@mantine/core';
+import { NumberInput, Switch, Textarea, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useForm, Controller } from 'react-hook-form';
 import { useSelector } from 'react-redux';
@@ -29,6 +29,12 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
   const [voidTarget, setVoidTarget] = useState(null);
   const [voiding, setVoiding] = useState(false);
   const [holdLoading, setHoldLoading] = useState(false);
+  const [autoPayEnabled, setAutoPayEnabled] = useState(Boolean(expense.autoPay));
+  const [autoPayCard, setAutoPayCard] = useState(
+    expense.autoPayCardNumber || expense.cardNumber || null,
+  );
+  const [autoPaySaving, setAutoPaySaving] = useState(false);
+  const [autoPaying, setAutoPaying] = useState(false);
 
   const balanceDue = Number(expense.balanceDue ?? expense.grossAmount ?? 0);
   const amountPaid = Number(expense.amountPaid ?? 0);
@@ -37,6 +43,14 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
   const payments = expense.payments || [];
   const isOpen = !['Paid', 'Cancelled'].includes(expense.status);
   const canRecordPayment = canManage && isOpen && balanceDue > 0 && expense.status !== 'Hold';
+  const isFixedBill = expense.expenseNature === 'Fixed';
+  const canConfigureAutoPay = canManage && isFixedBill && expense.status !== 'Cancelled';
+  const canAutoPayNow = canConfigureAutoPay && isOpen && balanceDue > 0 && expense.status !== 'Hold';
+
+  useEffect(() => {
+    setAutoPayEnabled(Boolean(expense.autoPay));
+    setAutoPayCard(expense.autoPayCardNumber || expense.cardNumber || null);
+  }, [expense.autoPay, expense.autoPayCardNumber, expense.cardNumber, expense._id]);
 
   useEffect(() => {
     if (!autoOpen || !canRecordPayment) return;
@@ -70,7 +84,10 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
     watch('bankAccountNumber'),
     lookups?.bankAccounts,
   );
-  const cardNumberOptions = getCardNumberOptions(watch('cardNumber'), lookups?.cards);
+  const cardNumberOptions = getCardNumberOptions(
+    autoPayCard || watch('cardNumber'),
+    lookups?.cards,
+  );
 
   const onSubmit = async (values) => {
     setSaving(true);
@@ -144,6 +161,95 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
     }
   };
 
+  const handleAutoPayToggle = async (checked) => {
+    if (checked && !autoPayCard) {
+      notifications.show({
+        message: 'Select a credit card before enabling auto-pay',
+        color: 'orange',
+      });
+      return;
+    }
+
+    setAutoPaySaving(true);
+    try {
+      await expenseApi.setAutoPay(expense._id, {
+        autoPay: checked,
+        autoPayCardNumber: checked ? autoPayCard : undefined,
+        syncTemplate: true,
+      });
+      setAutoPayEnabled(checked);
+      notifications.show({
+        message: checked
+          ? 'Auto-pay enabled — full amount will be paid by credit card'
+          : 'Auto-pay disabled',
+        color: 'green',
+      });
+      onChanged?.();
+    } catch (err) {
+      notifications.show({
+        message: err?.response?.data?.message || 'Failed to update auto-pay',
+        color: 'red',
+      });
+    } finally {
+      setAutoPaySaving(false);
+    }
+  };
+
+  const handleAutoPayCardChange = async (value) => {
+    const next = toSelectValue(value);
+    setAutoPayCard(next);
+    if (!autoPayEnabled || !next) return;
+
+    setAutoPaySaving(true);
+    try {
+      await expenseApi.setAutoPay(expense._id, {
+        autoPay: true,
+        autoPayCardNumber: next,
+        syncTemplate: true,
+      });
+      onChanged?.();
+    } catch (err) {
+      notifications.show({
+        message: err?.response?.data?.message || 'Failed to update auto-pay card',
+        color: 'red',
+      });
+    } finally {
+      setAutoPaySaving(false);
+    }
+  };
+
+  const handleAutoPayNow = async () => {
+    if (!autoPayCard) {
+      notifications.show({
+        message: 'Select a credit card for auto-pay',
+        color: 'orange',
+      });
+      return;
+    }
+
+    setAutoPaying(true);
+    try {
+      const res = await expenseApi.autoPay(expense._id, {
+        cardNumber: autoPayCard,
+        syncTemplate: true,
+      });
+      setAutoPayEnabled(true);
+      notifications.show({
+        message: res.data?.message
+          || `Paid ${formatCurrency(balanceDue)} in full by credit card`,
+        color: 'green',
+      });
+      onChanged?.();
+    } catch (err) {
+      notifications.show({
+        message: err?.response?.data?.message || 'Auto-pay failed',
+        color: 'red',
+      });
+    } finally {
+      setAutoPaying(false);
+    }
+  };
+
   return (
     <div className="expense-payments-panel card overflow-hidden">
       <div className="p-6">
@@ -165,6 +271,9 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
               <span className={`${getPaymentStatusBadge(expense.status)} !text-xs`}>
                 {getPaymentStatusLabel(expense.status)}
               </span>
+              {isFixedBill && autoPayEnabled && (
+                <span className="badge-partially-paid !text-xs">Auto-pay</span>
+              )}
             </div>
           </div>
 
@@ -234,6 +343,51 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
             />
           </div>
         </div>
+
+        {canConfigureAutoPay && (
+          <div className="expense-payments-form mb-5 rounded-xl border p-4 space-y-3 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="expense-payments-form-title text-sm font-semibold">Auto-pay by credit card</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Pay the full billed amount by card. Applies to this Fixed bill and future recurring periods.
+                </p>
+              </div>
+              <Switch
+                checked={autoPayEnabled}
+                onChange={(e) => handleAutoPayToggle(e.currentTarget.checked)}
+                disabled={autoPaySaving || autoPaying}
+                label={autoPayEnabled ? 'On' : 'Off'}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <FilterSelect
+                label="Credit card"
+                required={autoPayEnabled || canAutoPayNow}
+                searchable
+                data={cardNumberOptions}
+                value={toSelectValue(autoPayCard)}
+                onChange={handleAutoPayCardChange}
+                disabled={autoPaySaving || autoPaying}
+              />
+              {canAutoPayNow && (
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    className="btn-primary text-sm w-full sm:w-auto"
+                    onClick={handleAutoPayNow}
+                    disabled={autoPaying || autoPaySaving || !autoPayCard}
+                  >
+                    {autoPaying
+                      ? 'Paying…'
+                      : `Pay full ${formatCurrency(balanceDue)} by card`}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {open && (
           <form

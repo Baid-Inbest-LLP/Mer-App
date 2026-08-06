@@ -6,7 +6,11 @@ export const fetchExpenses = createAsyncThunk(
   async (params, { rejectWithValue }) => {
     try {
       const { data } = await expenseApi.list(params);
-      return { expenses: data.data, pagination: data.pagination };
+      return {
+        expenses: data.data,
+        pagination: data.pagination,
+        summary: data.summary || null,
+      };
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load expenses');
     }
@@ -89,6 +93,7 @@ const initialState = {
   list: [],
   current: null,
   pagination: { page: 1, limit: 10, total: 0, totalPages: 0 },
+  summary: null,
   loading: false,
   error: null,
   queryParams: {},
@@ -115,6 +120,7 @@ const expenseSlice = createSlice({
         state.loading = false;
         state.list = action.payload.expenses;
         state.pagination = action.payload.pagination;
+        state.summary = action.payload.summary;
       })
       .addCase(fetchExpenses.rejected, (state, action) => {
         state.loading = false;

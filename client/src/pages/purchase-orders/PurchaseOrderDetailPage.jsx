@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { notifications } from '@mantine/notifications';
 import { purchaseOrderApi } from '../../api/purchaseOrder.api';
+import { isSuperAdmin } from '../../constants/roles';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ActivityTimelineSidebar, {
   buildPurchaseOrderTimelineEvents,
@@ -44,6 +46,8 @@ const formatAddress = (address) => {
 export default function PurchaseOrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
+  const canExclude = isSuperAdmin(user?.role);
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -169,13 +173,15 @@ export default function PurchaseOrderDetailPage() {
                           View Expense
                         </Link>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => setExcludeOpen(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors"
-                      >
-                        Exclude
-                      </button>
+                      {canExclude && (
+                        <button
+                          type="button"
+                          onClick={() => setExcludeOpen(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors"
+                        >
+                          Exclude Bill
+                        </button>
+                      )}
                     </>
                   ) : (
                     <button
@@ -343,9 +349,9 @@ export default function PurchaseOrderDetailPage() {
             </div>
 
             <div className="border-t border-gray-100 p-6">
-              <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-                <div className="flex-1 max-w-lg">
-                  <div className="bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200 rounded-xl px-5 py-4">
+              <div className="flex flex-row items-stretch gap-6">
+                <div className="w-[65%] min-w-0">
+                  <div className="bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-200 rounded-xl px-5 py-4 h-full">
                     <p className="text-[11px] text-primary-500 uppercase font-bold tracking-wider mb-2">Amount in Words</p>
                     <p className="text-base text-primary-900 font-bold leading-relaxed">
                       {formatAmountInWords(roundedGrandTotal)}
@@ -353,7 +359,7 @@ export default function PurchaseOrderDetailPage() {
                   </div>
                 </div>
 
-                <div className="w-80 space-y-3">
+                <div className="w-[35%] min-w-0 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500 font-medium">Subtotal</span>
                     <span className="font-bold text-gray-800 text-base">
@@ -416,7 +422,7 @@ export default function PurchaseOrderDetailPage() {
         message={`Remove the MER expense linked to ${order.poNumber}${
           order.linkedExpenseSlNo ? ` (${order.linkedExpenseSlNo})` : ''
         }? The PO will be available to add as an expense again.`}
-        confirmLabel="Exclude"
+        confirmLabel="Exclude Bill"
         variant="danger"
       />
     </div>

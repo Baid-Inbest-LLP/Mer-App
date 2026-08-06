@@ -15,7 +15,7 @@ const SUBTITLES = {
   all: 'All bills — paid and unpaid',
   due: 'Unpaid, partially paid, and held bills',
   paid: 'Fully paid bills (expenses) — approval Completed',
-  recurring: 'Recurring schedules — pause, resume, edit, or stop them',
+  recurring: 'Active Fixed bills that will repeat on schedule',
 };
 
 export default function BillsPage() {
@@ -28,15 +28,13 @@ export default function BillsPage() {
     setSearchParams(value === 'all' ? {} : { tab: value });
   };
 
-  const showAdd = tab === 'all' || tab === 'paid';
-
   return (
     <div>
       <PageBanner
         className="mb-4"
         title="Bills/Expenses"
         subtitle={SUBTITLES[tab]}
-        action={showAdd ? { onClick: () => navigate('/entries/new'), label: 'Add Bill' } : undefined}
+        action={{ onClick: () => navigate('/entries/new'), label: 'Add Bill' }}
       />
 
       <div className="flex gap-2 mb-4 overflow-x-auto">

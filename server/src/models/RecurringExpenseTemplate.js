@@ -28,6 +28,9 @@ const recurringExpenseTemplateSchema = new mongoose.Schema(
     tds: { type: Number, default: 0 },
     merType: { type: String, enum: MER_TYPES },
     paymentMethod: { type: String, enum: ALL_PAYMENT_METHODS },
+    /** When true, newly generated Fixed bills are paid in full by credit card. */
+    autoPay: { type: Boolean, default: false },
+    autoPayCardNumber: { type: String, trim: true },
     frequency: {
       type: String,
       enum: RECURRING_FREQUENCIES,

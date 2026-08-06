@@ -76,6 +76,13 @@ const expenseSchema = new mongoose.Schema(
     cardNumber: { type: String, trim: true },
     merType: { type: String, enum: MER_TYPES },
     paymentMethod: { type: String, enum: ALL_PAYMENT_METHODS },
+    /**
+     * Fixed bills only: when true, settle the full billed amount by credit card
+     * (on demand from Payments, and automatically when a recurring instance is generated).
+     */
+    autoPay: { type: Boolean, default: false },
+    /** Card display value used for auto-pay (e.g. "HDFC - 1234"). */
+    autoPayCardNumber: { type: String, trim: true },
     hasBillOrReceipt: { type: Boolean, default: false },
     useIGST: { type: Boolean, default: false },
     status: { type: String, enum: PAYMENT_STATUSES, default: 'Pending' },

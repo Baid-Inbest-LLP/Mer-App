@@ -28,6 +28,20 @@ export const setHold = asyncHandler(async (req, res) => {
   ApiResponse.success(res, expense, hold ? 'Expense put on hold' : 'Hold released');
 });
 
+export const setAutoPay = asyncHandler(async (req, res) => {
+  const expense = await paymentService.setAutoPayPreference(req.params.id, req.body, req.user);
+  ApiResponse.success(
+    res,
+    expense,
+    expense.autoPay ? 'Auto-pay enabled for this Fixed bill' : 'Auto-pay disabled',
+  );
+});
+
+export const autoPay = asyncHandler(async (req, res) => {
+  const result = await paymentService.autoPayFullByCard(req.params.id, req.body, req.user);
+  ApiResponse.created(res, result, 'Auto-pay recorded — full balance paid by credit card');
+});
+
 export const getDueExpenses = asyncHandler(async (req, res) => {
   const result = await dueExpenseService.getDueExpenses(req.query);
   return res.status(200).json({

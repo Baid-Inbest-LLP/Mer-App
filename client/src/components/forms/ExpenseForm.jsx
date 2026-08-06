@@ -111,6 +111,8 @@ const defaultValues = {
   tds: 0,
   paymentMode: 'none',
   recordPaymentNow: false,
+  autoPay: false,
+  autoPayCardNumber: '',
   initialPaymentAmount: null,
   paymentDate: null,
   paymentRefNumber: '',
@@ -192,6 +194,7 @@ const buildInitialFormValues = (initialData) => {
       ),
     paymentDate: initialData.paymentDate ? new Date(initialData.paymentDate) : null,
     paymentMode: (() => {
+      if (initialData.autoPay) return 'autopay';
       const paid = Number(initialData.amountPaid || 0);
       const gross = Number(initialData.grossAmount || 0);
       if (paid > 0 && gross > 0 && paid < gross - 0.009) return 'partial';
@@ -205,7 +208,13 @@ const buildInitialFormValues = (initialData) => {
       if (paid > 0 || initialData.paymentDate) return gross || paid || null;
       return null;
     })(),
-    recordPaymentNow: Boolean(initialData.paymentDate || Number(initialData.amountPaid || 0) > 0),
+    recordPaymentNow: Boolean(
+      initialData.autoPay
+      || initialData.paymentDate
+      || Number(initialData.amountPaid || 0) > 0,
+    ),
+    autoPay: Boolean(initialData.autoPay),
+    autoPayCardNumber: initialData.autoPayCardNumber || initialData.cardNumber || '',
     expenseNature: initialData.expenseNature || 'Variable',
     amountType: initialData.amountType || 'Fixed',
     frequency: initialData.frequency || 'One-time',
@@ -291,7 +300,8 @@ export default function ExpenseForm({
   const merType = watch('merType');
   const paymentMethod = watch('paymentMethod');
   const paymentMode = watch('paymentMode');
-  const recordPaymentNow = paymentMode === 'full' || paymentMode === 'partial';
+  const isAutoPayMode = paymentMode === 'autopay';
+  const recordPaymentNow = paymentMode === 'full' || paymentMode === 'partial' || isAutoPayMode;
   const isPoExpense = Boolean(
     initialData?.purchaseOrderId || initialData?.source === 'purchase_order',
   );
@@ -310,15 +320,32 @@ export default function ExpenseForm({
   // Keep settlement fields in sync with payment mode + gross from Amount & GST.
   useEffect(() => {
     setValue('recordPaymentNow', recordPaymentNow);
+    setValue('autoPay', isAutoPayMode);
+
     if (paymentMode === 'none') {
       setValue('paymentDate', null);
       setValue('initialPaymentAmount', null);
+      setValue('paymentMethod', null);
+      setValue('paymentRefNumber', '');
+      setValue('cardNumber', '');
+      setValue('autoPayCardNumber', '');
       return;
     }
-    if (paymentMode === 'full') {
+
+    if (paymentMode === 'full' || isAutoPayMode) {
       setValue('initialPaymentAmount', Number(getValues('grossAmount')) || 0);
+      if (!getValues('paymentDate')) {
+        setValue('paymentDate', new Date());
+      }
+    }
+
+    if (isAutoPayMode) {
+      setValue('paymentMethod', 'Card');
+      setValue('paymentRefNumber', 'AUTO-PAY');
+      setValue('bankAccountNumber', '');
       return;
     }
+
     if (paymentMode === 'partial') {
       const current = Number(getValues('initialPaymentAmount'));
       const gross = Number(getValues('grossAmount')) || 0;
@@ -326,13 +353,13 @@ export default function ExpenseForm({
         setValue('initialPaymentAmount', null);
       }
     }
-  }, [paymentMode, recordPaymentNow, setValue, getValues]);
+  }, [paymentMode, recordPaymentNow, isAutoPayMode, setValue, getValues]);
 
   const grossAmount = watch('grossAmount') || 0;
   const initialPaymentAmount = watch('initialPaymentAmount');
 
   useEffect(() => {
-    if (paymentMode !== 'full') return;
+    if (paymentMode !== 'full' && paymentMode !== 'autopay') return;
     setValue('initialPaymentAmount', Number(grossAmount) || 0);
   }, [paymentMode, grossAmount, setValue]);
 
@@ -483,8 +510,10 @@ export default function ExpenseForm({
     payload.dueDate = null;
 
     const mode = payload.paymentMode || 'none';
-    const recording = mode === 'full' || mode === 'partial';
+    const recording = mode === 'full' || mode === 'partial' || mode === 'autopay';
+    const isAutoPay = mode === 'autopay';
     payload.recordPaymentNow = recording;
+    payload.autoPay = isAutoPay;
 
     if (!recording) {
       delete payload.paymentDate;
@@ -493,13 +522,21 @@ export default function ExpenseForm({
       delete payload.bankAccountNumber;
       delete payload.cardNumber;
       delete payload.initialPaymentAmount;
-    } else if (mode === 'full') {
+      delete payload.autoPayCardNumber;
+    } else if (mode === 'full' || isAutoPay) {
       payload.initialPaymentAmount = Number(payload.grossAmount) || 0;
     }
     delete payload.paymentMode;
 
     if (payload.cardNumber) {
       payload.cardNumber = formatIssuerLast4(payload.cardNumber);
+    }
+    if (isAutoPay) {
+      payload.paymentMethod = 'Card';
+      payload.paymentRefNumber = payload.paymentRefNumber || 'AUTO-PAY';
+      payload.autoPayCardNumber = payload.cardNumber || '';
+    } else {
+      delete payload.autoPayCardNumber;
     }
     if (payload.bankAccountNumber) {
       payload.bankAccountNumber = formatIssuerLast4(payload.bankAccountNumber);
@@ -568,7 +605,7 @@ export default function ExpenseForm({
   const summaryNetAmount = isPoExpense ? Math.round(Number(netAmount) || 0) : (netAmount || 0);
   const summaryGstAmount = isPoExpense ? Math.round(Number(gstAmount) || 0) : totalGST;
   const summaryIgst = isPoExpense ? Math.round(Number(gstAmount) || 0) : igst;
-  const paidNow = paymentMode === 'full'
+  const paidNow = (paymentMode === 'full' || isAutoPayMode)
     ? Number(grossAmount) || 0
     : Number(initialPaymentAmount) || 0;
   const balanceAfterPayment = Math.max(0, (Number(grossAmount) || 0) - paidNow);
@@ -652,6 +689,10 @@ export default function ExpenseForm({
                     setValue('frequency', 'One-time');
                     setValue('dueDate', null);
                     setValue('amountType', 'Fixed');
+                    if (getValues('paymentMode') === 'autopay') {
+                      setValue('paymentMode', 'none');
+                      setValue('autoPay', false);
+                    }
                     clearErrors(['dueDate', 'recurringDueDay', 'amountType', 'netAmount']);
                     if (!getValues('invoiceDate')) {
                       const today = new Date();
@@ -910,54 +951,56 @@ export default function ExpenseForm({
             <Text fw={600}>Amount & GST</Text>
           </div>
           <div className="flex flex-col gap-4 flex-1 content-start">
-            {isFixed && (
-              <Controller
-                name="amountType"
-                control={control}
-                rules={{ required: isFixed ? 'Amount type is required' : false }}
-                render={({ field, fieldState }) => (
-                  <Radio.Group
-                    label="Amount Type"
-                    required
-                    value={field.value || 'Fixed'}
-                    onChange={(value) => {
-                      const next = value || 'Fixed';
-                      field.onChange(next);
-                      if (next === 'Usage') {
-                        clearErrors('netAmount');
-                      }
-                    }}
-                    onBlur={field.onBlur}
-                    error={showControllerError('amountType', fieldState)}
-                    classNames={RADIO_GROUP_CLASS_NAMES}
-                  >
-                    <Group mt={6} gap="md" wrap="wrap">
-                      <Radio value="Fixed" label="Fixed amount" classNames={RADIO_CLASS_NAMES} />
-                      <Radio value="Usage" label="Usage-based" classNames={RADIO_CLASS_NAMES} />
-                    </Group>
-                  </Radio.Group>
-                )}
-              />
-            )}
-            <Controller
-              name="netAmount"
-              control={control}
-              rules={{ validate: requirePositiveAmount }}
-              render={({ field, fieldState }) => (
-                <NumberInput
-                  label={isUsageAmount ? 'Estimated / Current Amount' : 'Net Amount'}
-                  required={!isUsageAmount}
-                  min={0}
-                  prefix="₹"
-                  decimalScale={isPoExpense ? 2 : undefined}
-                  fixedDecimalScale={false}
-                  hideControls
-                  classNames={TEXT_INPUT_CLASS_NAMES}
-                  {...field}
-                  error={showControllerError('netAmount', fieldState)}
+            <SimpleGrid cols={{ base: 1, sm: isFixed ? 2 : 1 }} spacing="md">
+              {isFixed && (
+                <Controller
+                  name="amountType"
+                  control={control}
+                  rules={{ required: isFixed ? 'Amount type is required' : false }}
+                  render={({ field, fieldState }) => (
+                    <Radio.Group
+                      label="Amount Type"
+                      required
+                      value={field.value || 'Fixed'}
+                      onChange={(value) => {
+                        const next = value || 'Fixed';
+                        field.onChange(next);
+                        if (next === 'Usage') {
+                          clearErrors('netAmount');
+                        }
+                      }}
+                      onBlur={field.onBlur}
+                      error={showControllerError('amountType', fieldState)}
+                      classNames={RADIO_GROUP_CLASS_NAMES}
+                    >
+                      <Group mt={6} gap="md" wrap="wrap">
+                        <Radio value="Fixed" label="Fixed amount" classNames={RADIO_CLASS_NAMES} />
+                        <Radio value="Usage" label="Usage-based" classNames={RADIO_CLASS_NAMES} />
+                      </Group>
+                    </Radio.Group>
+                  )}
                 />
               )}
-            />
+              <Controller
+                name="netAmount"
+                control={control}
+                rules={{ validate: requirePositiveAmount }}
+                render={({ field, fieldState }) => (
+                  <NumberInput
+                    label={isUsageAmount ? 'Estimated / Current Amount' : 'Net Amount'}
+                    required={!isUsageAmount}
+                    min={0}
+                    prefix="₹"
+                    decimalScale={isPoExpense ? 2 : undefined}
+                    fixedDecimalScale={false}
+                    hideControls
+                    classNames={TEXT_INPUT_CLASS_NAMES}
+                    {...field}
+                    error={showControllerError('netAmount', fieldState)}
+                  />
+                )}
+              />
+            </SimpleGrid>
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
               {isPoExpense ? (
                 <Controller
@@ -1039,6 +1082,9 @@ export default function ExpenseForm({
                     <Radio value="none" label="Unpaid" classNames={RADIO_CLASS_NAMES} />
                     <Radio value="full" label="Pay Full" classNames={RADIO_CLASS_NAMES} />
                     <Radio value="partial" label="Pay Other" classNames={RADIO_CLASS_NAMES} />
+                    {isFixed && (
+                      <Radio value="autopay" label="Auto-pay" classNames={RADIO_CLASS_NAMES} />
+                    )}
                   </Group>
                 </Radio.Group>
               )}
@@ -1086,6 +1132,11 @@ export default function ExpenseForm({
 
           {recordPaymentNow ? (
             <div className="flex flex-col gap-4 flex-1 content-start">
+              {isAutoPayMode && (
+                <Text size="sm" c="dimmed">
+                  Pays the full billed amount by credit card and enables auto-pay for future recurring bills.
+                </Text>
+              )}
               <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
                 <Controller
                   name="initialPaymentAmount"
@@ -1093,7 +1144,7 @@ export default function ExpenseForm({
                   rules={{
                     validate: (value) => {
                       if (!recordPaymentNow) return true;
-                      if (paymentMode === 'full') return true;
+                      if (paymentMode === 'full' || isAutoPayMode) return true;
                       const amount = Number(value);
                       if (value === null || value === undefined || value === '' || Number.isNaN(amount)) {
                         return 'Payment amount is required';
@@ -1111,17 +1162,25 @@ export default function ExpenseForm({
                   }}
                   render={({ field, fieldState }) => (
                     <NumberInput
-                      label={paymentMode === 'full' ? 'Payment Amount (Full)' : 'Payment Amount'}
+                      label={
+                        isAutoPayMode || paymentMode === 'full'
+                          ? 'Payment Amount (Full)'
+                          : 'Payment Amount'
+                      }
                       required={paymentMode === 'partial'}
-                      readOnly={paymentMode === 'full'}
-                      disabled={paymentMode === 'full'}
+                      readOnly={paymentMode === 'full' || isAutoPayMode}
+                      disabled={paymentMode === 'full' || isAutoPayMode}
                       min={0}
                       max={paymentMode === 'partial' ? Math.max(0, Number(grossAmount) || 0) : undefined}
                       prefix="₹"
                       decimalScale={2}
                       hideControls
                       classNames={TEXT_INPUT_CLASS_NAMES}
-                      value={paymentMode === 'full' ? (Number(grossAmount) || 0) : (field.value ?? '')}
+                      value={
+                        (paymentMode === 'full' || isAutoPayMode)
+                          ? (Number(grossAmount) || 0)
+                          : (field.value ?? '')
+                      }
                       onChange={field.onChange}
                       error={showControllerError('initialPaymentAmount', fieldState)}
                     />
@@ -1137,12 +1196,18 @@ export default function ExpenseForm({
                     <FilterSelect
                       label="Payment Method"
                       required
-                      clearable
+                      clearable={!isAutoPayMode}
                       placeholder="Select payment method"
-                      data={paymentMethodOptions}
+                      data={isAutoPayMode
+                        ? [{ value: 'Card', label: 'Card' }]
+                        : paymentMethodOptions}
                       {...field}
                       value={toSelectValue(field.value)}
                       onChange={(value) => {
+                        if (isAutoPayMode) {
+                          field.onChange('Card');
+                          return;
+                        }
                         const next = toSelectValue(value);
                         field.onChange(next);
                         const rules = getPaymentMethodRules(next);
@@ -1153,6 +1218,7 @@ export default function ExpenseForm({
                           setValue('cardNumber', '');
                         }
                       }}
+                      disabled={isAutoPayMode}
                       error={showControllerError('paymentMethod', fieldState)}
                     />
                   )}
@@ -1204,15 +1270,25 @@ export default function ExpenseForm({
                     }}
                     render={({ field, fieldState }) => (
                       <FilterSelect
-                        label={paymentRules.cardNumberLabel || 'Card No'}
+                        label={isAutoPayMode ? 'Credit Card' : (paymentRules.cardNumberLabel || 'Card No')}
                         required
-                        clearable
+                        clearable={!isAutoPayMode}
                         searchable
-                        placeholder={paymentRules.cardNumberPlaceholder || 'Select card'}
+                        placeholder={
+                          isAutoPayMode
+                            ? 'Select credit card'
+                            : (paymentRules.cardNumberPlaceholder || 'Select card')
+                        }
                         data={cardNumberOptions}
                         {...field}
                         value={toSelectValue(field.value)}
-                        onChange={(value) => field.onChange(toSelectValue(value) || '')}
+                        onChange={(value) => {
+                          const next = toSelectValue(value) || '';
+                          field.onChange(next);
+                          if (isAutoPayMode) {
+                            setValue('autoPayCardNumber', next);
+                          }
+                        }}
                         error={showControllerError('cardNumber', fieldState)}
                       />
                     )}
@@ -1221,6 +1297,8 @@ export default function ExpenseForm({
                 <TextInput
                   label={paymentRules.paymentRefLabel || 'Payment Ref Number'}
                   required={paymentRules.requiresPaymentRef}
+                  readOnly={isAutoPayMode}
+                  disabled={isAutoPayMode}
                   classNames={TEXT_INPUT_CLASS_NAMES}
                   placeholder={paymentRules.paymentRefPlaceholder}
                   {...register('paymentRefNumber', {
@@ -1253,7 +1331,9 @@ export default function ExpenseForm({
           ) : (
             <div className="expense-payment-unpaid-hint flex flex-1 items-center rounded-lg border border-dashed px-4 py-6">
               <Text size="md" c="dimmed" className="leading-relaxed">
-                Leave unpaid to track as a due bill. Choose Pay Full to settle the gross amount, or Pay Other for a partial payment.
+                {isFixed
+                  ? 'Leave unpaid to track as a due bill. Choose Pay Full, Pay Other, or Auto-pay to settle by credit card.'
+                  : 'Leave unpaid to track as a due bill. Choose Pay Full to settle the gross amount, or Pay Other for a partial payment.'}
               </Text>
             </div>
           )}

@@ -225,6 +225,102 @@ export const setHoldStatus = async (expenseId, hold, user) => {
   return recalculateExpensePaymentState(expenseId, { preserveHold: false });
 };
 
+/**
+ * Fixed bills only: enable/disable auto-pay by credit card and remember the card.
+ * Optionally syncs the preference onto the linked recurring schedule.
+ */
+export const setAutoPayPreference = async (expenseId, data, user) => {
+  const expense = await Expense.findById(expenseId);
+  if (!expense) throw ApiError.notFound('Expense not found');
+  if (expense.isDraft) throw ApiError.badRequest('Submit the entry before configuring auto-pay');
+  if (expense.expenseNature !== 'Fixed') {
+    throw ApiError.badRequest('Auto-pay is only available for Fixed bills');
+  }
+
+  assertCanManagePayments(expense, user);
+
+  const enabled = data.autoPay === true || data.autoPay === 'true';
+  const cardNumber = asTrimmed(data.autoPayCardNumber || data.cardNumber);
+
+  if (enabled && !cardNumber) {
+    throw ApiError.badRequest('Select a credit card to enable auto-pay');
+  }
+
+  expense.autoPay = enabled;
+  expense.autoPayCardNumber = enabled ? cardNumber : '';
+  if (enabled) {
+    expense.paymentMethod = 'Card';
+    expense.cardNumber = cardNumber;
+  }
+  expense.updatedBy = user._id;
+  await expense.save();
+
+  const syncTemplate = data.syncTemplate !== false && data.syncTemplate !== 'false';
+  if (syncTemplate && expense.recurringTemplateId) {
+    const { RecurringExpenseTemplate } = await import('../models/RecurringExpenseTemplate.js');
+    await RecurringExpenseTemplate.updateOne(
+      { _id: expense.recurringTemplateId },
+      {
+        $set: {
+          autoPay: enabled,
+          autoPayCardNumber: enabled ? cardNumber : '',
+          ...(enabled ? { paymentMethod: 'Card' } : {}),
+          updatedBy: user._id,
+        },
+      },
+    );
+  }
+
+  return expense;
+};
+
+/**
+ * Pay the full remaining balance of a Fixed bill by credit card.
+ */
+export const autoPayFullByCard = async (expenseId, data, user) => {
+  const expense = await Expense.findById(expenseId);
+  if (!expense) throw ApiError.notFound('Expense not found');
+  if (expense.expenseNature !== 'Fixed') {
+    throw ApiError.badRequest('Auto-pay is only available for Fixed bills');
+  }
+  if (expense.status === PAYMENT_STATUS.HOLD) {
+    throw ApiError.badRequest('Release hold before auto-paying');
+  }
+
+  const cardNumber = asTrimmed(
+    data.cardNumber || data.autoPayCardNumber || expense.autoPayCardNumber || expense.cardNumber,
+  );
+  if (!cardNumber) {
+    throw ApiError.badRequest('Select a credit card for auto-pay');
+  }
+
+  await recalculateExpensePaymentState(expense._id);
+  const fresh = await Expense.findById(expenseId);
+  const balanceDue = roundMoney(fresh.balanceDue ?? fresh.grossAmount ?? 0);
+  if (!(balanceDue > MONEY_EPSILON)) {
+    throw ApiError.badRequest('Nothing left to pay on this bill');
+  }
+
+  // Persist preference when paying so future periods inherit it.
+  if (!fresh.autoPay || asTrimmed(fresh.autoPayCardNumber) !== cardNumber) {
+    await setAutoPayPreference(expenseId, {
+      autoPay: true,
+      autoPayCardNumber: cardNumber,
+      syncTemplate: data.syncTemplate,
+    }, user);
+  }
+
+  return addPayment(expenseId, {
+    amount: balanceDue,
+    paymentDate: data.paymentDate || new Date(),
+    paymentMethod: 'Card',
+    cardNumber,
+    paymentRefNumber: asTrimmed(data.paymentRefNumber) || 'AUTO-PAY',
+    merType: fresh.merType || 'Bank',
+    notes: asTrimmed(data.notes) || 'Auto-pay — full balance by credit card',
+  }, user);
+};
+
 export const cancelExpensePayment = async (expenseId, user) => {
   const expense = await Expense.findById(expenseId);
   if (!expense) throw ApiError.notFound('Expense not found');

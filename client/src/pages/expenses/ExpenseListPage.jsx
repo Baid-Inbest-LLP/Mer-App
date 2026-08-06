@@ -26,7 +26,7 @@ const PAGE_SIZE = 6;
 export default function ExpenseListPage({ embedded = false, statusFilter = null, variant = 'all' }) {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { list, pagination, loading, queryParams } = useSelector((state) => state.expense);
+  const { list, pagination, loading, queryParams, summary } = useSelector((state) => state.expense);
   const { user } = useSelector((state) => state.auth);
   const { lookups } = useSelector((state) => state.common);
 
@@ -35,6 +35,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
   const [filters, setFilters] = useState(queryParams);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const totals = summary?.totals || {};
 
   const load = (params = queryParams) => {
     const base = omitPaymentFilters({
@@ -87,6 +88,23 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
         />
       )}
 
+      {isPaidView && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          <div className="bill-summary-card bill-summary-card--blue">
+            <p className="bill-summary-card__label">Paid Bills</p>
+            <p className="bill-summary-card__value">{totals.count || 0}</p>
+          </div>
+          <div className="bill-summary-card bill-summary-card--emerald">
+            <p className="bill-summary-card__label">Total Paid</p>
+            <p className="bill-summary-card__value">{formatCurrency(totals.amountPaid || 0)}</p>
+          </div>
+          <div className="bill-summary-card bill-summary-card--violet">
+            <p className="bill-summary-card__label">Gross Amount</p>
+            <p className="bill-summary-card__value">{formatCurrency(totals.grossAmount || 0)}</p>
+          </div>
+        </div>
+      )}
+
       <FilterPanel
         filters={filters}
         onChange={setFilters}
@@ -116,8 +134,8 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                   <th className="text-right">Gross</th>
                   {isPaidView && <th className="text-center">Paid Date</th>}
                   {isPaidView && <th className="text-right">Amount Paid</th>}
-                  <th className="text-center">Payment</th>
-                  <th className="text-center">Approval</th>
+                  <th className="text-center">Payment Status</th>
+                  <th className="text-center">Approval Status</th>
                   <th className="text-center">Actions</th>
                 </tr>
               </thead>
@@ -160,8 +178,8 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                   <th className="text-right">Gross</th>
                   {isPaidView && <th className="text-center">Paid Date</th>}
                   {isPaidView && <th className="text-right">Amount Paid</th>}
-                  <th className="text-center">Payment</th>
-                  <th className="text-center">Approval</th>
+                  <th className="text-center">Payment Status</th>
+                  <th className="text-center">Approval Status</th>
                   <th className="text-center">Actions</th>
                 </tr>
               </thead>

@@ -144,7 +144,11 @@ export const createTemplateFromExpense = async (expense, data, user) => {
     useIGST: Boolean(expense.useIGST),
     tds: roundMoney(expense.tds),
     merType: expense.merType || 'Bank',
-    paymentMethod: expense.paymentMethod || undefined,
+    paymentMethod: expense.autoPay ? 'Card' : (expense.paymentMethod || undefined),
+    autoPay: Boolean(expense.autoPay),
+    autoPayCardNumber: expense.autoPay
+      ? asTrimmed(expense.autoPayCardNumber || expense.cardNumber)
+      : '',
     frequency,
     dueDayOfMonth,
     startDate,
@@ -162,13 +166,14 @@ export const updateTemplate = async (id, data, user) => {
   const fields = [
     'name', 'company', 'location', 'coNames', 'headOfExpense', 'particulars', 'vendor',
     'expenseType', 'expenseNature', 'amountType', 'netAmount', 'gstPercent', 'useIGST', 'tds',
-    'merType', 'paymentMethod', 'frequency', 'notes', 'isActive',
+    'merType', 'paymentMethod', 'autoPay', 'autoPayCardNumber', 'frequency', 'notes', 'isActive',
   ];
 
   for (const key of fields) {
     if (data[key] !== undefined) {
       if (key === 'useIGST') template.useIGST = data.useIGST === true || data.useIGST === 'true';
       else if (key === 'isActive') template.isActive = data.isActive !== false && data.isActive !== 'false';
+      else if (key === 'autoPay') template.autoPay = data.autoPay === true || data.autoPay === 'true';
       else if (key === 'netAmount' || key === 'tds') template[key] = roundMoney(data[key]);
       else if (typeof data[key] === 'string') template[key] = asTrimmed(data[key]);
       else template[key] = data[key];
@@ -274,7 +279,11 @@ export const generateFromTemplate = async (templateId, user, { asOf = new Date()
     amountType,
     frequency: template.frequency || 'Monthly',
     merType,
-    paymentMethod: template.paymentMethod,
+    paymentMethod: template.autoPay ? 'Card' : template.paymentMethod,
+    autoPay: Boolean(template.autoPay),
+    autoPayCardNumber: template.autoPay
+      ? asTrimmed(template.autoPayCardNumber)
+      : '',
     status: 'Pending',
     amountPaid: 0,
     balanceDue: calculated.grossAmount || 0,
@@ -286,6 +295,31 @@ export const generateFromTemplate = async (templateId, user, { asOf = new Date()
     createdBy: user._id,
     updatedBy: user._id,
   });
+
+  if (
+    template.autoPay
+    && asTrimmed(template.autoPayCardNumber)
+    && roundMoney(calculated.grossAmount) > 0
+  ) {
+    try {
+      const { addPayment } = await import('./payment.service.js');
+      await addPayment(expense._id, {
+        amount: roundMoney(calculated.grossAmount),
+        paymentDate: dueDate,
+        paymentMethod: 'Card',
+        cardNumber: asTrimmed(template.autoPayCardNumber),
+        paymentRefNumber: 'AUTO-PAY',
+        merType,
+        notes: 'Auto-pay — full balance by credit card (recurring)',
+      }, user);
+      const paid = await Expense.findById(expense._id);
+      if (paid) {
+        Object.assign(expense, paid.toObject());
+      }
+    } catch {
+      // Leave the bill unpaid if auto-pay fails (e.g. card removed); preference stays on.
+    }
+  }
 
   if (template.frequency === 'One-time') {
     template.isActive = false;

@@ -2,8 +2,7 @@ import mongoose from 'mongoose';
 import { config } from '../config/index.js';
 import { Expense } from '../models/Expense.js';
 import { ApiError } from '../utils/ApiError.js';
-import { isAdminRole } from '../constants/roles.js';
-import { canDeleteExpense } from '../utils/expensePermissions.js';
+import { isSuperAdmin } from '../constants/roles.js';
 
 /** Only POs final-approved by Superadmin (`status: completed`) can become MER expenses. */
 const FINAL_APPROVED_PO_STATUS = 'completed';
@@ -294,10 +293,9 @@ export const excludePurchaseOrderExpense = async (poId, user) => {
     throw ApiError.notFound('No MER expense is linked to this purchase order');
   }
 
-  const allowed = canDeleteExpense(expense, user) || isAdminRole(user.role);
-  if (!allowed) {
+  if (!isSuperAdmin(user.role)) {
     throw ApiError.forbidden(
-      'You do not have permission to exclude this purchase order from MER expenses',
+      'Only a Superadmin can exclude a purchase order after it has been added as a bill',
     );
   }
 

@@ -98,6 +98,8 @@ const sharedBodyRules = [
   body('initialPaymentAmount').optional({ values: 'falsy' }).toFloat(),
   body('paymentAmount').optional({ values: 'falsy' }).toFloat(),
   body('recordPaymentNow').optional({ values: 'falsy' }),
+  body('autoPay').optional({ values: 'falsy' }),
+  body('autoPayCardNumber').optional({ values: 'falsy' }).trim(),
   body('headOfExpense')
     .optional({ values: 'falsy' })
     .trim()
@@ -296,6 +298,8 @@ export const createExpenseValidator = [
   body('initialPaymentAmount').optional({ values: 'falsy' }).toFloat(),
   body('paymentAmount').optional({ values: 'falsy' }).toFloat(),
   body('recordPaymentNow').optional({ values: 'falsy' }),
+  body('autoPay').optional({ values: 'falsy' }),
+  body('autoPayCardNumber').optional({ values: 'falsy' }).trim(),
   body('scheduleName').optional({ values: 'falsy' }).trim(),
   body('recurringDueDay')
     .if((_, { req }) => isDraftRequest(req) || isVariableBill(req))

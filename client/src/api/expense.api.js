@@ -33,6 +33,8 @@ const MER_FORM_FIELDS = new Set([
   'paymentMethod',
   'initialPaymentAmount',
   'recordPaymentNow',
+  'autoPay',
+  'autoPayCardNumber',
   'isDraft',
   'purchaseOrderId',
   'poNumber',
@@ -74,6 +76,8 @@ export const expenseApi = {
   calculate: (data) => api.post('/expenses/calculate', data),
   listPayments: (id) => api.get(`/expenses/${id}/payments`),
   addPayment: (id, data) => api.post(`/expenses/${id}/payments`, data),
+  autoPay: (id, data) => api.post(`/expenses/${id}/payments/auto-pay`, data || {}),
+  setAutoPay: (id, data) => api.patch(`/expenses/${id}/auto-pay`, data),
   voidPayment: (id, paymentId) => api.delete(`/expenses/${id}/payments/${paymentId}`),
   setHold: (id, hold) => api.patch(`/expenses/${id}/hold`, { hold }),
 };

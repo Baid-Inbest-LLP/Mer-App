@@ -348,9 +348,9 @@ export const getApprovalStatusColor = (status) => {
 export const getApprovalStatusBadge = (status) => {
   switch (status) {
     case 'Approved':
-      return 'badge-completed';
-    case 'Completed':
       return 'badge-approved';
+    case 'Completed':
+      return 'badge-completed';
     case 'Pending':
       return 'badge-pending';
     case 'Draft':

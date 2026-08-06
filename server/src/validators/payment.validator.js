@@ -27,3 +27,21 @@ export const holdStatusValidator = [
   param('id').isMongoId().withMessage('Invalid expense ID'),
   body('hold').optional({ values: 'falsy' }),
 ];
+
+export const setAutoPayValidator = [
+  param('id').isMongoId().withMessage('Invalid expense ID'),
+  body('autoPay').exists().withMessage('autoPay is required'),
+  body('autoPayCardNumber').optional({ values: 'falsy' }).trim(),
+  body('cardNumber').optional({ values: 'falsy' }).trim(),
+  body('syncTemplate').optional({ values: 'falsy' }),
+];
+
+export const autoPayValidator = [
+  param('id').isMongoId().withMessage('Invalid expense ID'),
+  body('cardNumber').optional({ values: 'falsy' }).trim(),
+  body('autoPayCardNumber').optional({ values: 'falsy' }).trim(),
+  body('paymentDate').optional({ values: 'falsy' }).isISO8601().withMessage('Valid payment date is required'),
+  body('paymentRefNumber').optional({ values: 'falsy' }).trim(),
+  body('notes').optional({ values: 'falsy' }).trim(),
+  body('syncTemplate').optional({ values: 'falsy' }),
+];

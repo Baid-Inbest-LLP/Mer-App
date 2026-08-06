@@ -6,7 +6,9 @@ import { validate } from '../middleware/validate.js';
 import { createExpenseValidator, expenseIdValidator } from '../validators/expense.validator.js';
 import {
   addPaymentValidator,
+  autoPayValidator,
   holdStatusValidator,
+  setAutoPayValidator,
   voidPaymentValidator,
 } from '../validators/payment.validator.js';
 
@@ -24,6 +26,12 @@ router.patch('/:id/complete', expenseIdValidator, validate, expenseController.co
 
 router.get('/:id/payments', expenseIdValidator, validate, paymentController.listPayments);
 router.post('/:id/payments', addPaymentValidator, validate, paymentController.addPayment);
+router.post(
+  '/:id/payments/auto-pay',
+  autoPayValidator,
+  validate,
+  paymentController.autoPay,
+);
 router.delete(
   '/:id/payments/:paymentId',
   voidPaymentValidator,
@@ -31,6 +39,7 @@ router.delete(
   paymentController.voidPayment,
 );
 router.patch('/:id/hold', holdStatusValidator, validate, paymentController.setHold);
+router.patch('/:id/auto-pay', setAutoPayValidator, validate, paymentController.setAutoPay);
 
 router.get('/:id', expenseIdValidator, validate, expenseController.getExpense);
 router.post('/', createExpenseValidator, validate, expenseController.createExpense);

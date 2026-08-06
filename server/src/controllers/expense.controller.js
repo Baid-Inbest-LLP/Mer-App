@@ -6,7 +6,13 @@ import { Expense } from '../models/Expense.js';
 
 export const getExpenses = asyncHandler(async (req, res) => {
   const result = await expenseService.getExpenses(req.query);
-  ApiResponse.paginated(res, result.expenses, result.pagination);
+  return res.status(200).json({
+    success: true,
+    message: 'Success',
+    data: result.expenses,
+    pagination: result.pagination,
+    summary: result.summary,
+  });
 });
 
 export const getExpense = asyncHandler(async (req, res) => {

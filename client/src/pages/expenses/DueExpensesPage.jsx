@@ -99,17 +99,17 @@ export default function DueExpensesPage({ embedded = false }) {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        <div className="card p-4">
-          <p className="text-[11px] uppercase tracking-wider text-gray-500 font-semibold">Unpaid Bills</p>
-          <p className="text-2xl font-bold text-gray-900 mt-1">{totals.count || 0}</p>
+        <div className="bill-summary-card bill-summary-card--blue">
+          <p className="bill-summary-card__label">Unpaid Bills</p>
+          <p className="bill-summary-card__value">{totals.count || 0}</p>
         </div>
-        <div className="card p-4">
-          <p className="text-[11px] uppercase tracking-wider text-amber-700 font-semibold">Balance due</p>
-          <p className="text-2xl font-bold text-amber-800 mt-1">{formatCurrency(totals.balanceDue || 0)}</p>
+        <div className="bill-summary-card bill-summary-card--amber">
+          <p className="bill-summary-card__label">Balance due</p>
+          <p className="bill-summary-card__value">{formatCurrency(totals.balanceDue || 0)}</p>
         </div>
-        <div className="card p-4">
-          <p className="text-[11px] uppercase tracking-wider text-emerald-700 font-semibold">Already paid</p>
-          <p className="text-2xl font-bold text-emerald-800 mt-1">{formatCurrency(totals.amountPaid || 0)}</p>
+        <div className="bill-summary-card bill-summary-card--emerald">
+          <p className="bill-summary-card__label">Already paid</p>
+          <p className="bill-summary-card__value">{formatCurrency(totals.amountPaid || 0)}</p>
         </div>
       </div>
 
@@ -150,7 +150,7 @@ export default function DueExpensesPage({ embedded = false }) {
                   <th className="text-right">Gross</th>
                   <th className="text-right">Paid</th>
                   <th className="text-right">Balance</th>
-                  <th className="text-center">Status</th>
+                  <th className="text-center">Payment Status</th>
                   <th className="text-center">Actions</th>
                 </tr>
               </thead>

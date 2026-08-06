@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import { notifications } from '@mantine/notifications';
 import { purchaseOrderApi } from '../../api/purchaseOrder.api';
+import { isSuperAdmin } from '../../constants/roles';
 import PageBanner from '../../components/common/PageBanner';
 import EmptyState from '../../components/common/EmptyState';
 import Pagination from '../../components/common/Pagination';
@@ -13,6 +15,8 @@ const PAGE_SIZE = 10;
 
 export default function ApprovedPurchaseOrdersPage() {
   const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
+  const canExclude = isSuperAdmin(user?.role);
   const [orders, setOrders] = useState([]);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -185,16 +189,17 @@ export default function ApprovedPurchaseOrdersPage() {
                     <td className="text-center">
                       <div className="inline-flex items-center justify-center gap-2 flex-wrap">
                         {po.alreadyImported ? (
-                          <>
-                            <span className="text-xs font-medium text-gray-500">Already added</span>
+                          canExclude ? (
                             <button
                               type="button"
                               onClick={() => setExcludeTarget(po)}
                               className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 transition-colors"
                             >
-                              Exclude
+                              Exclude Bill
                             </button>
-                          </>
+                          ) : (
+                            <span className="text-xs font-medium text-gray-500">Already added</span>
+                          )
                         ) : (
                           <button
                             type="button"
@@ -238,7 +243,7 @@ export default function ApprovedPurchaseOrdersPage() {
             }? The PO will be available to add as an expense again.`
             : ''
         }
-        confirmLabel="Exclude"
+        confirmLabel="Exclude Bill"
         variant="danger"
       />
     </div>
