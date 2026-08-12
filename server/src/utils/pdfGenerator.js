@@ -17,20 +17,34 @@ const ACCOUNTS_RED = '#EF4444';
 const LEFT_ALIGN_HEADERS = new Set(['Co\nName', 'Particulars']);
 const DETAIL_MERGE_END_IDX = 8; // Exp Type → Particulars
 
-/** Soft column fills for detail report body cells (match Excel). */
-const COL_FILL_CO_PARTICULARS = '#BFDBFE'; // light blue — Co Name, Particulars
-const COL_FILL_EXP_TYPE = '#FEF9C3'; // light yellow — Exp Type
-const COL_FILL_TOTAL_GST = '#E2EFDA'; // soft sage green — Total GST
-const COL_FILL_TDS = '#F4CCCC'; // soft coral red — TDS
-const COL_FILL_PAYMENT = '#D0E2F3'; // steel light blue — Gross Amt + payment cols
+/**
+ * Column fills — tints of the report palette so the table matches the
+ * navy header (#005887), brand cyan (#13AFCD), title red (#EF4444),
+ * and highlight yellow. Amount cols are one navy family in stepped
+ * shades; Gross is a wash of the title red.
+ */
+const COL_FILL_CO_PARTICULARS = '#C5DCE8';
+const COL_FILL_EXP_TYPE = '#FFF3B0';
+const COL_FILL_NET = '#DCE8EF';
+const COL_FILL_CGST = '#C8DCE6';
+const COL_FILL_SGST = '#BDD6E2';
+const COL_FILL_IGST = '#B2D0DE';
+const COL_FILL_TOTAL_GST = '#9CC4D6';
+const COL_FILL_TDS = '#86B8CE';
+const COL_FILL_GROSS = '#F9BCBC';
+const COL_FILL_PAYMENT = '#E4EEF3';
 
 const COLUMN_CELL_FILLS = new Map([
   ['Co\nName', COL_FILL_CO_PARTICULARS],
   ['Particulars', COL_FILL_CO_PARTICULARS],
   ['Exp\nType', COL_FILL_EXP_TYPE],
+  ['Net\nAmt', COL_FILL_NET],
+  ['CGST', COL_FILL_CGST],
+  ['SGST', COL_FILL_SGST],
+  ['IGST', COL_FILL_IGST],
   ['Total\nGST', COL_FILL_TOTAL_GST],
   ['TDS', COL_FILL_TDS],
-  ['Gross\nAmt', COL_FILL_PAYMENT],
+  ['Gross\nAmt', COL_FILL_GROSS],
   ['Paid\nBy', COL_FILL_PAYMENT],
   ['Payment\nFrom', COL_FILL_PAYMENT],
   ['Payment\nMethod', COL_FILL_PAYMENT],
@@ -94,6 +108,9 @@ const WRAP_HEADERS = new Set([
 
 /** Sl No header wraps to 2 lines; cell values stay short. */
 const HEADER_WRAP_HEADERS = new Set(['Sl\nNo']);
+
+/** Body cell values rendered bold. */
+const BOLD_BODY_HEADERS = new Set(['Co\nName', 'Particulars']);
 
 const escapeHtml = (value) =>
   String(value ?? '')
@@ -221,6 +238,7 @@ const renderBodyRows = (rows, headers, moneyCols, { totalColIndex }) =>
           if (WRAP_HEADERS.has(header) || (align === 'left' && !NOWRAP_HEADERS.has(header))) {
             classes.push('cell-wrap');
           }
+          if (BOLD_BODY_HEADERS.has(header)) classes.push('cell-bold');
           const fill = COLUMN_CELL_FILLS.get(header);
           const style = [
             `text-align:${align}`,
@@ -380,6 +398,7 @@ export const buildMonthlyReportHtml = ({
         font-weight: 700;
         font-size: 12px;
         text-align: center;
+        text-transform: uppercase;
       }
       table.report-table tbody td { white-space: nowrap; }
       table.report-table tbody td.cell-wrap {
@@ -407,6 +426,7 @@ export const buildMonthlyReportHtml = ({
         overflow-wrap: anywhere;
       }
       .cell-money { font-size: 12px; font-weight: 700; }
+      .cell-bold { font-weight: 700; }
       .cell-total { font-weight: 700; }
 
       tr.totals-row .totals-cell {

@@ -18,7 +18,9 @@ bankAccountSchema.index({ isActive: 1 });
 bankAccountSchema.index({ company: 1 });
 
 bankAccountSchema.virtual('displayValue').get(function displayValue() {
-  return `${this.bankName} - ${this.last4}`;
+  const code = this.company?.code || this.companyCode || '';
+  const parts = [code, this.bankName, this.last4].filter(Boolean);
+  return parts.join(' - ');
 });
 
 bankAccountSchema.set('toJSON', { virtuals: true });

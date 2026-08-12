@@ -9,3 +9,5 @@ export { ExpenseHead } from './ExpenseHead.js';
 export { FinancialYear } from './FinancialYear.js';
 export { BankAccount } from './BankAccount.js';
 export { Card } from './Card.js';
+export { AppSetting } from './AppSetting.js';
+export { DueBillNotification } from './DueBillNotification.js';

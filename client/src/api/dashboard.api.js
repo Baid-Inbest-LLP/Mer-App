@@ -12,4 +12,5 @@ export const analyticsApi = {
   heads: (params) => api.get('/analytics/heads', { params }),
   quarterly: (params) => api.get('/analytics/quarterly', { params }),
   fyComparison: (params) => api.get('/analytics/fy-comparison', { params }),
+  daysToClear: (params) => api.get('/analytics/days-to-clear', { params }),
 };

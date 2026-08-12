@@ -50,12 +50,14 @@ export const config = {
     allowedMime: ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'],
   },
   smtp: {
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT, 10) || 587,
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-    from: process.env.SMTP_FROM || 'MER System <noreply@mer.local>',
+    host: (process.env.SMTP_HOST || '').trim(),
+    port: parseInt(String(process.env.SMTP_PORT || '587').trim(), 10) || 587,
+    user: (process.env.SMTP_USER || '').trim(),
+    pass: (process.env.SMTP_PASS || '').trim(),
+    from: (process.env.SMTP_FROM || 'MER System <noreply@mer.local>').trim(),
   },
+  /** Comma-separated emails for upcoming due-bill digests (overridable in Settings). */
+  notifyDueEmails: (process.env.NOTIFY_DUE_EMAILS || 'inbest.dev@gmail.com').trim(),
 };
 
 export const EXPENSE_HEADS = [

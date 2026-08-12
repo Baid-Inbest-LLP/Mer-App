@@ -13,5 +13,6 @@ router.get('/heads', analyticsController.getHeadAnalytics);
 router.get('/expense-heads', analyticsController.getHeadAnalytics);
 router.get('/quarterly', analyticsController.getQuarterly);
 router.get('/fy-comparison', analyticsController.getFYComparison);
+router.get('/days-to-clear', analyticsController.getDaysToClear);
 
 export default router;

@@ -45,6 +45,18 @@ services:
         sync: false
       - key: FRONTEND_URL
         value: https://mer-app.onrender.com
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: NOTIFY_DUE_EMAILS
+        value: inbest.dev@gmail.com
 
   # Daily job: generate recurring bills that have come due (reminder mode).
   # They land in the Due Bills board for review; nothing is auto-approved.
@@ -63,6 +75,37 @@ services:
         value: production
       - key: MONGODB_URI
         sync: false
+
+  # Daily job: email upcoming due bills (overdue + next 7 days) to NOTIFY_DUE_EMAILS.
+  - type: cron
+    name: mer-notify-due
+    runtime: node
+    plan: starter
+    region: singapore
+    repo: https://github.com/Baid-Inbest-LLP/Mer-App
+    branch: main
+    schedule: "0 3 * * *" # 03:00 UTC daily (~08:30 IST), after generate-due
+    buildCommand: pnpm install --frozen-lockfile
+    startCommand: pnpm --filter server exec node scripts/notify-due.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: FRONTEND_URL
+        value: https://mer-app.onrender.com
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: NOTIFY_DUE_EMAILS
+        value: inbest.dev@gmail.com
 
   - type: web
     name: mer-client

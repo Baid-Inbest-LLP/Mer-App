@@ -21,6 +21,7 @@ export const getDashboard = asyncHandler(async (req, res) => {
     headAnalytics,
     quarterly,
     companyBreakdown,
+    daysToClear,
     recentEntries,
   ] = await Promise.all([
     analyticsService.getDashboardKPIs(),
@@ -30,6 +31,7 @@ export const getDashboard = asyncHandler(async (req, res) => {
     analyticsService.getHeadOfExpenseAnalytics(toMonthQuery(headCtx)),
     analyticsService.getQuarterlyOverview(req.query.financialYear),
     analyticsService.getCompanyBreakdown(companyCtx.monthStart, companyCtx.monthEnd),
+    analyticsService.getAvgDaysToClearByMonth(12),
     analyticsService.getRecentExpenses(5),
   ]);
 
@@ -45,6 +47,7 @@ export const getDashboard = asyncHandler(async (req, res) => {
     headAnalytics: headAnalytics.map((h) => ({ name: h._id, value: h.total })),
     quarterly: quarterly.map((q) => ({ quarter: q._id, total: q.total, count: q.count })),
     companyChart: companyBreakdown,
+    daysToClear,
     recentEntries,
     fyMonthOptions: companyCtx.fyMonthOptions,
     fyLabel: companyCtx.fyLabel,

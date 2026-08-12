@@ -6,6 +6,7 @@ import DashboardPageSkeleton from '../../components/dashboard/DashboardPageSkele
 import {
   ExpenseTrendChart,
   CompanyWiseChart,
+  DaysToClearChart,
   PieChartCard,
   BarChartCard,
 } from '../../components/charts/lazyCharts';
@@ -148,6 +149,8 @@ export default function DashboardPage() {
           {...monthProps('company')}
         />
       </div>
+
+      <DaysToClearChart data={data?.daysToClear} loading={loading} />
 
       <div className="dashboard-grid-2">
         <PieChartCard

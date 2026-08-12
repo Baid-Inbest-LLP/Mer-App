@@ -12,11 +12,13 @@ import Skeleton from '../../components/common/Skeleton';
 import {
   formatCurrency,
   formatDate,
+  formatDaysToClear,
   formatMerSerial,
   getEntryApprovalBadge,
   getEntryApprovalLabel,
   getPaymentStatusBadge,
   getPaymentStatusLabel,
+  resolveDaysToClear,
 } from '../../utils/format';
 import { canDeleteExpense, canEditExpense } from '../../utils/permissions';
 import { omitPaymentFilters, cleanFilterParams, stripExpenseListHiddenFilters } from '../../utils/filters';
@@ -134,6 +136,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                   <th className="text-right">Gross</th>
                   {isPaidView && <th className="text-center">Paid Date</th>}
                   {isPaidView && <th className="text-right">Amount Paid</th>}
+                  {isPaidView && <th className="text-center">Days to Clear</th>}
                   <th className="text-center">Payment Status</th>
                   <th className="text-center">Approval Status</th>
                   <th className="text-center">Actions</th>
@@ -149,6 +152,9 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                     <td className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></td>
                     <td className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>
+                    {isPaidView && <td className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></td>}
+                    {isPaidView && <td className="text-right"><Skeleton className="h-4 w-16 ml-auto" /></td>}
+                    {isPaidView && <td className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></td>}
                     <td className="text-center"><Skeleton className="h-5 w-20 mx-auto rounded-full" /></td>
                     <td className="text-center"><Skeleton className="h-5 w-20 mx-auto rounded-full" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></td>
@@ -178,6 +184,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                   <th className="text-right">Gross</th>
                   {isPaidView && <th className="text-center">Paid Date</th>}
                   {isPaidView && <th className="text-right">Amount Paid</th>}
+                  {isPaidView && <th className="text-center">Days to Clear</th>}
                   <th className="text-center">Payment Status</th>
                   <th className="text-center">Approval Status</th>
                   <th className="text-center">Actions</th>
@@ -221,6 +228,11 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                       {isPaidView && <td className="text-center">{formatDate(e.paymentDate)}</td>}
                       {isPaidView && (
                         <td className="text-right text-emerald-700">{formatCurrency(e.amountPaid)}</td>
+                      )}
+                      {isPaidView && (
+                        <td className="text-center font-medium text-indigo-700">
+                          {formatDaysToClear(resolveDaysToClear(e))}
+                        </td>
                       )}
                       <td className="text-center">
                         <span className={getPaymentStatusBadge(e.status)}>

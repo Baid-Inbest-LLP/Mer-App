@@ -158,6 +158,87 @@ export const getExpenseTrends = async (months = 12) => {
   ]);
 };
 
+/**
+ * Average calendar days from due (or invoice) date to full payment,
+ * grouped by the month the bill was due. Includes months with no paid
+ * bills as avgDays: 0 so the chart stays continuous.
+ */
+export const getAvgDaysToClearByMonth = async (months = 12) => {
+  const now = new Date();
+  const rangeStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1, 0, 0, 0, 0);
+
+  const monthSlots = [];
+  for (let i = months - 1; i >= 0; i -= 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    monthSlots.push({
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      label: `${MONTH_NAMES[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`,
+    });
+  }
+
+  const rows = await Expense.aggregate([
+    {
+      $match: {
+        isDraft: { $ne: true },
+        status: 'Paid',
+      },
+    },
+    {
+      $addFields: {
+        anchorDate: { $ifNull: ['$dueDate', '$invoiceDate'] },
+        clearDate: { $ifNull: ['$clearedAt', '$paymentDate'] },
+      },
+    },
+    {
+      $match: {
+        anchorDate: { $gte: rangeStart, $ne: null },
+        clearDate: { $ne: null },
+      },
+    },
+    {
+      $addFields: {
+        resolvedDays: {
+          $cond: [
+            { $and: [{ $ne: ['$daysToClear', null] }, { $ne: [{ $type: '$daysToClear' }, 'missing'] }] },
+            '$daysToClear',
+            {
+              $dateDiff: {
+                startDate: { $dateTrunc: { date: '$anchorDate', unit: 'day' } },
+                endDate: { $dateTrunc: { date: '$clearDate', unit: 'day' } },
+                unit: 'day',
+              },
+            },
+          ],
+        },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$anchorDate' },
+          month: { $month: '$anchorDate' },
+        },
+        avgDays: { $avg: '$resolvedDays' },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const byKey = Object.fromEntries(
+    rows.map((r) => [`${r._id.year}-${r._id.month}`, r]),
+  );
+
+  return monthSlots.map((slot) => {
+    const row = byKey[`${slot.year}-${slot.month}`];
+    return {
+      label: slot.label,
+      avgDays: row ? Math.round(row.avgDays * 10) / 10 : null,
+      count: row?.count || 0,
+    };
+  });
+};
+
 export const getExpenseTypeBreakdown = async (query = {}) => {
   const filter = buildExpenseQuery(query);
   return Expense.aggregate([

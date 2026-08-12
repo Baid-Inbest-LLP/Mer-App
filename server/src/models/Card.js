@@ -18,7 +18,9 @@ cardSchema.index({ isActive: 1 });
 cardSchema.index({ company: 1 });
 
 cardSchema.virtual('displayValue').get(function displayValue() {
-  return `${this.issuer} - ${this.last4}`;
+  const code = this.company?.code || this.companyCode || '';
+  const parts = [code, this.issuer, this.last4].filter(Boolean);
+  return parts.join(' - ');
 });
 
 cardSchema.set('toJSON', { virtuals: true });

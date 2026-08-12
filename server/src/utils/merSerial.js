@@ -68,6 +68,28 @@ export const monthToDateInFy = (month, financialYear) => {
 };
 
 /**
+ * Report month column label, e.g. Jul'26 (3-letter month + apostrophe + 2-digit year).
+ */
+export const formatReportMonthLabel = (month, { invoiceDate, financialYear } = {}) => {
+  const monthLabel = abbreviateMonthName(month);
+  if (!monthLabel) return '';
+
+  let year;
+  if (invoiceDate) {
+    const date = new Date(invoiceDate);
+    if (!Number.isNaN(date.getTime())) {
+      year = date.getFullYear();
+    }
+  }
+  if (year == null) {
+    const fy = financialYear || getFinancialYear();
+    year = monthToDateInFy(month, fy).getFullYear();
+  }
+
+  return `${monthLabel}'${String(year).slice(-2)}`;
+};
+
+/**
  * Month + FY start year, e.g. Apr'26 for April in FY 2026-27.
  */
 export const formatMonthFyLabel = (month, invoiceDate) => {

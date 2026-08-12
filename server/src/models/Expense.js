@@ -69,6 +69,16 @@ const expenseSchema = new mongoose.Schema(
     amountPaid: { type: Number, default: 0 },
     /** Cached grossAmount - amountPaid (never negative). */
     balanceDue: { type: Number, default: 0 },
+    /**
+     * When the bill became fully paid (payment date that cleared the balance).
+     * Cleared if the bill reopens (e.g. voided payment).
+     */
+    clearedAt: { type: Date },
+    /**
+     * Calendar days from dueDate (or invoiceDate) to clearedAt.
+     * Negative means paid before the due/invoice date.
+     */
+    daysToClear: { type: Number },
     /** Mirrored from latest active payment for list/report convenience. */
     paymentDate: { type: Date },
     paymentRefNumber: { type: String, trim: true },
@@ -126,6 +136,8 @@ expenseSchema.index({ expenseType: 1 });
 expenseSchema.index({ expenseNature: 1 });
 expenseSchema.index({ dueDate: 1 });
 expenseSchema.index({ status: 1, dueDate: 1 });
+expenseSchema.index({ status: 1, clearedAt: 1 });
+expenseSchema.index({ status: 1, dueDate: 1, daysToClear: 1 });
 expenseSchema.index({ isDraft: 1 });
 expenseSchema.index({ recurringTemplateId: 1 }, { sparse: true });
 expenseSchema.index({ purchaseOrderId: 1 }, { unique: true, sparse: true });

@@ -5,6 +5,7 @@ import { notifications } from '@mantine/notifications';
 import { logout } from '../../store/slices/authSlice';
 import { setTheme } from '../../store/slices/commonSlice';
 import ConfirmModal from '../common/ConfirmModal';
+import DueNotifications from './DueNotifications';
 
 const Navbar = ({ sidebarOpen, onToggleSidebar }) => {
   const dispatch = useDispatch();
@@ -38,8 +39,12 @@ const Navbar = ({ sidebarOpen, onToggleSidebar }) => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
+        <span className={`navbar-brand ${theme === 'dark' ? 'text-gray-50' : 'text-gray-700'}`}>
+          MER APP
+        </span>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <DueNotifications />
         <button
           type="button"
           onClick={toggleTheme}

@@ -39,9 +39,9 @@ export const PAYMENT_METHOD_RULES = {
     requiresPaymentRef: true,
     bankAccountLabel: 'From Account',
     paymentRefLabel: 'NEFT UTR Number',
-    bankAccountMessage: 'From account is required (e.g. ICICI - 2404)',
+    bankAccountMessage: 'From account is required (e.g. BILLP - ICICI - 2404)',
     paymentRefMessage: 'NEFT UTR number is required',
-    bankAccountPlaceholder: 'e.g. ICICI - 2404',
+    bankAccountPlaceholder: 'e.g. BILLP - ICICI - 2404',
     paymentRefPlaceholder: 'Enter NEFT UTR',
   },
   RTGS: {
@@ -49,9 +49,9 @@ export const PAYMENT_METHOD_RULES = {
     requiresPaymentRef: true,
     bankAccountLabel: 'From Account',
     paymentRefLabel: 'RTGS UTR Number',
-    bankAccountMessage: 'From account is required (e.g. ICICI - 2404)',
+    bankAccountMessage: 'From account is required (e.g. BILLP - ICICI - 2404)',
     paymentRefMessage: 'RTGS UTR number is required',
-    bankAccountPlaceholder: 'e.g. ICICI - 2404',
+    bankAccountPlaceholder: 'e.g. BILLP - ICICI - 2404',
     paymentRefPlaceholder: 'Enter RTGS UTR',
   },
   IMPS: {
@@ -59,9 +59,9 @@ export const PAYMENT_METHOD_RULES = {
     requiresPaymentRef: true,
     bankAccountLabel: 'From Account',
     paymentRefLabel: 'IMPS UTR Number',
-    bankAccountMessage: 'From account is required (e.g. ICICI - 2404)',
+    bankAccountMessage: 'From account is required (e.g. BILLP - ICICI - 2404)',
     paymentRefMessage: 'IMPS UTR number is required',
-    bankAccountPlaceholder: 'e.g. ICICI - 2404',
+    bankAccountPlaceholder: 'e.g. BILLP - ICICI - 2404',
     paymentRefPlaceholder: 'Enter IMPS UTR / reference',
   },
   Card: {
@@ -69,8 +69,8 @@ export const PAYMENT_METHOD_RULES = {
     requiresPaymentRef: true,
     requiresCardNumber: true,
     cardNumberLabel: 'Card No',
-    cardNumberMessage: 'Card number is required (e.g. ICICI - 2404)',
-    cardNumberPlaceholder: 'e.g. ICICI - 2404',
+    cardNumberMessage: 'Card number is required (e.g. BILLP - ICICI - 2404)',
+    cardNumberPlaceholder: 'e.g. BILLP - ICICI - 2404',
     paymentRefLabel: 'Card Transaction Reference',
     paymentRefMessage: 'Card transaction reference is required',
     paymentRefPlaceholder: 'Auth code / approval code',
@@ -87,9 +87,9 @@ export const PAYMENT_METHOD_RULES = {
     requiresPaymentRef: true,
     bankAccountLabel: 'From Account',
     paymentRefLabel: 'Payment Ref / UTR Number',
-    bankAccountMessage: 'From account is required (e.g. ICICI - 2404)',
+    bankAccountMessage: 'From account is required (e.g. BILLP - ICICI - 2404)',
     paymentRefMessage: 'Payment reference number is required',
-    bankAccountPlaceholder: 'e.g. ICICI - 2404',
+    bankAccountPlaceholder: 'e.g. BILLP - ICICI - 2404',
     paymentRefPlaceholder: 'Enter NEFT/RTGS/IMPS UTR',
   },
   'Debit/Credit Card': {
@@ -97,8 +97,8 @@ export const PAYMENT_METHOD_RULES = {
     requiresPaymentRef: true,
     requiresCardNumber: true,
     cardNumberLabel: 'Card No',
-    cardNumberMessage: 'Card number is required (e.g. ICICI - 2404)',
-    cardNumberPlaceholder: 'e.g. ICICI - 2404',
+    cardNumberMessage: 'Card number is required (e.g. BILLP - ICICI - 2404)',
+    cardNumberPlaceholder: 'e.g. BILLP - ICICI - 2404',
     paymentRefLabel: 'Card Transaction Reference',
     paymentRefMessage: 'Card transaction reference is required',
     paymentRefPlaceholder: 'Auth code / approval code',
@@ -108,12 +108,12 @@ export const PAYMENT_METHOD_RULES = {
 export const getPaymentMethodRules = (method) =>
   PAYMENT_METHOD_RULES[method] || PAYMENT_METHOD_RULES.Cash;
 
-/** Normalize issuer + last 4 to "ISSUER - 1234" (e.g. ICICI - 2404). */
+/** Normalize to "COMPANYCODE - BANK - 1234" (or "BANK - 1234" if no company code). */
 export const formatIssuerLast4 = (value) => {
   const raw = String(value || '').trim();
   if (!raw) return '';
 
-  const match = raw.match(/^(.+?)\s*[-–—]?\s*(\d{4})$/);
+  const match = raw.match(/^(.+?)\s*[-–—]\s*(\d{4})$/);
   if (match) {
     const issuer = match[1].trim().replace(/\s+/g, ' ').toUpperCase();
     return `${issuer} - ${match[2]}`;

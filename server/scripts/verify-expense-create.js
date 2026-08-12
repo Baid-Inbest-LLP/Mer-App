@@ -125,10 +125,18 @@ const run = async () => {
   }).lean();
   const location = locationDoc?.label || undefined;
 
-  const bank = await BankAccount.findOne({ isActive: { $ne: false } }).lean();
-  const card = await Card.findOne({ isActive: { $ne: false } }).lean();
-  const bankLabel = bank ? `${bank.bankName} - ${bank.last4}` : null;
-  const cardLabel = card ? `${card.issuer} - ${card.last4}` : null;
+  const bank = await BankAccount.findOne({ isActive: { $ne: false } })
+    .populate('company', 'code name')
+    .lean();
+  const card = await Card.findOne({ isActive: { $ne: false } })
+    .populate('company', 'code name')
+    .lean();
+  const bankLabel = bank
+    ? [bank.company?.code, bank.bankName, bank.last4].filter(Boolean).join(' - ')
+    : null;
+  const cardLabel = card
+    ? [card.company?.code, card.issuer, card.last4].filter(Boolean).join(' - ')
+    : null;
 
   console.log(`User: ${user.email} (${user.role})`);
   console.log(`Company: ${company.name}`);

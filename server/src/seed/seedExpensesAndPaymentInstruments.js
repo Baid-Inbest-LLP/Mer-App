@@ -20,6 +20,7 @@ import {
 import { buildMerSerial, buildMerSerialBase } from '../utils/merSerial.js';
 import { calculateGST, calculateGrossAmount } from '../utils/gstCalculator.js';
 import { toLocationLabel } from '../utils/locationFormat.js';
+import { formatPaymentInstrumentDisplay } from '../utils/paymentInstrumentDisplay.js';
 
 dotenv.config();
 
@@ -279,8 +280,16 @@ const seed = async () => {
     BankAccount.insertMany(bankDocs),
     Card.insertMany(cardDocs),
   ]);
-  const bankDisplays = banks.map((b) => `${b.bankName} - ${b.last4}`);
-  const cardDisplays = cards.map((c) => `${c.issuer} - ${c.last4}`);
+  const bankDisplays = banks.map((b) => formatPaymentInstrumentDisplay({
+    companyCode: companies.find((c) => String(c._id) === String(b.company))?.code,
+    bankName: b.bankName,
+    last4: b.last4,
+  }));
+  const cardDisplays = cards.map((c) => formatPaymentInstrumentDisplay({
+    companyCode: companies.find((co) => String(co._id) === String(c.company))?.code,
+    issuer: c.issuer,
+    last4: c.last4,
+  }));
   console.log(`  Banks: ${bankDisplays.join(', ')}`);
   console.log(`  Cards: ${cardDisplays.join(', ')}`);
 

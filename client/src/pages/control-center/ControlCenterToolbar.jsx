@@ -22,12 +22,14 @@ export default function ControlCenterToolbar({
         </div>
 
         <div className="flex sm:flex-row sm:items-center gap-2 w-full lg:w-auto">
-          <input
-            className="input-field w-full sm:w-64"
-            placeholder={searchPlaceholder}
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
+          {typeof onSearchChange === 'function' ? (
+            <input
+              className="input-field w-full sm:w-64"
+              placeholder={searchPlaceholder}
+              value={search ?? ''}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+          ) : null}
           {showAction && actionLabel && onAction ? (
             <button
               type="button"

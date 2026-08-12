@@ -56,9 +56,52 @@ const resolveStatusFromBalance = ({ amountPaid, balanceDue, currentStatus }) => 
   return PAYMENT_STATUS.PENDING;
 };
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const startOfLocalDay = (value) => {
+  const d = new Date(value);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+/** Whole calendar days from `from` to `to` (negative if `to` is earlier). */
+export const calendarDaysBetween = (from, to) => {
+  if (!from || !to) return null;
+  return Math.round((startOfLocalDay(to) - startOfLocalDay(from)) / MS_PER_DAY);
+};
+
+/**
+ * Payment date that first brought cumulative active payments to / above gross.
+ * Payments sorted oldest-first so partials are walked chronologically.
+ */
+export const findClearedAt = (payments, grossAmount) => {
+  if (!payments?.length) return null;
+  const ordered = [...payments].sort((a, b) => {
+    const da = new Date(a.paymentDate || a.createdAt || 0).getTime();
+    const db = new Date(b.paymentDate || b.createdAt || 0).getTime();
+    if (da !== db) return da - db;
+    return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+  });
+
+  const target = roundMoney(grossAmount || 0);
+  let cumulative = 0;
+  for (const payment of ordered) {
+    cumulative = roundMoney(cumulative + (Number(payment.amount) || 0));
+    if (cumulative + MONEY_EPSILON >= target) {
+      return payment.paymentDate ? new Date(payment.paymentDate) : new Date();
+    }
+  }
+  const last = ordered[ordered.length - 1];
+  return last?.paymentDate ? new Date(last.paymentDate) : null;
+};
+
+const clearanceAnchorDate = (expense) =>
+  expense.dueDate || expense.invoiceDate || expense.createdAt || null;
+
 /**
  * Recompute cached payment totals + status from active payment rows.
  * Mirrors latest payment fields onto the expense for reports/list views.
+ * When fully paid, stores clearedAt + daysToClear (due/invoice → clearance).
  */
 export const recalculateExpensePaymentState = async (expenseId, { preserveHold = true } = {}) => {
   const expense = await Expense.findById(expenseId);
@@ -98,6 +141,17 @@ export const recalculateExpensePaymentState = async (expenseId, { preserveHold =
   ) {
     expense.approvalStatus = APPROVAL_STATUS.COMPLETED;
     if (!expense.approvedAt) expense.approvedAt = new Date();
+  }
+
+  if (nextStatus === PAYMENT_STATUS.PAID) {
+    const clearedAt = findClearedAt(payments, gross);
+    const anchor = clearanceAnchorDate(expense);
+    expense.clearedAt = clearedAt || null;
+    expense.daysToClear =
+      clearedAt && anchor != null ? calendarDaysBetween(anchor, clearedAt) : null;
+  } else {
+    expense.clearedAt = null;
+    expense.daysToClear = null;
   }
 
   const latest = payments[0];

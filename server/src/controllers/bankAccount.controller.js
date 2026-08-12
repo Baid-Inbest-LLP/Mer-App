@@ -2,25 +2,31 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { BankAccount, Company } from '../models/index.js';
+import { formatPaymentInstrumentDisplay } from '../utils/paymentInstrumentDisplay.js';
 
 const normalizeLast4 = (value) => String(value || '').replace(/\D/g, '').slice(-4);
 
 const toDto = (doc) => {
   const item = doc?.toObject ? doc.toObject() : { ...doc };
+  const companyCode = item.company?.code || item.companyCode || '';
   return {
     ...item,
-    displayValue: `${item.bankName} - ${item.last4}`,
+    displayValue: formatPaymentInstrumentDisplay({
+      companyCode,
+      bankName: item.bankName,
+      last4: item.last4,
+    }),
   };
 };
 
 const resolveCompany = async (body = {}) => {
   if (body.company) {
-    const company = await Company.findById(body.company).select('name').lean();
+    const company = await Company.findById(body.company).select('name code').lean();
     if (!company) throw ApiError.badRequest('Company not found');
     return { company: company._id, companyName: company.name };
   }
   if (body.companyName) {
-    const company = await Company.findOne({ name: body.companyName.trim() }).select('_id name').lean();
+    const company = await Company.findOne({ name: body.companyName.trim() }).select('_id name code').lean();
     if (company) return { company: company._id, companyName: company.name };
     return { company: undefined, companyName: body.companyName.trim() };
   }
@@ -58,12 +64,15 @@ export const getBankAccounts = asyncHandler(async (req, res) => {
     ];
   }
 
-  const items = await BankAccount.find(filter).sort({ bankName: 1, last4: 1 }).lean();
+  const items = await BankAccount.find(filter)
+    .populate('company', 'code name')
+    .sort({ bankName: 1, last4: 1 })
+    .lean();
   ApiResponse.paginated(res, items.map(toDto), { total: items.length });
 });
 
 export const getBankAccount = asyncHandler(async (req, res) => {
-  const item = await BankAccount.findById(req.params.id).lean();
+  const item = await BankAccount.findById(req.params.id).populate('company', 'code name').lean();
   if (!item) throw ApiError.notFound('Bank account not found');
   ApiResponse.success(res, toDto(item));
 });
@@ -72,6 +81,7 @@ export const createBankAccount = asyncHandler(async (req, res) => {
   const payload = await normalizeBody(req.body);
   try {
     const item = await BankAccount.create(payload);
+    await item.populate('company', 'code name');
     ApiResponse.created(res, toDto(item), 'Bank account created');
   } catch (err) {
     if (err?.code === 11000) throw ApiError.conflict('Bank account already exists');
@@ -86,7 +96,7 @@ export const updateBankAccount = asyncHandler(async (req, res) => {
     item = await BankAccount.findByIdAndUpdate(req.params.id, payload, {
       new: true,
       runValidators: true,
-    });
+    }).populate('company', 'code name');
   } catch (err) {
     if (err?.code === 11000) throw ApiError.conflict('Bank account already exists');
     throw err;

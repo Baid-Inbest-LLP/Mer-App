@@ -2,25 +2,31 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { ApiError } from '../utils/ApiError.js';
 import { Card, Company } from '../models/index.js';
+import { formatPaymentInstrumentDisplay } from '../utils/paymentInstrumentDisplay.js';
 
 const normalizeLast4 = (value) => String(value || '').replace(/\D/g, '').slice(-4);
 
 const toDto = (doc) => {
   const item = doc?.toObject ? doc.toObject() : { ...doc };
+  const companyCode = item.company?.code || item.companyCode || '';
   return {
     ...item,
-    displayValue: `${item.issuer} - ${item.last4}`,
+    displayValue: formatPaymentInstrumentDisplay({
+      companyCode,
+      issuer: item.issuer,
+      last4: item.last4,
+    }),
   };
 };
 
 const resolveCompany = async (body = {}) => {
   if (body.company) {
-    const company = await Company.findById(body.company).select('name').lean();
+    const company = await Company.findById(body.company).select('name code').lean();
     if (!company) throw ApiError.badRequest('Company not found');
     return { company: company._id, companyName: company.name };
   }
   if (body.companyName) {
-    const company = await Company.findOne({ name: body.companyName.trim() }).select('_id name').lean();
+    const company = await Company.findOne({ name: body.companyName.trim() }).select('_id name code').lean();
     if (company) return { company: company._id, companyName: company.name };
     return { company: undefined, companyName: body.companyName.trim() };
   }
@@ -59,12 +65,15 @@ export const getCards = asyncHandler(async (req, res) => {
     ];
   }
 
-  const items = await Card.find(filter).sort({ issuer: 1, last4: 1 }).lean();
+  const items = await Card.find(filter)
+    .populate('company', 'code name')
+    .sort({ issuer: 1, last4: 1 })
+    .lean();
   ApiResponse.paginated(res, items.map(toDto), { total: items.length });
 });
 
 export const getCard = asyncHandler(async (req, res) => {
-  const item = await Card.findById(req.params.id).lean();
+  const item = await Card.findById(req.params.id).populate('company', 'code name').lean();
   if (!item) throw ApiError.notFound('Card not found');
   ApiResponse.success(res, toDto(item));
 });
@@ -73,6 +82,7 @@ export const createCard = asyncHandler(async (req, res) => {
   const payload = await normalizeBody(req.body);
   try {
     const item = await Card.create(payload);
+    await item.populate('company', 'code name');
     ApiResponse.created(res, toDto(item), 'Card created');
   } catch (err) {
     if (err?.code === 11000) throw ApiError.conflict('Card already exists');
@@ -87,7 +97,7 @@ export const updateCard = asyncHandler(async (req, res) => {
     item = await Card.findByIdAndUpdate(req.params.id, payload, {
       new: true,
       runValidators: true,
-    });
+    }).populate('company', 'code name');
   } catch (err) {
     if (err?.code === 11000) throw ApiError.conflict('Card already exists');
     throw err;

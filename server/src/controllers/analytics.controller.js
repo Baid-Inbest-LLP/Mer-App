@@ -80,3 +80,9 @@ export const getFYComparison = asyncHandler(async (req, res) => {
   );
 });
 
+export const getDaysToClear = asyncHandler(async (req, res) => {
+  const months = parseInt(req.query.months, 10) || 12;
+  const data = await analyticsService.getAvgDaysToClearByMonth(months);
+  ApiResponse.success(res, data);
+});
+

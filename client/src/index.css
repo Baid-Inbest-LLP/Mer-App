@@ -730,6 +730,37 @@
     @apply text-gray-400 hover:text-red-600;
   }
 
+  .reminder-send-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0.4rem 0.85rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    background: linear-gradient(135deg, #2563eb 0%, #0b2f81 100%);
+    box-shadow: 0 4px 10px -4px rgba(37, 99, 235, 0.55);
+    transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+  }
+
+  .reminder-send-btn:hover:not(:disabled) {
+    filter: brightness(1.08);
+    box-shadow: 0 6px 14px -4px rgba(37, 99, 235, 0.65);
+    transform: translateY(-1px);
+  }
+
+  .reminder-send-btn:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
   .company-section-label {
     @apply text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2;
   }
@@ -1124,8 +1155,18 @@
   padding-right: 1.5rem;
 }
 
+#root .app-layout .app-navbar .navbar-brand {
+  font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  user-select: none;
+}
+
 #root .app-layout .app-navbar .navbar-toggle,
-#root .app-layout .app-navbar .navbar-theme {
+#root .app-layout .app-navbar .navbar-theme,
+#root .app-layout .app-navbar .navbar-notify {
   font: inherit;
   cursor: pointer;
   background: transparent;
@@ -1137,9 +1178,259 @@
 }
 
 #root .app-layout .app-navbar .navbar-toggle:hover,
-#root .app-layout .app-navbar .navbar-theme:hover {
+#root .app-layout .app-navbar .navbar-theme:hover,
+#root .app-layout .app-navbar .navbar-notify:hover {
   background-color: #f3f4f6;
   color: #111827;
+}
+
+#root .app-layout .app-navbar .navbar-notify {
+  position: relative;
+}
+
+#root .app-layout .app-navbar .navbar-notify__icon {
+  display: block;
+  transform-origin: 50% 0%;
+  will-change: transform;
+}
+
+#root .app-layout .app-navbar .navbar-notify__icon--ring {
+  animation: navbar-bell-ring 2.4s ease-in-out infinite;
+}
+
+#root .app-layout .app-navbar .navbar-notify:hover .navbar-notify__icon:not(.navbar-notify__icon--ring) {
+  animation: navbar-bell-ring 0.9s ease-in-out 1;
+}
+
+@keyframes navbar-bell-ring {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  8% {
+    transform: rotate(14deg);
+  }
+  16% {
+    transform: rotate(-12deg);
+  }
+  24% {
+    transform: rotate(10deg);
+  }
+  32% {
+    transform: rotate(-8deg);
+  }
+  40% {
+    transform: rotate(6deg);
+  }
+  48% {
+    transform: rotate(-3deg);
+  }
+  56%,
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #root .app-layout .app-navbar .navbar-notify__icon--ring,
+  #root .app-layout .app-navbar .navbar-notify:hover .navbar-notify__icon:not(.navbar-notify__icon--ring) {
+    animation: none;
+  }
+}
+
+#root .app-layout .app-navbar .navbar-notify__badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  box-sizing: border-box;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  box-shadow: 0 0 0 2px #fff;
+  pointer-events: none;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  width: min(22rem, calc(100vw - 1.5rem));
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.85rem;
+  box-shadow: 0 18px 40px -18px rgba(15, 23, 42, 0.35);
+  z-index: 60;
+  overflow: hidden;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel__subtitle {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin: 0.15rem 0 0;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel__count {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel__body {
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel__empty {
+  padding: 1.5rem 1rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+}
+
+#root .app-layout .app-navbar .navbar-notify-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+}
+
+#root .app-layout .app-navbar .navbar-notify-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 140ms;
+}
+
+#root .app-layout .app-navbar .navbar-notify-item:hover {
+  background: #f8fafc;
+}
+
+#root .app-layout .app-navbar .navbar-notify-item__top,
+#root .app-layout .app-navbar .navbar-notify-item__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+#root .app-layout .app-navbar .navbar-notify-item__serial {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+#root .app-layout .app-navbar .navbar-notify-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.25rem 0 0.4rem;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+#root .app-layout .app-navbar .navbar-notify-item__company {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+  color: #334155;
+}
+
+#root .app-layout .app-navbar .navbar-notify-item__bottom {
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+#root .app-layout .app-navbar .navbar-notify-item__amount {
+  font-weight: 700;
+  color: #b45309;
+}
+
+#root .app-layout .app-navbar .navbar-notify-tag {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+#root .app-layout .app-navbar .navbar-notify-tag--red {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+#root .app-layout .app-navbar .navbar-notify-tag--amber {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+#root .app-layout .app-navbar .navbar-notify-tag--blue {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+#root .app-layout .app-navbar .navbar-notify-tag--slate {
+  background: #f1f5f9;
+  color: #475569;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel__footer {
+  border-top: 1px solid #f1f5f9;
+  padding: 0.65rem 0.85rem;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel__link {
+  display: block;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+#root .app-layout .app-navbar .navbar-notify-panel__link:hover {
+  text-decoration: underline;
 }
 
 #root .app-layout .app-navbar .navbar-logout {
@@ -1198,14 +1489,93 @@
 }
 
 [data-theme='dark'] #root .app-layout .app-navbar .navbar-toggle,
-[data-theme='dark'] #root .app-layout .app-navbar .navbar-theme {
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-theme,
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify {
   color: #c1c2c5;
 }
 
 [data-theme='dark'] #root .app-layout .app-navbar .navbar-toggle:hover,
-[data-theme='dark'] #root .app-layout .app-navbar .navbar-theme:hover {
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-theme:hover,
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify:hover {
   background-color: #2c2e33;
   color: #fff;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify__badge {
+  box-shadow: 0 0 0 2px #25262b;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-panel {
+  background: #25262b;
+  border-color: #373a40;
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.55);
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-panel__header,
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-panel__footer {
+  border-color: #373a40;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-panel__title {
+  color: #f1f5f9;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-panel__subtitle,
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-panel__empty {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-panel__count {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-item:hover {
+  background: #2c2e33;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-item__serial {
+  color: #93c5fd;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-item__meta {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-item__company {
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-item__bottom {
+  color: #94a3b8;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-item__amount {
+  color: #fbbf24;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-tag--red {
+  background: #450a0a;
+  color: #fca5a5;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-tag--amber {
+  background: #451a03;
+  color: #fcd34d;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-tag--blue {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-tag--slate {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+[data-theme='dark'] #root .app-layout .app-navbar .navbar-notify-panel__link {
+  color: #93c5fd;
 }
 
 [data-theme='dark'] #root .card {
@@ -1356,6 +1726,46 @@
 
 [data-theme='dark'] #root .chart-card-header h3 {
   color: #c1c2c5;
+}
+
+[data-theme='dark'] #root .chart-card-icon {
+  background-color: #373a40;
+}
+
+[data-theme='dark'] #root .chart-card-icon.bg-blue-100 {
+  background-color: rgba(59, 130, 246, 0.18);
+}
+
+[data-theme='dark'] #root .chart-card-icon.bg-purple-100 {
+  background-color: rgba(167, 139, 250, 0.18);
+}
+
+[data-theme='dark'] #root .chart-card-icon.bg-emerald-100 {
+  background-color: rgba(52, 211, 153, 0.18);
+}
+
+[data-theme='dark'] #root .chart-card-icon.bg-indigo-100 {
+  background-color: rgba(129, 140, 248, 0.18);
+}
+
+[data-theme='dark'] #root .chart-card-icon svg {
+  color: #c1c2c5;
+}
+
+[data-theme='dark'] #root .chart-card-icon .text-blue-800 {
+  color: #60a5fa;
+}
+
+[data-theme='dark'] #root .chart-card-icon .text-purple-800 {
+  color: #c4b5fd;
+}
+
+[data-theme='dark'] #root .chart-card-icon .text-emerald-800 {
+  color: #34d399;
+}
+
+[data-theme='dark'] #root .chart-card-icon .text-indigo-800 {
+  color: #a5b4fc;
 }
 
 [data-theme='dark'] #root .recent-entries-list > :not([hidden]) ~ :not([hidden]) {
@@ -2151,6 +2561,11 @@
 
 [data-theme='dark'] #root .company-action-btn--delete:hover {
   color: #f87171 !important;
+}
+
+[data-theme='dark'] #root .reminder-send-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  box-shadow: 0 4px 12px -4px rgba(59, 130, 246, 0.45);
 }
 
 [data-theme='dark'] #root .company-section-label,

@@ -315,6 +315,41 @@ export const formatDate = (date) => {
   });
 };
 
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+const startOfLocalDay = (value) => {
+  const d = new Date(value);
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+
+/**
+ * Calendar days from due (or invoice) date to full payment.
+ * Uses stored daysToClear when present; otherwise derives from dates.
+ * Returns null when the bill is not fully paid or dates are missing.
+ */
+export const resolveDaysToClear = (expense) => {
+  if (!expense || expense.status !== 'Paid') return null;
+  if (expense.daysToClear != null && expense.daysToClear !== '') {
+    return Number(expense.daysToClear);
+  }
+  const anchor = expense.dueDate || expense.invoiceDate;
+  const cleared = expense.clearedAt || expense.paymentDate;
+  if (!anchor || !cleared) return null;
+  return Math.round((startOfLocalDay(cleared) - startOfLocalDay(anchor)) / MS_PER_DAY);
+};
+
+/** Human-readable clearance time, e.g. "12 days", "1 day", "3 days early". */
+export const formatDaysToClear = (days) => {
+  if (days == null || Number.isNaN(Number(days))) return '—';
+  const n = Number(days);
+  const abs = Math.abs(n);
+  const unit = abs === 1 ? 'day' : 'days';
+  if (n < 0) return `${abs} ${unit} early`;
+  if (n === 0) return 'Same day';
+  return `${n} ${unit}`;
+};
+
 export const getStatusColor = (status) => {
   switch (status) {
     case 'Paid':

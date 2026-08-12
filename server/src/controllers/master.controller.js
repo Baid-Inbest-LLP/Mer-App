@@ -15,6 +15,10 @@ import { EXPENSE_HEADS, EXPENSE_NATURES, EXPENSE_STATUSES, getFinancialYear, APP
 import { RECURRING_FREQUENCIES } from '../constants/paymentStatus.js';
 import { normalizeBranchLabel } from '../utils/locationFormat.js';
 import { ApiError } from '../utils/ApiError.js';
+import {
+  companyCodeFromInstrument,
+  formatPaymentInstrumentDisplay,
+} from '../utils/paymentInstrumentDisplay.js';
 
 const crud = (Model, name) => ({
   list: asyncHandler(async (req, res) => {
@@ -56,8 +60,16 @@ export const getLookupData = asyncHandler(async (_req, res) => {
       .sort({ label: 1 })
       .lean(),
     ExpenseHead.find({ isActive: true }).select('name').sort({ name: 1 }).lean(),
-    BankAccount.find({ isActive: true }).select('bankName last4').sort({ bankName: 1, last4: 1 }).lean(),
-    Card.find({ isActive: true }).select('issuer last4').sort({ issuer: 1, last4: 1 }).lean(),
+    BankAccount.find({ isActive: true })
+      .populate('company', 'code name')
+      .select('bankName last4 company companyName')
+      .sort({ bankName: 1, last4: 1 })
+      .lean(),
+    Card.find({ isActive: true })
+      .populate('company', 'code name')
+      .select('issuer last4 company companyName')
+      .sort({ issuer: 1, last4: 1 })
+      .lean(),
   ]);
 
   const companyLocations = {};
@@ -75,12 +87,14 @@ export const getLookupData = asyncHandler(async (_req, res) => {
     ),
   ].sort((a, b) => a.localeCompare(b));
 
+  const companyCodeByName = Object.fromEntries(
+    companies.filter((c) => c.name && c.code).map((c) => [c.name, c.code]),
+  );
+
   ApiResponse.success(res, {
     vendors: vendors.map((v) => v.name),
     companies: companies.map((c) => c.name),
-    companyCodeByName: Object.fromEntries(
-      companies.filter((c) => c.name && c.code).map((c) => [c.name, c.code]),
-    ),
+    companyCodeByName,
     locations: branchLabels,
     companyLocations,
     expenseHeads: heads.length ? heads.map((h) => h.name) : EXPENSE_HEADS,
@@ -88,8 +102,16 @@ export const getLookupData = asyncHandler(async (_req, res) => {
     expenseNatures: EXPENSE_NATURES,
     frequencies: RECURRING_FREQUENCIES,
     paymentMethods: PAYMENT_METHODS,
-    bankAccounts: bankAccounts.map((b) => `${b.bankName} - ${b.last4}`),
-    cards: cards.map((c) => `${c.issuer} - ${c.last4}`),
+    bankAccounts: bankAccounts.map((b) => formatPaymentInstrumentDisplay({
+      companyCode: companyCodeFromInstrument(b, companyCodeByName),
+      bankName: b.bankName,
+      last4: b.last4,
+    })),
+    cards: cards.map((c) => formatPaymentInstrumentDisplay({
+      companyCode: companyCodeFromInstrument(c, companyCodeByName),
+      issuer: c.issuer,
+      last4: c.last4,
+    })),
     statuses: EXPENSE_STATUSES,
     approvalStatuses: APPROVAL_STATUSES,
     roles: USER_ROLES,

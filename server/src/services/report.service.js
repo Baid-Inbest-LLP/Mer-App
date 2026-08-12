@@ -3,6 +3,7 @@ import { Company } from '../models/Company.js';
 import { Location } from '../models/Location.js';
 import { buildExpenseQuery } from '../utils/queryBuilder.js';
 import { getFinancialYear } from '../config/index.js';
+import { formatReportMonthLabel } from '../utils/merSerial.js';
 import { toLocationLabel } from '../utils/locationFormat.js';
 import {
   buildMonthlyReportNo,
@@ -513,6 +514,7 @@ const formatPaymentFrom = (expense) => {
  */
 const buildMonthlyReportModel = async (query) => {
   const filter = buildExpenseQuery(query);
+  const financialYear = query.financialYear || getFinancialYear();
 
   const [entries, meta, companyCtx, companies] = await Promise.all([
     Expense.find(baseMatch(filter)).sort({ invoiceDate: 1 }).lean(),
@@ -540,7 +542,7 @@ const buildMonthlyReportModel = async (query) => {
     return [
       index + 1,
       formatExpenseType(e.expenseType),
-      e.month || '',
+      formatReportMonthLabel(e.month, { invoiceDate: e.invoiceDate, financialYear }),
       e.coNames || '',
       toLocationLabel(e.location),
       fmtDateDMY(e.invoiceDate),
@@ -618,6 +620,7 @@ export const generateMonthlyPdf = async (query) => {
 };
 
 export const generateSummaryExcel = async (query) => {
+  const financialYear = query.financialYear || getFinancialYear();
   const [summary, headSummary, monthlyReport, companyCtx] = await Promise.all([
     getReportSummary(query),
     getExpenseHeadSummary(query),
@@ -697,7 +700,7 @@ export const generateSummaryExcel = async (query) => {
     rows: monthlyReport.map((m) => [
       m.reportNo || '',
       m.companyCode || m.company || '',
-      m.month,
+      formatReportMonthLabel(m.month, { financialYear }),
       m.merType || 'combined',
       m.net,
       m.gst,

@@ -15,6 +15,14 @@ import { buildCompanySelectOptionsFromRecords } from '../../utils/companySelect'
 
 const toSelectValue = (value) => (value == null || value === '' ? null : value);
 
+const FREQUENCY_FILTERS = [
+  { value: 'all', label: 'All' },
+  { value: 'Monthly', label: 'Monthly' },
+  { value: 'Quarterly', label: 'Quarterly' },
+  { value: 'Half-yearly', label: 'Half-yearly' },
+  { value: 'Yearly', label: 'Yearly' },
+];
+
 const emptyForm = {
   name: '',
   company: null,
@@ -45,6 +53,7 @@ export default function RecurringSchedulesSection() {
   const companyCode = (name) => lookups?.companyCodeByName?.[name] || name || '—';
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
+  const [frequencyFilter, setFrequencyFilter] = useState('all');
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -96,8 +105,12 @@ export default function RecurringSchedulesSection() {
     load();
   }, []);
 
-  const activeCount = rows.length;
-  const dueSoonCount = rows.filter((r) => {
+  const filteredRows = frequencyFilter === 'all'
+    ? rows
+    : rows.filter((r) => r.frequency === frequencyFilter);
+
+  const activeCount = filteredRows.length;
+  const dueSoonCount = filteredRows.filter((r) => {
     if (!r.nextDueDate) return false;
     const due = new Date(r.nextDueDate);
     const in7 = new Date();
@@ -105,7 +118,7 @@ export default function RecurringSchedulesSection() {
     in7.setDate(in7.getDate() + 7);
     return due <= in7;
   }).length;
-  const activeNet = rows.reduce((sum, r) => sum + (Number(r.netAmount) || 0), 0);
+  const activeNet = filteredRows.reduce((sum, r) => sum + (Number(r.netAmount) || 0), 0);
 
   const openEdit = (row) => {
     setEditing(row);
@@ -213,6 +226,28 @@ export default function RecurringSchedulesSection() {
         </div>
       </div>
 
+      <div className="flex flex-wrap gap-2 mb-4">
+        {FREQUENCY_FILTERS.map((f) => (
+          <button
+            key={f.value}
+            type="button"
+            onClick={() => setFrequencyFilter(f.value)}
+            className={`px-3 py-1.5 text-sm font-semibold rounded-lg whitespace-nowrap transition-colors ${
+              frequencyFilter === f.value
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            {f.label}
+            {f.value !== 'all' && (
+              <span className="ml-1.5 opacity-80">
+                ({rows.filter((r) => r.frequency === f.value).length})
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       <div className="card overflow-hidden">
         {loading ? (
           <div className="p-4 space-y-3">
@@ -220,10 +255,14 @@ export default function RecurringSchedulesSection() {
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
-        ) : rows.length === 0 ? (
+        ) : filteredRows.length === 0 ? (
           <EmptyState
-            title="No repeating bills"
-            description="Create a Fixed bill with Add Bill — it will appear here and generate on schedule"
+            title={frequencyFilter === 'all' ? 'No repeating bills' : `No ${frequencyFilter.toLowerCase()} bills`}
+            description={
+              frequencyFilter === 'all'
+                ? 'Create a Fixed bill with Add Bill — it will appear here and generate on schedule'
+                : 'Try another frequency or create a Fixed bill with this schedule'
+            }
           />
         ) : (
           <div className="table-wrapper">
@@ -242,7 +281,7 @@ export default function RecurringSchedulesSection() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {filteredRows.map((row) => (
                   <tr key={row._id}>
                     <td className="text-left font-medium">{row.name}</td>
                     <td className="text-center">

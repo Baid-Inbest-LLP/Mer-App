@@ -9,12 +9,14 @@ import {
   formatAmountInWords,
   formatCurrency,
   formatDate,
+  formatDaysToClear,
   formatMerSerial,
   getEntryApprovalBadge,
   getEntryApprovalLabel,
   getApprovalStatusGradient,
   getPaymentStatusBadge,
   getPaymentStatusLabel,
+  resolveDaysToClear,
 } from '../../utils/format';
 import { canEditExpense } from '../../utils/permissions';
 import { getPaymentMethodRules } from '../../utils/paymentMethods';
@@ -401,6 +403,12 @@ export default function ExpenseViewPage() {
               <DetailRow label="Amount Paid" value={formatCurrency(e.amountPaid)} />
               <DetailRow label="Balance Due" value={formatCurrency(e.balanceDue)} />
               <DetailRow label="Last Payment Date" value={formatDate(e.paymentDate)} />
+              {e.status === 'Paid' ? (
+                <DetailRow
+                  label="Days to Clear"
+                  value={formatDaysToClear(resolveDaysToClear(e))}
+                />
+              ) : null}
               <DetailRow
                 label="Bill / Receipt"
                 value={e.hasBillOrReceipt ? 'Available' : 'Not available'}

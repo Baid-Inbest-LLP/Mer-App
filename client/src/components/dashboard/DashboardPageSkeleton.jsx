@@ -21,6 +21,8 @@ export default function DashboardPageSkeleton() {
         <ChartSkeleton />
       </div>
 
+      <ChartSkeleton />
+
       <div className="dashboard-grid-2">
         <ChartSkeleton />
         <ChartSkeleton />

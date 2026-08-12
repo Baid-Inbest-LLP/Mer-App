@@ -10,6 +10,7 @@ import bankAccountRoutes from './bankAccount.routes.js';
 import cardRoutes from './card.routes.js';
 import purchaseOrderRoutes from './purchaseOrder.routes.js';
 import recurringRoutes from './recurring.routes.js';
+import notificationRoutes from './notification.routes.js';
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use('/masters', masterRoutes);
 router.use('/companies', companyRoutes);
 router.use('/bank-accounts', bankAccountRoutes);
 router.use('/cards', cardRoutes);
+router.use('/notifications', notificationRoutes);
 
 export default router;
