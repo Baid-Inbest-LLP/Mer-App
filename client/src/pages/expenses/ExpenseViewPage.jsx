@@ -21,6 +21,8 @@ import {
 import { canEditExpense } from '../../utils/permissions';
 import { getPaymentMethodRules } from '../../utils/paymentMethods';
 import { isAdmin } from '../../constants/roles';
+import WhatsAppShareButton from '../../components/expenses/WhatsAppShareButton';
+import { useShareBill } from '../../components/expenses/ShareBillModal';
 
 function StatItem({ iconBg, iconColor, icon, label, value }) {
   return (
@@ -178,7 +180,10 @@ const getBackNav = (from) => {
   if (!isSafeInternalPath(from)) {
     return { to: '/entries', label: 'Back to Expenses' };
   }
-  if (from.startsWith('/reports/monthly/detail')) {
+  if (
+    from.startsWith('/reports/monthly/detail')
+    || /\/reports\/monthly\/[^/]+\/detail/.test(from)
+  ) {
     const params = new URLSearchParams(from.split('?')[1] || '');
     const month = params.get('month');
     return {
@@ -197,6 +202,7 @@ export default function ExpenseViewPage() {
   const backNav = getBackNav(location.state?.from);
   const { current, loading } = useSelector((state) => state.expense);
   const { user } = useSelector((state) => state.auth);
+  const { openShare, shareModal } = useShareBill();
 
   useEffect(() => {
     dispatch(fetchExpense(id));
@@ -268,6 +274,9 @@ export default function ExpenseViewPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  {!e.isDraft && (
+                    <WhatsAppShareButton withLabel onClick={() => openShare(e)} />
+                  )}
                   {isAdmin(user?.role) && (
                     <ApprovalActions expense={e} onSuccess={() => dispatch(fetchExpense(id))} />
                   )}
@@ -307,8 +316,8 @@ export default function ExpenseViewPage() {
                   <StatItem
                     iconBg="bg-purple-50"
                     iconColor="text-purple-600"
-                    label={isFixedBill ? 'Due Date' : 'Billing Date'}
-                    value={formatDate(isFixedBill ? e.dueDate : e.invoiceDate)}
+                    label="Invoice Date"
+                    value={formatDate(e.invoiceDate)}
                     icon={
                       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -361,10 +370,8 @@ export default function ExpenseViewPage() {
               <DetailRow label="Particulars" value={e.particulars} />
               <DetailRow label="Co Name" value={e.coNames} />
               <DetailRow label="Billing Month" value={e.month} />
-              <DetailRow
-                label={isFixedBill ? 'Due Date' : 'Billing Date'}
-                value={formatDate(isFixedBill ? e.dueDate : e.invoiceDate)}
-              />
+              <DetailRow label="Invoice Date" value={formatDate(e.invoiceDate)} />
+              <DetailRow label="Due Date" value={formatDate(e.dueDate)} />
               <DetailRow label="Payment Type" value={e.merType || e.paymentMethod} />
               <DetailRow label="Payment Method" value={e.paymentMethod} />
               <DetailRow label="Nature" value={e.expenseNature || 'Variable'} />
@@ -402,7 +409,10 @@ export default function ExpenseViewPage() {
               <DetailRow label="Gross Amount" value={formatCurrency(e.grossAmount)} />
               <DetailRow label="Amount Paid" value={formatCurrency(e.amountPaid)} />
               <DetailRow label="Balance Due" value={formatCurrency(e.balanceDue)} />
-              <DetailRow label="Last Payment Date" value={formatDate(e.paymentDate)} />
+              <DetailRow
+                label={e.status === 'Paid' ? 'Payment Date' : 'Last Payment Date'}
+                value={formatDate(e.status === 'Paid' ? (e.clearedAt || e.paymentDate) : e.paymentDate)}
+              />
               {e.status === 'Paid' ? (
                 <DetailRow
                   label="Days to Clear"
@@ -551,6 +561,8 @@ export default function ExpenseViewPage() {
         </div>
         <ActivityTimelineSidebar expense={e} />
       </div>
+
+      {shareModal}
     </div>
   );
 }

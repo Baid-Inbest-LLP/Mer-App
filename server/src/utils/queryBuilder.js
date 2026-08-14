@@ -2,6 +2,7 @@
  * Builds MongoDB query from request query params for expenses
  */
 import { buildReportMerTypeFilter } from './reportMerType.js';
+import { applyReportScope } from './reportScope.js';
 
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -64,6 +65,8 @@ export const buildExpenseQuery = (query) => {
     filter.balanceDue = { $gt: 0 };
     filter.status = filter.status || { $in: ['Pending', 'PartiallyPaid', 'Hold'] };
   }
+
+  applyReportScope(filter, query.reportScope);
 
   if (query.dueDateFrom || query.dueDateTo) {
     filter.dueDate = {};

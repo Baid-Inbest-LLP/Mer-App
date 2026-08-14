@@ -22,6 +22,8 @@ import {
 } from '../../utils/format';
 import { canDeleteExpense, canEditExpense } from '../../utils/permissions';
 import { omitPaymentFilters, cleanFilterParams, stripExpenseListHiddenFilters } from '../../utils/filters';
+import WhatsAppShareButton from '../../components/expenses/WhatsAppShareButton';
+import { useShareBill } from '../../components/expenses/ShareBillModal';
 
 const PAGE_SIZE = 6;
 
@@ -37,6 +39,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
   const [filters, setFilters] = useState(queryParams);
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const { openShare, shareModal } = useShareBill();
   const totals = summary?.totals || {};
 
   const load = (params = queryParams) => {
@@ -130,6 +133,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                   <th className="text-center">Expense No</th>
                   <th className="text-center">Month</th>
                   <th className="text-center">Invoice Date</th>
+                  <th className="text-center">Due Date</th>
                   <th className="text-center">Company</th>
                   <th className="text-center">Co Name</th>
                   <th className="text-center">Head</th>
@@ -147,6 +151,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                   <tr key={i}>
                     <td className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></td>
+                    <td className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></td>
@@ -178,6 +183,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                   <th className="text-center">Expense No</th>
                   <th className="text-center">Month</th>
                   <th className="text-center">Invoice Date</th>
+                  <th className="text-center">Due Date</th>
                   <th className="text-center">Company</th>
                   <th className="text-center">Co Name</th>
                   <th className="text-center">Head</th>
@@ -217,6 +223,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                       </td>
                       <td className="text-center">{e.month}</td>
                       <td className="text-center">{formatDate(e.invoiceDate)}</td>
+                      <td className="text-center">{formatDate(e.dueDate)}</td>
                       <td className="text-center">
                         <span className="font-mono text-xs bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded-md">
                           {companyCode(e.company)}
@@ -281,6 +288,9 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                               </svg>
                             </button>
                           )}
+                          {!e.isDraft && (
+                            <WhatsAppShareButton onClick={() => openShare(e)} />
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -300,6 +310,8 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
           onPageChange={(page) => load({ ...queryParams, page })}
         />
       </div>
+
+      {shareModal}
 
       <ConfirmModal
         open={!!deleteId}

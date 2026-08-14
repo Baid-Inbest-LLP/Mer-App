@@ -177,9 +177,7 @@ const buildInitialFormValues = (initialData) => {
       ? null
       : (initialData.invoiceDate ? new Date(initialData.invoiceDate) : new Date()),
     invoiceNo: initialData.expenseNature === 'Fixed' ? (initialData.invoiceNo || '') : (initialData.invoiceNo || ''),
-    dueDate: initialData.expenseNature === 'Fixed' && initialData.dueDate
-      ? new Date(initialData.dueDate)
-      : null,
+    dueDate: initialData.dueDate ? new Date(initialData.dueDate) : null,
     recurringStartDate: initialData.recurringStartDate
       ? new Date(initialData.recurringStartDate)
       : null,
@@ -297,6 +295,7 @@ export default function ExpenseForm({
   const selectedMonth = watch('month');
   const invoiceDate = watch('invoiceDate');
   const recurringStartDate = watch('recurringStartDate');
+  const recurringDueDay = watch('recurringDueDay');
   const merType = watch('merType');
   const paymentMethod = watch('paymentMethod');
   const paymentMode = watch('paymentMode');
@@ -316,6 +315,17 @@ export default function ExpenseForm({
     if (!shouldShowErrors) return;
     trigger(['merType', 'paymentMethod', 'bankAccountNumber', 'paymentRefNumber', 'cardNumber']);
   }, [merType, paymentMethod, trigger, shouldShowErrors]);
+
+  // New Fixed bills: keep this instance's due date in sync with the schedule day.
+  useEffect(() => {
+    if (!isFixed || isExistingEntry) return;
+    const day = Number(recurringDueDay);
+    if (!Number.isInteger(day) || day < 1 || day > 28) return;
+    const anchor = getValues('recurringStartDate') || getValues('invoiceDate') || new Date();
+    const date = anchor instanceof Date ? anchor : new Date(anchor);
+    if (Number.isNaN(date.getTime())) return;
+    setValue('dueDate', new Date(date.getFullYear(), date.getMonth(), day));
+  }, [isFixed, isExistingEntry, recurringDueDay, recurringStartDate, getValues, setValue]);
 
   // Keep settlement fields in sync with payment mode + gross from Amount & GST.
   useEffect(() => {
@@ -506,8 +516,7 @@ export default function ExpenseForm({
 
   const submit = (data, isDraft = false) => {
     const payload = { ...data, isDraft };
-    // Due date is schedule-driven for Fixed bills; Variable bills don't use it.
-    payload.dueDate = null;
+    payload.dueDate = data.dueDate || null;
 
     const mode = payload.paymentMode || 'none';
     const recording = mode === 'full' || mode === 'partial' || mode === 'autopay';
@@ -687,7 +696,6 @@ export default function ExpenseForm({
                   field.onChange(nextNature);
                   if (nextNature === 'Variable') {
                     setValue('frequency', 'One-time');
-                    setValue('dueDate', null);
                     setValue('amountType', 'Fixed');
                     if (getValues('paymentMode') === 'autopay') {
                       setValue('paymentMode', 'none');
@@ -939,6 +947,22 @@ export default function ExpenseForm({
                 }}
                 onBlur={field.onBlur}
                 error={showControllerError('invoiceDate', fieldState)}
+              />
+            )}
+          />
+
+          <Controller
+            name="dueDate"
+            control={control}
+            render={({ field, fieldState }) => (
+              <FormDateInput
+                label="Due Date"
+                clearable
+                popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                error={showControllerError('dueDate', fieldState)}
               />
             )}
           />

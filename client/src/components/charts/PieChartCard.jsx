@@ -13,6 +13,7 @@ export default function PieChartCard({
   title,
   dataKey = 'value',
   nameKey = 'name',
+  colors = COLORS,
   fyMonthOptions,
   selectedMonth,
   onMonthChange,
@@ -65,7 +66,7 @@ export default function PieChartCard({
                 isAnimationActive={false}
               >
                 {chartData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  <Cell key={i} fill={colors[i % colors.length]} />
                 ))}
               </Pie>
               <Tooltip formatter={(v) => formatCurrency(v)} />

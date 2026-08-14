@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { analyticsApi } from '../../api/dashboard.api';
 import { reportApi } from '../../api/report.api';
@@ -8,6 +8,13 @@ import { BarChartCard } from '../../components/charts/lazyCharts';
 import { ChartSkeletonGrid } from '../../components/charts/LazyChartBoundary';
 import { FinancialYearExpensesTable } from '../../components/reports/lazyReportTables';
 import { FinancialYearReportStatCards } from '../../components/reports/lazyReportStatCards';
+import {
+  isDueReportScope,
+  normalizeReportScope,
+  reportScopeLabels,
+  withReportScope,
+} from '../../utils/reportScope';
+import { getPreviousFinancialYear } from '../../utils/financialYear';
 
 const TABLE_YEAR_OPTIONS = [
   { value: '2', label: 'Last 2 years' },
@@ -30,10 +37,15 @@ const mapFyComparison = (items = []) =>
     gst: item.gst ?? 0,
     tds: item.tds ?? 0,
     gross: item.gross ?? item.total ?? 0,
+    outstanding: item.outstanding ?? 0,
     count: item.count ?? 0,
   }));
 
 export default function FinancialYearReportPage() {
+  const { reportScope: rawScope } = useParams();
+  const scope = normalizeReportScope(rawScope) || 'expenses';
+  const isDue = isDueReportScope(scope);
+  const labels = reportScopeLabels(scope);
   const [searchParams] = useSearchParams();
   const { lookups } = useSelector((state) => state.common);
   const currentFY = lookups?.currentFinancialYear || '';
@@ -72,33 +84,33 @@ export default function FinancialYearReportPage() {
   const loadFyRows = useCallback(async () => {
     setFyRowsLoading(true);
     try {
-      const { data } = await reportApi.financialYear();
+      const { data } = await reportApi.financialYear(withReportScope({}, scope));
       setFyRows(data.data || []);
     } catch {
       setFyRows([]);
     } finally {
       setFyRowsLoading(false);
     }
-  }, []);
+  }, [scope]);
 
   const loadQuarterlyChart = useCallback(async (fy) => {
     if (!fy) return;
 
     setQuarterlyChartLoading(true);
     try {
-      const { data } = await analyticsApi.quarterly({ financialYear: fy });
+      const { data } = await analyticsApi.quarterly(withReportScope({ financialYear: fy }, scope));
       setQuarterlyChart(mapQuarterly(data.data));
     } finally {
       setQuarterlyChartLoading(false);
     }
-  }, []);
+  }, [scope]);
 
   const fetchReport = useCallback(async () => {
     if (!currentFY) return;
 
     const [qRes, fyRes] = await Promise.all([
-      analyticsApi.quarterly({ financialYear: currentFY }),
-      analyticsApi.fyComparison({ limit: 20 }),
+      analyticsApi.quarterly(withReportScope({ financialYear: currentFY }, scope)),
+      analyticsApi.fyComparison(withReportScope({ limit: 20 }, scope)),
     ]);
 
     const quarterlyData = mapQuarterly(qRes.data.data);
@@ -110,7 +122,7 @@ export default function FinancialYearReportPage() {
     setFyComparisonChart(
       comparisonData.filter((row) => row.count > 0).slice(0, 2),
     );
-  }, [currentFY]);
+  }, [currentFY, scope]);
 
   useEffect(() => {
     if (!currentFY) return;
@@ -137,34 +149,46 @@ export default function FinancialYearReportPage() {
   };
 
   const { fyTotal, totalEntries, peakQuarter, yoyChange } = useMemo(() => {
-    const total = quarterly.reduce((sum, q) => sum + (q.value || 0), 0);
-    const entries = quarterly.reduce((sum, q) => sum + (q.count || 0), 0);
+    const currentFyCombined = fyRows.filter(
+      (row) => row.financialYear === currentFY && row.merType === 'combined',
+    );
+    const tableGross = currentFyCombined.reduce((sum, row) => sum + (row.gross || 0), 0);
+    const tableCount = currentFyCombined.reduce((sum, row) => sum + (row.count || 0), 0);
+    const quarterlyGross = quarterly.reduce((sum, q) => sum + (q.value || 0), 0);
+    const quarterlyCount = quarterly.reduce((sum, q) => sum + (q.count || 0), 0);
     const peak = quarterly.reduce(
       (max, q) => ((q.value || 0) > (max?.value || 0) ? q : max),
       null,
     );
-    const currentIndex = fyComparisonChart.findIndex((f) => f.name === currentFY);
-    const currentFy = currentIndex >= 0 ? fyComparisonChart[currentIndex] : null;
-    const previousFy = currentIndex >= 0 ? fyComparisonChart[currentIndex + 1] : null;
-    const currentTotal = currentFy?.value ?? total;
+
+    const byYear = Object.fromEntries(fyOverview.map((row) => [row.name, row]));
+    const currentYear = byYear[currentFY];
+    const previousYear = byYear[getPreviousFinancialYear(currentFY)];
+    const hasTableTotals = currentFyCombined.length > 0;
+    const currentTotal = hasTableTotals
+      ? tableGross
+      : (currentYear?.value || quarterlyGross);
+    const previousTotal = previousYear?.value ?? 0;
     const change =
-      previousFy?.value > 0
-        ? ((currentTotal - previousFy.value) / previousFy.value) * 100
+      previousTotal > 0
+        ? ((currentTotal - previousTotal) / previousTotal) * 100
         : 0;
 
     return {
       fyTotal: currentTotal,
-      totalEntries: currentFy?.count ?? entries,
+      totalEntries: hasTableTotals
+        ? tableCount
+        : (currentYear?.count || quarterlyCount),
       peakQuarter: peak,
       yoyChange: change,
     };
-  }, [quarterly, fyComparisonChart, currentFY]);
+  }, [fyRows, quarterly, fyOverview, currentFY]);
 
   return (
     <div>
       <PageBanner
         className="mb-4"
-        title="FY Report"
+        title={labels.fyTitle}
         subtitle={`FY Overview ${currentFY}`}
       />
       <FinancialYearReportStatCards
@@ -174,6 +198,8 @@ export default function FinancialYearReportPage() {
         totalEntries={totalEntries}
         peakQuarter={peakQuarter}
         yoyChange={yoyChange}
+        totalLabel={isDue ? 'Total FY Billing Amount' : labels.fyTotalLabel}
+        entriesLabel={isDue ? 'Total No Of FY Bills' : 'Total Entries'}
       />
       {loading ? (
         <ChartSkeletonGrid count={2} className="dashboard-grid-2" />
@@ -184,13 +210,14 @@ export default function FinancialYearReportPage() {
             loading={false}
             title="Financial Year Comparison"
             xKey="name"
-            color="#8b5cf6"
+            color={isDue ? '#f59e0b' : '#8b5cf6'}
           />
           <BarChartCard
             data={quarterlyChart}
             loading={quarterlyChartLoading}
             title="Quarterly Comparison"
             xKey="name"
+            color={isDue ? '#f59e0b' : '#3b82f6'}
             fyOptions={fyOptions}
             selectedFy={resolvedQuarterlyFy}
             onFyChange={handleQuarterlyFyChange}
@@ -199,7 +226,7 @@ export default function FinancialYearReportPage() {
       )}
 
       <FinancialYearExpensesTable
-        key={initialFy ?? 'all'}
+        key={`${scope}-${initialFy ?? 'all'}`}
         className="mt-4"
         loading={loading || fyRowsLoading}
         fyRows={fyRows}
@@ -207,6 +234,7 @@ export default function FinancialYearReportPage() {
         tableYearLimit={tableYearLimit}
         onTableYearLimitChange={(v) => setTableYearLimit(v || tableYearOptions[0]?.value || '2')}
         initialFy={initialFy}
+        reportScope={scope}
       />
     </div>
   );

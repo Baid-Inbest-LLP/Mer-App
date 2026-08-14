@@ -68,9 +68,34 @@ const navItems = [
       </svg>
     ),
     children: [
-      { to: '/reports/monthly', label: 'Monthly Report' },
-      { to: '/reports/financial-year', label: 'FY Report' },
-      { to: '/reports/summary', label: 'Summary Report' },
+      {
+        id: 'monthly',
+        label: 'Monthly Report',
+        basePath: '/reports/monthly',
+        children: [
+          { to: '/reports/monthly/due', label: 'Due bills' },
+          { to: '/reports/monthly/expenses', label: 'Expenses' },
+        ],
+      },
+      {
+        id: 'fy',
+        label: 'FY Report',
+        basePath: '/reports/financial-year',
+        children: [
+          { to: '/reports/financial-year/due', label: 'Due bills' },
+          { to: '/reports/financial-year/expenses', label: 'Expenses' },
+        ],
+      },
+      {
+        id: 'summary',
+        label: 'Summary Report',
+        basePath: '/reports/summary',
+        extraActivePaths: ['/reports/customized'],
+        children: [
+          { to: '/reports/summary/due', label: 'Due bills' },
+          { to: '/reports/summary/expenses', label: 'Expenses' },
+        ],
+      },
     ],
   },
   {
@@ -120,17 +145,50 @@ const linkClass = (isOpen, isActive) =>
       : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
   }`;
 
+const firstNestedPath = (item) =>
+  item?.children?.[0]?.children?.[0]?.to || item?.children?.[0]?.to || item?.to;
+
+const pathMatches = (pathname, prefix) =>
+  pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+const isGroupPathActive = (pathname, group) =>
+  pathMatches(pathname, group.basePath)
+  || (group.extraActivePaths || []).some((path) => pathMatches(pathname, path));
+
+const isReportChildActive = (pathname, child) => {
+  if (pathMatches(pathname, child.to)) return true;
+  if (child.to === '/reports/summary/due' && pathMatches(pathname, '/reports/customized/due')) {
+    return true;
+  }
+  if (child.to === '/reports/summary/expenses' && pathMatches(pathname, '/reports/customized/expenses')) {
+    return true;
+  }
+  return false;
+};
+
+const openGroupsFromPath = (pathname) => {
+  const open = {};
+  if (pathMatches(pathname, '/reports/monthly')) open.monthly = true;
+  if (pathMatches(pathname, '/reports/financial-year')) open.fy = true;
+  if (pathMatches(pathname, '/reports/summary') || pathMatches(pathname, '/reports/customized')) {
+    open.summary = true;
+  }
+  return open;
+};
+
 const Sidebar = ({ isOpen = true }) => {
   const { user, avatarPreview } = useSelector((state) => state.auth);
   const location = useLocation();
   const navigate = useNavigate();
   const items = navItems.filter((item) => !item.adminOnly || isAdmin(user?.role));
   const [reportsOpen, setReportsOpen] = useState(() => location.pathname.startsWith('/reports'));
+  const [openReportGroups, setOpenReportGroups] = useState(() => openGroupsFromPath(location.pathname));
   const showPhoto = Boolean(user?.hasAvatar && avatarPreview);
 
   useEffect(() => {
     if (location.pathname.startsWith('/reports')) {
       setReportsOpen(true);
+      setOpenReportGroups((prev) => ({ ...prev, ...openGroupsFromPath(location.pathname) }));
     }
   }, [location.pathname]);
 
@@ -168,7 +226,7 @@ const Sidebar = ({ isOpen = true }) => {
                   type="button"
                   title={!isOpen ? item.label : undefined}
                   onClick={() =>
-                    isOpen ? setReportsOpen((prev) => !prev) : navigate(item.children[0].to)
+                    isOpen ? setReportsOpen((prev) => !prev) : navigate(firstNestedPath(item))
                   }
                   className={`w-full border-0 cursor-pointer ${linkClass(isOpen, isGroupActive)}`}
                 >
@@ -189,23 +247,58 @@ const Sidebar = ({ isOpen = true }) => {
                 </button>
 
                 {isOpen && reportsOpen && (
-                  <div className="mt-1 space-y-1 pl-4">
-                    {item.children.map((child) => (
-                      <NavLink
-                        key={child.to}
-                        to={child.to}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 rounded-lg pl-4 pr-3 py-2 text-sm font-medium transition-colors ${
-                            isActive
-                              ? 'bg-white/75 text-[#0b2f81] shadow-sm'
-                              : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
-                          }`
-                        }
-                      >
-                        <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current" />
-                        <span className="whitespace-nowrap">{child.label}</span>
-                      </NavLink>
-                    ))}
+                  <div className="mt-1 space-y-1 pl-3">
+                    {item.children.map((group) => {
+                      const groupOpen = Boolean(openReportGroups[group.id]);
+                      const groupActive = isGroupPathActive(location.pathname, group);
+                      return (
+                        <div key={group.id}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenReportGroups((prev) => ({
+                                ...prev,
+                                [group.id]: !prev[group.id],
+                              }))
+                            }
+                            className={`flex w-full cursor-pointer items-center gap-2 rounded-lg border-0 pl-3 pr-2 py-1.5 text-sm font-medium transition-colors ${
+                              groupActive
+                                ? 'bg-white/50 text-white'
+                                : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
+                            }`}
+                          >
+                            <span className="flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap">
+                              {group.label}
+                            </span>
+                            {cloneElement(chevronIcon, {
+                              className: `w-3.5 h-3.5 flex-shrink-0 transition-transform duration-200 ${
+                                groupOpen ? 'rotate-90' : ''
+                              }`,
+                            })}
+                          </button>
+                          {groupOpen && (
+                            <div className="mt-0.5 space-y-0.5 pl-3">
+                              {group.children.map((child) => (
+                                <NavLink
+                                  key={child.to}
+                                  to={child.to}
+                                  className={() =>
+                                    `flex items-center gap-3 rounded-lg pl-4 pr-3 py-1.5 text-sm font-medium transition-colors ${
+                                      isReportChildActive(location.pathname, child)
+                                        ? 'bg-white/75 text-[#0b2f81] shadow-sm'
+                                        : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
+                                    }`
+                                  }
+                                >
+                                  <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-current" />
+                                  <span className="whitespace-nowrap">{child.label}</span>
+                                </NavLink>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

@@ -16,6 +16,8 @@ import {
 } from '../../utils/format';
 import { cleanFilterParams } from '../../utils/filters';
 import { useSelector } from 'react-redux';
+import WhatsAppShareButton from '../../components/expenses/WhatsAppShareButton';
+import { useShareBill } from '../../components/expenses/ShareBillModal';
 
 const PAGE_SIZE = 10;
 
@@ -42,6 +44,7 @@ export default function DueExpensesPage({ embedded = false }) {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [appliedFilters, setAppliedFilters] = useState(DEFAULT_FILTERS);
   const [page, setPage] = useState(1);
+  const { openShare, shareModal } = useShareBill();
 
   const load = async (nextPage = page, filterParams = appliedFilters) => {
     setLoading(true);
@@ -143,6 +146,7 @@ export default function DueExpensesPage({ embedded = false }) {
               <thead>
                 <tr>
                   <th className="text-center">Expense No</th>
+                  <th className="text-center">Invoice Date</th>
                   <th className="text-center">Due Date</th>
                   <th className="text-center">Nature</th>
                   <th className="text-center">Company</th>
@@ -168,6 +172,7 @@ export default function DueExpensesPage({ embedded = false }) {
                           {formatMerSerial(e.slNo) || '—'}
                         </Link>
                       </td>
+                      <td className="text-center">{formatDate(e.invoiceDate)}</td>
                       <td className={`text-center ${overdue ? 'text-red-600 font-semibold' : ''}`}>
                         {formatDate(e.dueDate)}
                       </td>
@@ -187,17 +192,20 @@ export default function DueExpensesPage({ embedded = false }) {
                         </span>
                       </td>
                       <td className="text-center">
-                        <button
-                          type="button"
-                          className="btn-primary text-xs px-3 py-1.5 whitespace-nowrap"
-                          onClick={() =>
-                            navigate(`/entries/${e._id}#payments`, {
-                              state: { from: '/due-expenses', openPayment: true },
-                            })
-                          }
-                        >
-                          Make Payment
-                        </button>
+                        <div className="inline-flex items-center justify-center gap-1">
+                          <button
+                            type="button"
+                            className="btn-primary text-xs px-3 py-1.5 whitespace-nowrap"
+                            onClick={() =>
+                              navigate(`/entries/${e._id}#payments`, {
+                                state: { from: '/due-expenses', openPayment: true },
+                              })
+                            }
+                          >
+                            Make Payment
+                          </button>
+                          <WhatsAppShareButton onClick={() => openShare(e)} />
+                        </div>
                       </td>
                     </tr>
                   );
@@ -219,6 +227,8 @@ export default function DueExpensesPage({ embedded = false }) {
           }}
         />
       </div>
+
+      {shareModal}
     </div>
   );
 }

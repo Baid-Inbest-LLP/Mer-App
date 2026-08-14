@@ -28,6 +28,25 @@ const asTrimmedString = (value) => {
   return String(value).trim();
 };
 
+const parseOptionalDate = (value) => {
+  if (value == null || value === '' || value === 'null' || value === false) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+/** Expected payment date: explicit dueDate, or Fixed schedule day in the bill month. */
+const resolveDueDate = (cleaned, isFixedNature) => {
+  const explicit = parseOptionalDate(cleaned.dueDate);
+  if (explicit) return explicit;
+  if (!isFixedNature) return null;
+  const day = parseInt(cleaned.recurringDueDay, 10);
+  if (!Number.isInteger(day) || day < 1) return null;
+  const anchor = parseOptionalDate(cleaned.recurringStartDate)
+    || parseOptionalDate(cleaned.invoiceDate)
+    || new Date();
+  return new Date(anchor.getFullYear(), anchor.getMonth(), Math.min(28, Math.max(1, day)));
+};
+
 const resolveCompanyCode = async (companyName) => {
   const name = asTrimmedString(companyName);
   if (!name) {
@@ -199,10 +218,7 @@ export const createExpense = async (data, user) => {
     : 'One-time';
 
   const grossAmount = roundMoney(calculated.grossAmount || 0);
-  let dueDate;
-  if (isFixedNature && cleaned.dueDate) {
-    dueDate = new Date(cleaned.dueDate);
-  }
+  const dueDate = resolveDueDate(cleaned, isFixedNature);
 
   const payload = {
     ...calculated,
@@ -220,13 +236,12 @@ export const createExpense = async (data, user) => {
     source,
   };
 
+  delete payload.dueDate;
   if (dueDate) payload.dueDate = dueDate;
 
   if (isFixedNature) {
     if (!asTrimmedString(cleaned.invoiceNo)) delete payload.invoiceNo;
     if (!cleaned.invoiceDate) delete payload.invoiceDate;
-  } else {
-    delete payload.dueDate;
   }
 
   // Sparse unique index on purchaseOrderId rejects multiple explicit nulls — omit when unset.
@@ -348,7 +363,10 @@ export const updateExpense = async (id, data, user) => {
   if (cleaned.location != null) {
     calculated.location = toLocationLabel(cleaned.location) || calculated.location;
   }
-  if (cleaned.dueDate) calculated.dueDate = new Date(cleaned.dueDate);
+  if (Object.prototype.hasOwnProperty.call(cleaned, 'dueDate')) {
+    const parsedDue = parseOptionalDate(cleaned.dueDate);
+    calculated.dueDate = parsedDue || undefined;
+  }
   if (cleaned.expenseNature && EXPENSE_NATURES.includes(cleaned.expenseNature)) {
     calculated.expenseNature = cleaned.expenseNature;
   }
@@ -367,9 +385,8 @@ export const updateExpense = async (id, data, user) => {
   if (existing.expenseNature === 'Fixed') {
     if (!asTrimmedString(cleaned.invoiceNo)) existing.invoiceNo = undefined;
     if (!cleaned.invoiceDate) existing.invoiceDate = undefined;
-  } else {
-    existing.dueDate = undefined;
   }
+  if (!calculated.dueDate) existing.dueDate = undefined;
 
   if (data.isDraft !== undefined) {
     existing.isDraft = data.isDraft === true || data.isDraft === 'true';

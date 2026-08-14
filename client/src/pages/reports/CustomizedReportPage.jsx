@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { SimpleGrid, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useSelector } from 'react-redux';
@@ -14,6 +14,7 @@ import { reportApi } from '../../api/report.api';
 import { downloadBlob, withExtension } from '../../utils/download';
 import excelIconSrc from '../../assets/excel.svg';
 import pdfIconSrc from '../../assets/pdf.svg';
+import { normalizeReportScope, reportScopeLabels, withReportScope } from '../../utils/reportScope';
 
 const FILTER_LABELS = {
   financialYear: 'FY',
@@ -40,6 +41,9 @@ const cleanParams = (params) => {
 
 export default function CustomizedReportPage() {
   const navigate = useNavigate();
+  const { reportScope: rawScope } = useParams();
+  const scope = normalizeReportScope(rawScope) || 'expenses';
+  const labels = reportScopeLabels(scope);
   const { lookups } = useSelector((state) => state.common);
   const [downloadFilters, setDownloadFilters] = useState({});
   const [exportingReport, setExportingReport] = useState({ pdf: false, excel: false });
@@ -97,10 +101,11 @@ export default function CustomizedReportPage() {
     if (exportingReport[format]) return;
     setExportingReport((prev) => ({ ...prev, [format]: true }));
     const isPdf = format === 'pdf';
+    const scopedParams = withReportScope(params, scope);
     try {
       const { data } = isPdf
-        ? await reportApi.exportMonthlyPdf(params)
-        : await reportApi.exportMonthlyExcel(params);
+        ? await reportApi.exportMonthlyPdf(scopedParams)
+        : await reportApi.exportMonthlyExcel(scopedParams);
       const filename = filenameHint
         || buildCustomizedReportFilename(params, companyCodeByName);
       downloadBlob(data, isPdf ? withExtension(filename, 'pdf') : filename);
@@ -112,11 +117,17 @@ export default function CustomizedReportPage() {
     }
   };
 
+  useEffect(() => {
+    setPreview(null);
+    setDownloadFilters({});
+    setFiltersKey((k) => k + 1);
+  }, [scope]);
+
   const generatePreview = async () => {
     if (generating || !downloadFilters.financialYear) return;
     setGenerating(true);
     try {
-      const params = cleanParams({ ...downloadFilters });
+      const params = withReportScope(cleanParams({ ...downloadFilters }), scope);
       const { data } = await reportApi.monthlyDetailed(params);
       setPreview({ ...data.data, params });
     } catch {
@@ -130,7 +141,7 @@ export default function CustomizedReportPage() {
     <div>
       <button
         type="button"
-        onClick={() => navigate('/reports/summary')}
+        onClick={() => navigate(`/reports/summary/${scope}`)}
         className="expense-view-back-btn group mb-4"
       >
         <svg
@@ -146,8 +157,8 @@ export default function CustomizedReportPage() {
 
       <PageBanner
         className="mb-4"
-        title="Customized Report"
-        subtitle="Build Expense Reports with Flexible Filters"
+        title={labels.customizedTitle}
+        subtitle={labels.customizedSubtitle}
       />
 
       <div className="card p-4 mb-4">

@@ -252,6 +252,23 @@
     @apply badge bg-rose-100 text-rose-700;
   }
 
+  .whatsapp-share-icon-btn {
+    @apply inline-flex items-center justify-center flex-shrink-0 p-1.5 rounded text-[#25d366] hover:bg-emerald-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .whatsapp-share-btn {
+    @apply inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    background: #25d366;
+    box-shadow: 0 1px 2px rgba(37, 211, 102, 0.35);
+  }
+
+  .whatsapp-share-btn:hover {
+    background: #1ebe57;
+    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.4);
+  }
+
   .dashboard-grid-4 {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -261,6 +278,24 @@
   @media (min-width: 1024px) {
     .dashboard-grid-4 {
       grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .dashboard-grid-5 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .dashboard-grid-5 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .dashboard-grid-5 {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
     }
   }
 
@@ -2974,6 +3009,232 @@
 
 [data-theme='dark'] ::-webkit-scrollbar-thumb {
   background: #495057;
+}
+
+.share-bill-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(6px);
+}
+
+.share-bill-modal {
+  position: relative;
+  width: 100%;
+  max-width: 26.5rem;
+  max-height: min(92vh, 40rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 1.25rem;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.share-bill-modal--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.share-bill-modal__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: #008069;
+}
+
+.share-bill-modal__header-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.share-bill-modal__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  min-width: 0;
+}
+
+.share-bill-modal__close {
+  margin-left: auto;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 0.25rem;
+  border-radius: 0.5rem;
+}
+
+.share-bill-modal__close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.share-bill-modal__body {
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.share-bill-modal__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem 1rem;
+  border-top: 1px solid #eef2f7;
+  background: #fff;
+}
+
+.wa-chat {
+  flex: 1 1 auto;
+  min-height: 16rem;
+  max-height: 26rem;
+  overflow-y: auto;
+  padding: 1rem 0.85rem 1.15rem;
+  background-color: #e5ddd5;
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(0, 0, 0, 0.035) 1.2px, transparent 1.6px),
+    radial-gradient(circle at 72% 64%, rgba(0, 0, 0, 0.03) 1px, transparent 1.4px);
+  background-size: 22px 22px, 18px 18px;
+}
+
+.wa-chat__thread {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.wa-chat__bubble {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  padding: 0.45rem 0.55rem 1.15rem 0.7rem;
+  background: #d9fdd3;
+  border-radius: 7.5px 0 7.5px 7.5px;
+  box-shadow: 0 1px 0.5px rgba(11, 20, 26, 0.13);
+}
+
+.wa-chat__bubble::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: -7px;
+  width: 8px;
+  height: 13px;
+  background: #d9fdd3;
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+.wa-chat__text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #111b21;
+}
+
+.wa-chat__text strong {
+  font-weight: 700;
+}
+
+.wa-chat__meta {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.28rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 11px;
+  color: #667781;
+  user-select: none;
+}
+
+.wa-chat__ticks {
+  width: 16px;
+  height: 11px;
+  color: #53bdeb;
+}
+
+[data-theme='dark'] #root .whatsapp-share-icon-btn {
+  color: #25d366;
+  background: transparent;
+}
+
+[data-theme='dark'] #root .whatsapp-share-icon-btn:hover {
+  background: rgba(37, 211, 102, 0.12);
+}
+
+[data-theme='dark'] #root .whatsapp-share-btn {
+  color: #fff;
+  background: #25d366;
+}
+
+[data-theme='dark'] #root .whatsapp-share-btn:hover {
+  background: #1ebe57;
+}
+
+[data-theme='dark'] .share-bill-modal {
+  background: #111b21;
+  box-shadow: 0 25px 60px -12px rgba(0, 0, 0, 0.55);
+}
+
+[data-theme='dark'] .share-bill-modal__header {
+  background: #202c33;
+}
+
+[data-theme='dark'] .share-bill-modal__footer {
+  border-color: #2c2e33;
+  background: #111b21;
+}
+
+[data-theme='dark'] .share-bill-modal__title {
+  color: #e9edef;
+}
+
+[data-theme='dark'] .share-bill-modal__close {
+  color: #8696a0;
+}
+
+[data-theme='dark'] .share-bill-modal__close:hover {
+  color: #e9edef;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme='dark'] .wa-chat {
+  background-color: #0b141a;
+  background-image:
+    radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.03) 1.2px, transparent 1.6px),
+    radial-gradient(circle at 72% 64%, rgba(255, 255, 255, 0.025) 1px, transparent 1.4px);
+}
+
+[data-theme='dark'] .wa-chat__bubble,
+[data-theme='dark'] .wa-chat__bubble::before {
+  background: #005c4b;
+}
+
+[data-theme='dark'] .wa-chat__text {
+  color: #e9edef;
+}
+
+[data-theme='dark'] .wa-chat__meta {
+  color: #8696a0;
 }
 
 @media print {

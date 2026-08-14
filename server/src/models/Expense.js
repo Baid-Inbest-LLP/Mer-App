@@ -14,8 +14,9 @@ const expenseSchema = new mongoose.Schema(
     slNo: { type: String, trim: true },
     month: { type: String, required: true },
     coNames: { type: String, required: true, trim: true },
+    /** When the purchase / order / service happened. */
     invoiceDate: { type: Date },
-    /** When payment is expected; used by Due Bills board. */
+    /** Expected payment date; used by Due Bills board and days-to-clear. */
     dueDate: { type: Date },
     location: { type: String, trim: true },
     company: { type: String, trim: true },
@@ -79,7 +80,7 @@ const expenseSchema = new mongoose.Schema(
      * Negative means paid before the due/invoice date.
      */
     daysToClear: { type: Number },
-    /** Mirrored from latest active payment for list/report convenience. */
+    /** Latest active payment date; for Paid bills, clearedAt is the full-payment date. */
     paymentDate: { type: Date },
     paymentRefNumber: { type: String, trim: true },
     bankAccountNumber: { type: String, trim: true },
@@ -155,7 +156,7 @@ expenseSchema.pre('save', function setDerivedFields(next) {
   if (!this.month && anchorDate) {
     this.month = new Date(anchorDate).toLocaleString('en-US', { month: 'long' });
   }
-  // Due date applies to recurring (Fixed) bills only; do not copy from billing date.
+  // dueDate is the expected payment date for every bill (Variable and Fixed).
   if (!this.merType && this.paymentMethod) {
     this.merType = this.paymentMethod === 'Cash' ? 'Cash' : 'Bank';
   }

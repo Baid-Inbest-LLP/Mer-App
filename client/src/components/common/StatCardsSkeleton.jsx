@@ -13,9 +13,9 @@ export function StatCardSkeleton() {
   );
 }
 
-export default function StatCardsSkeleton({ className = '', count = 4 }) {
+export default function StatCardsSkeleton({ className = '', count = 4, gridClass = 'dashboard-grid-4' }) {
   return (
-    <div className={`dashboard-grid-4 ${className}`}>
+    <div className={`${gridClass} ${className}`}>
       {Array.from({ length: count }).map((_, i) => (
         <StatCardSkeleton key={i} />
       ))}

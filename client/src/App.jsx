@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import AppLayout from './components/layout/AppLayout';
 import ProtectedRoute from './routes/ProtectedRoute';
@@ -19,6 +19,7 @@ import SettingsPage from './pages/settings/SettingsPage';
 import ControlCenterPage from './pages/control-center/ControlCenterPage';
 import ExpenseViewSkeleton from './components/common/ExpenseViewSkeleton';
 import ReportDetailSkeleton from './components/common/ReportDetailSkeleton';
+import { normalizeReportScope } from './utils/reportScope';
 
 const ExpenseViewPage = lazy(() => import('./pages/expenses/ExpenseViewPage'));
 const MonthlyDetailPage = lazy(() => import('./pages/reports/MonthlyDetailPage'));
@@ -28,6 +29,19 @@ function PublicOnly({ children }) {
   const { isAuthenticated } = useSelector((state) => state.auth);
   if (isAuthenticated) return <Navigate to="/" replace />;
   return children;
+}
+
+function RedirectPreserveSearch({ to }) {
+  const { search } = useLocation();
+  return <Navigate to={`${to}${search}`} replace />;
+}
+
+function ReportScopeGuard({ children }) {
+  const { reportScope } = useParams();
+  const location = useLocation();
+  if (normalizeReportScope(reportScope)) return children;
+  const fallback = location.pathname.replace(`/${reportScope}`, '/expenses');
+  return <Navigate to={`${fallback}${location.search}`} replace />;
 }
 
 export default function App() {
@@ -71,20 +85,64 @@ export default function App() {
           <Route path="entries/:id/edit" element={<ExpenseFormPage />} />
           <Route path="purchase-orders" element={<ApprovedPurchaseOrdersPage />} />
           <Route path="purchase-orders/:id" element={<PurchaseOrderDetailPage />} />
-          <Route path="reports/summary" element={<SummaryReportPage />} />
-          <Route path="reports/customized" element={<CustomizedReportPage />} />
-          <Route path="reports/monthly" element={<MonthlyReportPage />} />
-          <Route path="reports/monthly/detail" element={
-            <Suspense fallback={<ReportDetailSkeleton />}>
-              <MonthlyDetailPage />
-            </Suspense>
-          } />
-          <Route path="reports/financial-year" element={<FinancialYearReportPage />} />
-          <Route path="reports/financial-year/detail" element={
-            <Suspense fallback={<ReportDetailSkeleton />}>
-              <FinancialYearDetailPage />
-            </Suspense>
-          } />
+          <Route path="reports/summary" element={<RedirectPreserveSearch to="/reports/summary/expenses" />} />
+          <Route
+            path="reports/summary/:reportScope"
+            element={(
+              <ReportScopeGuard>
+                <SummaryReportPage />
+              </ReportScopeGuard>
+            )}
+          />
+          <Route path="reports/customized" element={<RedirectPreserveSearch to="/reports/customized/expenses" />} />
+          <Route
+            path="reports/customized/:reportScope"
+            element={(
+              <ReportScopeGuard>
+                <CustomizedReportPage />
+              </ReportScopeGuard>
+            )}
+          />
+          <Route path="reports/monthly/detail" element={<RedirectPreserveSearch to="/reports/monthly/expenses/detail" />} />
+          <Route
+            path="reports/monthly/:reportScope/detail"
+            element={(
+              <ReportScopeGuard>
+                <Suspense fallback={<ReportDetailSkeleton />}>
+                  <MonthlyDetailPage />
+                </Suspense>
+              </ReportScopeGuard>
+            )}
+          />
+          <Route
+            path="reports/monthly/:reportScope"
+            element={(
+              <ReportScopeGuard>
+                <MonthlyReportPage />
+              </ReportScopeGuard>
+            )}
+          />
+          <Route path="reports/monthly" element={<RedirectPreserveSearch to="/reports/monthly/expenses" />} />
+          <Route path="reports/financial-year/detail" element={<RedirectPreserveSearch to="/reports/financial-year/expenses/detail" />} />
+          <Route
+            path="reports/financial-year/:reportScope/detail"
+            element={(
+              <ReportScopeGuard>
+                <Suspense fallback={<ReportDetailSkeleton />}>
+                  <FinancialYearDetailPage />
+                </Suspense>
+              </ReportScopeGuard>
+            )}
+          />
+          <Route
+            path="reports/financial-year/:reportScope"
+            element={(
+              <ReportScopeGuard>
+                <FinancialYearReportPage />
+              </ReportScopeGuard>
+            )}
+          />
+          <Route path="reports/financial-year" element={<RedirectPreserveSearch to="/reports/financial-year/expenses" />} />
           <Route path="control-center/*" element={<ControlCenterPage />} />
           <Route path="companies" element={<Navigate to="/control-center/companies" replace />} />
           <Route path="settings" element={<SettingsPage />} />

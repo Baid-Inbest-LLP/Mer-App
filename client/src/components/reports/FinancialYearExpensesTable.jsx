@@ -8,6 +8,7 @@ import {
   buildFyReportNo,
   formatFyShortLabel,
 } from '../../utils/format';
+import { isDueReportScope, reportScopeLabels } from '../../utils/reportScope';
 
 const REPORT_TYPES = [
   { key: 'bank', label: 'Bank' },
@@ -21,12 +22,12 @@ const backIcon = (
   </svg>
 );
 
-const buildDetailUrl = ({ financialYear, company, merType }) => {
+const buildDetailUrl = ({ reportScope, financialYear, company, merType }) => {
   const params = new URLSearchParams();
   if (financialYear) params.set('fy', financialYear);
   if (company) params.set('company', company);
   if (merType) params.set('merType', merType);
-  return `/reports/financial-year/detail?${params.toString()}`;
+  return `/reports/financial-year/${reportScope || 'expenses'}/detail?${params.toString()}`;
 };
 
 const aggregateFyTotals = (rows = []) => {
@@ -40,6 +41,8 @@ const aggregateFyTotals = (rows = []) => {
       gst: 0,
       tds: 0,
       gross: 0,
+      outstanding: 0,
+      amountPaid: 0,
       count: 0,
       companyCount: 0,
     };
@@ -49,6 +52,8 @@ const aggregateFyTotals = (rows = []) => {
       gst: prev.gst + (row.gst || 0),
       tds: prev.tds + (row.tds || 0),
       gross: prev.gross + (row.gross || 0),
+      outstanding: prev.outstanding + (row.outstanding || 0),
+      amountPaid: prev.amountPaid + (row.amountPaid || 0),
       count: prev.count + (row.count || 0),
       companyCount: prev.companyCount + 1,
     });
@@ -106,7 +111,10 @@ export default function FinancialYearExpensesTable({
   tableYearLimit,
   onTableYearLimitChange,
   initialFy = null,
+  reportScope = 'expenses',
 }) {
+  const labels = reportScopeLabels(reportScope);
+  const isDue = isDueReportScope(reportScope);
   const [selectedFy, setSelectedFy] = useState(initialFy);
 
   const yearLimit = parseInt(tableYearLimit, 10) || 2;
@@ -144,6 +152,7 @@ export default function FinancialYearExpensesTable({
       <div className="monthly-report-cell">
         <Link
           to={buildDetailUrl({
+            reportScope,
             financialYear: selectedFy,
             company,
             merType,
@@ -174,7 +183,7 @@ export default function FinancialYearExpensesTable({
           <h3 className="report-table-title text-sm font-bold text-gray-800 uppercase tracking-wide">
             {selectedFy
               ? `Company Reports FY ${formatFyShortLabel(selectedFy)}`
-              : 'Expenses by Financial Year'}
+              : labels.fyTable}
           </h3>
         </div>
         {!selectedFy && tableYearOptions.length > 0 && (
@@ -194,7 +203,7 @@ export default function FinancialYearExpensesTable({
         fyTotals.length === 0 ? (
           <EmptyState
             title="No data"
-            description="No completed entries are available for any financial year yet."
+            description={labels.emptyAnyYear}
           />
         ) : (
           <div className="table-wrapper mt-3">
@@ -204,11 +213,21 @@ export default function FinancialYearExpensesTable({
                   <th className="text-center w-14">S.No</th>
                   <th className="text-center">Financial Year</th>
                   <th className="text-center">Companies</th>
-                  <th className="text-right">Net</th>
-                  <th className="text-right">GST</th>
-                  <th className="text-right">TDS</th>
-                  <th className="text-right">Gross</th>
-                  <th className="text-center">Entries</th>
+                  {isDue ? (
+                    <>
+                      <th className="text-right">Outstanding</th>
+                      <th className="text-right">Paid</th>
+                      <th className="text-right">Gross</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="text-right">Net</th>
+                      <th className="text-right">GST</th>
+                      <th className="text-right">TDS</th>
+                      <th className="text-right">Gross</th>
+                    </>
+                  )}
+                  <th className="text-center">{isDue ? 'Bills' : 'Entries'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -225,10 +244,20 @@ export default function FinancialYearExpensesTable({
                       </button>
                     </td>
                     <td className="text-center">{row.companyCount}</td>
-                    <td className="text-right">{formatCurrency(row.net)}</td>
-                    <td className="text-right text-emerald-700">{formatCurrency(row.gst)}</td>
-                    <td className="text-right text-orange-700">{formatCurrency(row.tds)}</td>
-                    <td className="text-right font-semibold">{formatCurrency(row.gross)}</td>
+                    {isDue ? (
+                      <>
+                        <td className="text-right font-semibold text-amber-800">{formatCurrency(row.outstanding)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(row.amountPaid)}</td>
+                        <td className="text-right">{formatCurrency(row.gross)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="text-right">{formatCurrency(row.net)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(row.gst)}</td>
+                        <td className="text-right text-orange-700">{formatCurrency(row.tds)}</td>
+                        <td className="text-right font-semibold">{formatCurrency(row.gross)}</td>
+                      </>
+                    )}
                     <td className="text-center">
                       <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 text-xs font-bold border border-primary-200">
                         {row.count}
@@ -243,7 +272,7 @@ export default function FinancialYearExpensesTable({
       ) : companiesForFy.length === 0 ? (
         <EmptyState
           title="No company reports"
-          description={`No completed entries are available for ${selectedFy}.`}
+          description={labels.emptyFy(selectedFy)}
         />
       ) : (
         <div className="table-wrapper mt-3">
@@ -255,11 +284,21 @@ export default function FinancialYearExpensesTable({
                 {REPORT_TYPES.map((type) => (
                   <th key={type.key} className="text-center min-w-[15.5rem]">{type.label} MER</th>
                 ))}
-                <th className="text-right">Net</th>
-                <th className="text-right">GST</th>
-                <th className="text-right">TDS</th>
-                <th className="text-right">Gross</th>
-                <th className="text-center">Entries</th>
+                {isDue ? (
+                  <>
+                    <th className="text-right">Outstanding</th>
+                    <th className="text-right">Paid</th>
+                    <th className="text-right">Gross</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="text-right">Net</th>
+                    <th className="text-right">GST</th>
+                    <th className="text-right">TDS</th>
+                    <th className="text-right">Gross</th>
+                  </>
+                )}
+                <th className="text-center">{isDue ? 'Bills' : 'Entries'}</th>
               </tr>
             </thead>
             <tbody>
@@ -275,10 +314,20 @@ export default function FinancialYearExpensesTable({
                         {renderReportCell(row.reports[type.key], row.company, type.key)}
                       </td>
                     ))}
-                    <td className="text-right">{formatCurrency(combined?.net)}</td>
-                    <td className="text-right text-emerald-700">{formatCurrency(combined?.gst)}</td>
-                    <td className="text-right text-orange-700">{formatCurrency(combined?.tds)}</td>
-                    <td className="text-right font-semibold">{formatCurrency(combined?.gross)}</td>
+                    {isDue ? (
+                      <>
+                        <td className="text-right font-semibold text-amber-800">{formatCurrency(combined?.outstanding)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(combined?.amountPaid)}</td>
+                        <td className="text-right">{formatCurrency(combined?.gross)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="text-right">{formatCurrency(combined?.net)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(combined?.gst)}</td>
+                        <td className="text-right text-orange-700">{formatCurrency(combined?.tds)}</td>
+                        <td className="text-right font-semibold">{formatCurrency(combined?.gross)}</td>
+                      </>
+                    )}
                     <td className="text-center">
                       <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 text-xs font-bold border border-primary-200">
                         {combined?.count || 0}

@@ -1,6 +1,8 @@
 import Skeleton from './Skeleton';
 
-export default function ReportDetailSkeleton() {
+export default function ReportDetailSkeleton({ cardCount = 4 }) {
+  const gridClass = cardCount === 5 ? 'dashboard-grid-5' : 'dashboard-grid-4';
+
   return (
     <div className="w-full max-w-[90rem] mx-auto">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -13,8 +15,8 @@ export default function ReportDetailSkeleton() {
         <Skeleton className="h-4 w-48" />
       </div>
 
-      <div className="dashboard-grid-4 mb-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+      <div className={`${gridClass} mb-4`}>
+        {Array.from({ length: cardCount }).map((_, i) => (
           <div key={i} className="card p-4 flex items-center gap-3">
             <Skeleton className="h-10 w-10 rounded-xl shrink-0" />
             <div className="flex-1 space-y-2">

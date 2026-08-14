@@ -56,16 +56,28 @@ export const getCompanyChart = asyncHandler(async (req, res) => {
 });
 
 export const getQuarterly = asyncHandler(async (req, res) => {
-  const data = await analyticsService.getQuarterlyOverview(req.query.financialYear);
+  const data = await analyticsService.getQuarterlyOverview(req.query.financialYear, req.query);
   ApiResponse.success(
     res,
-    data.map((q) => ({ quarter: q._id, total: q.total, net: q.net, gst: q.gst, count: q.count })),
+    data.map((q) => ({
+      quarter: q._id,
+      total: q.total,
+      net: q.net,
+      gst: q.gst,
+      outstanding: q.outstanding,
+      amountPaid: q.amountPaid,
+      count: q.count,
+    })),
   );
 });
 
 export const getFYComparison = asyncHandler(async (req, res) => {
   const limit = parseInt(req.query.limit, 10) || 5;
-  const data = await analyticsService.getFinancialYearComparison(req.query.financialYear, limit);
+  const data = await analyticsService.getFinancialYearComparison(
+    req.query.financialYear,
+    limit,
+    req.query,
+  );
   ApiResponse.success(
     res,
     data.map((f) => ({
@@ -75,6 +87,8 @@ export const getFYComparison = asyncHandler(async (req, res) => {
       tds: f.tds,
       gross: f.gross,
       total: f.total,
+      outstanding: f.outstanding,
+      amountPaid: f.amountPaid,
       count: f.count,
     })),
   );

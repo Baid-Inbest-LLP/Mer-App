@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { notifications } from '@mantine/notifications';
 import PageBanner from '../../components/common/PageBanner';
@@ -17,6 +17,8 @@ import {
 } from '../../utils/format';
 import { reportApi } from '../../api/report.api';
 import { downloadBlob, withExtension } from '../../utils/download';
+import { isDueReportScope, normalizeReportScope, reportScopeLabels, withReportScope } from '../../utils/reportScope';
+import { FinancialYearReportStatCards } from '../../components/reports/lazyReportStatCards';
 
 const iconClass =
   'w-5 h-5 sm:w-6 sm:h-6 xl:w-7 xl:h-7 max-[1660px]:w-6 max-[1660px]:h-6 max-[1536px]:w-5 max-[1536px]:h-5 max-[1366px]:w-[18px] max-[1366px]:h-[18px] max-[1280px]:w-4 max-[1280px]:h-4';
@@ -38,6 +40,10 @@ const cleanParams = (params) => {
 export default function FinancialYearDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { reportScope: rawScope } = useParams();
+  const scope = normalizeReportScope(rawScope) || 'expenses';
+  const isDue = isDueReportScope(scope);
+  const labels = reportScopeLabels(scope);
   const [searchParams] = useSearchParams();
   const returnTo = `${location.pathname}${location.search}`;
   const { lookups } = useSelector((state) => state.common);
@@ -62,7 +68,7 @@ export default function FinancialYearDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const params = cleanParams({ financialYear, company, merType });
+        const params = withReportScope(cleanParams({ financialYear, company, merType }), scope);
         const res = await reportApi.monthlyDetailed(params);
         if (active) setData(res.data.data);
       } catch {
@@ -78,14 +84,14 @@ export default function FinancialYearDetailPage() {
     return () => {
       active = false;
     };
-  }, [financialYear, company, merType]);
+  }, [financialYear, company, merType, scope]);
 
   const runExport = async (format) => {
     if (exporting[format]) return;
     setExporting((prev) => ({ ...prev, [format]: true }));
     const isPdf = format === 'pdf';
     try {
-      const params = cleanParams({ financialYear, company, merType });
+      const params = withReportScope(cleanParams({ financialYear, company, merType }), scope);
       const res = isPdf
         ? await reportApi.exportMonthlyPdf(params)
         : await reportApi.exportMonthlyExcel(params);
@@ -120,9 +126,19 @@ export default function FinancialYearDetailPage() {
     return <ReportDetailSkeleton />;
   }
 
+  const byQuarter = totals.byQuarter || {};
+  const peakQuarter = Object.entries(byQuarter).reduce(
+    (max, [name, value]) => ((value || 0) > (max?.value || 0) ? { name, value } : max),
+    null,
+  );
+  const previousYearGross = data?.previousYearGross || 0;
+  const yoyChange = previousYearGross > 0
+    ? ((totals.gross - previousYearGross) / previousYearGross) * 100
+    : 0;
+
   const backUrl = company
-    ? `/reports/financial-year?fy=${encodeURIComponent(financialYear)}`
-    : '/reports/financial-year';
+    ? `/reports/financial-year/${scope}?fy=${encodeURIComponent(financialYear)}`
+    : `/reports/financial-year/${scope}`;
 
   return (
     <div className="w-full max-w-[90rem] mx-auto">
@@ -159,6 +175,17 @@ export default function FinancialYearDetailPage() {
         ]}
       />
 
+      {isDue ? (
+        <FinancialYearReportStatCards
+          className="mb-4"
+          fyTotal={totals.gross}
+          totalEntries={count}
+          peakQuarter={peakQuarter}
+          yoyChange={yoyChange}
+          totalLabel="Total FY Billing Amount"
+          entriesLabel="Total No Of FY Bills"
+        />
+      ) : (
       <div className="dashboard-grid-4 mb-4">
         <StatCard
           label="Net Expense"
@@ -209,18 +236,19 @@ export default function FinancialYearDetailPage() {
           }
         />
       </div>
+      )}
 
       <div className="card">
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">
           <h3 className="report-table-title text-sm font-bold text-gray-800 uppercase tracking-wide">
-            Expense Entries
+            {labels.entriesHeading}
           </h3>
         </div>
 
         {count === 0 ? (
           <EmptyState
             title="No entries"
-            description="No completed entries are available for this financial year."
+            description={labels.emptyDetailFy}
           />
         ) : (
           <div className="table-wrapper mt-3 max-h-[600px] overflow-auto">

@@ -4,6 +4,7 @@ import FilterSelect from '../common/FilterSelect';
 import EmptyState from '../common/EmptyState';
 import ReportOverviewTableSkeleton from '../common/ReportOverviewTableSkeleton';
 import { formatCurrency, buildMonthlyReportNo, formatMonthFyPeriodLabel } from '../../utils/format';
+import { isDueReportScope, reportScopeLabels } from '../../utils/reportScope';
 
 const FY_MONTH_ORDER = [
   'April', 'May', 'June', 'July', 'August', 'September',
@@ -22,13 +23,13 @@ const backIcon = (
   </svg>
 );
 
-const buildDetailUrl = ({ activeTableFY, month, company, merType }) => {
+const buildDetailUrl = ({ reportScope, activeTableFY, month, company, merType }) => {
   const params = new URLSearchParams();
   if (activeTableFY) params.set('fy', activeTableFY);
   if (month) params.set('month', month);
   if (company) params.set('company', company);
   if (merType) params.set('merType', merType);
-  return `/reports/monthly/detail?${params.toString()}`;
+  return `/reports/monthly/${reportScope || 'expenses'}/detail?${params.toString()}`;
 };
 
 const aggregateMonthTotals = (rows = []) => {
@@ -42,6 +43,8 @@ const aggregateMonthTotals = (rows = []) => {
       gst: 0,
       tds: 0,
       gross: 0,
+      outstanding: 0,
+      amountPaid: 0,
       count: 0,
       companyCount: 0,
     };
@@ -51,6 +54,8 @@ const aggregateMonthTotals = (rows = []) => {
       gst: prev.gst + (row.gst || 0),
       tds: prev.tds + (row.tds || 0),
       gross: prev.gross + (row.gross || 0),
+      outstanding: prev.outstanding + (row.outstanding || 0),
+      amountPaid: prev.amountPaid + (row.amountPaid || 0),
       count: prev.count + (row.count || 0),
       companyCount: prev.companyCount + 1,
     });
@@ -106,7 +111,10 @@ export default function MonthlyExpensesTable({
   fyOptions,
   onTableFyChange,
   initialMonth = null,
+  reportScope = 'expenses',
 }) {
+  const labels = reportScopeLabels(reportScope);
+  const isDue = isDueReportScope(reportScope);
   const [selectedMonth, setSelectedMonth] = useState(initialMonth);
 
   const monthTotals = useMemo(
@@ -143,6 +151,7 @@ export default function MonthlyExpensesTable({
       <div className="monthly-report-cell">
         <Link
           to={buildDetailUrl({
+            reportScope,
             activeTableFY,
             month: selectedMonth,
             company,
@@ -174,7 +183,7 @@ export default function MonthlyExpensesTable({
           <h3 className="report-table-title text-sm font-bold text-gray-800 uppercase tracking-wide">
             {selectedMonth
               ? `Company Reports ${formatMonthFyPeriodLabel(selectedMonth, activeTableFY)}`
-              : 'Expenses Monthly'}
+              : labels.monthlyTable}
           </h3>
         </div>
         <div className="w-44">
@@ -192,7 +201,7 @@ export default function MonthlyExpensesTable({
         monthTotals.length === 0 ? (
           <EmptyState
             title="No data"
-            description="No completed entries are available for this financial year yet."
+            description={labels.emptyYear}
           />
         ) : (
           <div className="table-wrapper mt-3">
@@ -202,11 +211,21 @@ export default function MonthlyExpensesTable({
                   <th className="text-center w-14">S.No</th>
                   <th className="text-center">Month</th>
                   <th className="text-center">Companies</th>
-                  <th className="text-right">Net</th>
-                  <th className="text-right">GST</th>
-                  <th className="text-right">TDS</th>
-                  <th className="text-right">Gross</th>
-                  <th className="text-center">Entries</th>
+                  {isDue ? (
+                    <>
+                      <th className="text-right">Outstanding</th>
+                      <th className="text-right">Paid</th>
+                      <th className="text-right">Gross</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="text-right">Net</th>
+                      <th className="text-right">GST</th>
+                      <th className="text-right">TDS</th>
+                      <th className="text-right">Gross</th>
+                    </>
+                  )}
+                  <th className="text-center">{isDue ? 'Bills' : 'Entries'}</th>
                   
                 </tr>
               </thead>
@@ -224,10 +243,20 @@ export default function MonthlyExpensesTable({
                       </button>
                     </td>
                     <td className="text-center">{m.companyCount}</td>
-                    <td className="text-right">{formatCurrency(m.net)}</td>
-                    <td className="text-right text-emerald-700">{formatCurrency(m.gst)}</td>
-                    <td className="text-right text-orange-700">{formatCurrency(m.tds)}</td>
-                    <td className="text-right font-semibold">{formatCurrency(m.gross)}</td>
+                    {isDue ? (
+                      <>
+                        <td className="text-right font-semibold text-amber-800">{formatCurrency(m.outstanding)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(m.amountPaid)}</td>
+                        <td className="text-right">{formatCurrency(m.gross)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="text-right">{formatCurrency(m.net)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(m.gst)}</td>
+                        <td className="text-right text-orange-700">{formatCurrency(m.tds)}</td>
+                        <td className="text-right font-semibold">{formatCurrency(m.gross)}</td>
+                      </>
+                    )}
                     <td className="text-center">
                       <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 text-xs font-bold border border-primary-200">
                         {m.count}
@@ -242,7 +271,7 @@ export default function MonthlyExpensesTable({
       ) : companiesForMonth.length === 0 ? (
         <EmptyState
           title="No company reports"
-          description={`No completed entries are available for ${selectedMonth}.`}
+          description={labels.emptyMonth(selectedMonth)}
         />
       ) : (
         <div className="table-wrapper mt-3">
@@ -254,11 +283,21 @@ export default function MonthlyExpensesTable({
                 {REPORT_TYPES.map((type) => (
                   <th key={type.key} className="text-center min-w-[15.5rem]">{type.label} MER</th>
                 ))}
-                <th className="text-right">Net</th>
-                <th className="text-right">GST</th>
-                <th className="text-right">TDS</th>
-                <th className="text-right">Gross</th>
-                <th className="text-center">Entries</th>
+                {isDue ? (
+                  <>
+                    <th className="text-right">Outstanding</th>
+                    <th className="text-right">Paid</th>
+                    <th className="text-right">Gross</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="text-right">Net</th>
+                    <th className="text-right">GST</th>
+                    <th className="text-right">TDS</th>
+                    <th className="text-right">Gross</th>
+                  </>
+                )}
+                <th className="text-center">{isDue ? 'Bills' : 'Entries'}</th>
               </tr>
             </thead>
             <tbody>
@@ -274,10 +313,20 @@ export default function MonthlyExpensesTable({
                         {renderReportCell(row.reports[type.key], row.company, type.key)}
                       </td>
                     ))}
-                    <td className="text-right">{formatCurrency(combined?.net)}</td>
-                    <td className="text-right text-emerald-700">{formatCurrency(combined?.gst)}</td>
-                    <td className="text-right text-orange-700">{formatCurrency(combined?.tds)}</td>
-                    <td className="text-right font-semibold">{formatCurrency(combined?.gross)}</td>
+                    {isDue ? (
+                      <>
+                        <td className="text-right font-semibold text-amber-800">{formatCurrency(combined?.outstanding)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(combined?.amountPaid)}</td>
+                        <td className="text-right">{formatCurrency(combined?.gross)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="text-right">{formatCurrency(combined?.net)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(combined?.gst)}</td>
+                        <td className="text-right text-orange-700">{formatCurrency(combined?.tds)}</td>
+                        <td className="text-right font-semibold">{formatCurrency(combined?.gross)}</td>
+                      </>
+                    )}
                     <td className="text-center">
                       <span className="inline-flex items-center justify-center min-w-[2rem] px-2 py-0.5 rounded-full bg-primary-50 text-primary-700 text-xs font-bold border border-primary-200">
                         {combined?.count || 0}

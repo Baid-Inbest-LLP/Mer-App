@@ -18,3 +18,7 @@ export const ReportSummaryStatCards = withStatCardsSuspense(
 export const FinancialYearReportStatCards = withStatCardsSuspense(
   lazy(() => import('./FinancialYearReportStatCards')),
 );
+
+export const DueBillsStatCards = withStatCardsSuspense(
+  lazy(() => import('./DueBillsStatCards')),
+);

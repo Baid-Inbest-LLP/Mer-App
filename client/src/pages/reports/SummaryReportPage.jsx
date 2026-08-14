@@ -1,30 +1,52 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useParams } from 'react-router-dom';
 import {
   fetchReportSummary,
   fetchHeadSummary,
+  clearReport,
 } from '../../store/slices/reportSlice';
 import PageBanner from '../../components/common/PageBanner';
 import FilterPanel from '../../components/common/FilterPanel';
+import { BarChartCard, PieChartCard } from '../../components/charts/lazyCharts';
+import { ChartSkeletonGrid } from '../../components/charts/LazyChartBoundary';
 import { ExpenseHeadSummaryTable } from '../../components/reports/lazyReportTables';
-import { ReportSummaryStatCards } from '../../components/reports/lazyReportStatCards';
+import { DueBillsStatCards, ReportSummaryStatCards } from '../../components/reports/lazyReportStatCards';
 import { omitPaymentFilters, cleanFilterParams, stripSummaryReportHiddenFilters } from '../../utils/filters';
+import {
+  isDueReportScope,
+  normalizeReportScope,
+  reportScopeLabels,
+  withReportScope,
+} from '../../utils/reportScope';
+
+const AGING_COLORS = ['#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#94a3b8', '#10b981'];
 
 export default function SummaryReportPage() {
   const dispatch = useDispatch();
+  const { reportScope: rawScope } = useParams();
+  const scope = normalizeReportScope(rawScope) || 'expenses';
+  const isDue = isDueReportScope(scope);
+  const labels = reportScopeLabels(scope);
   const { summary, headSummary, headSummaryLoading, loading } = useSelector((state) => state.report);
   const [filters, setFilters] = useState({});
 
   const load = useCallback((f) => {
-    const params = cleanFilterParams(stripSummaryReportHiddenFilters(omitPaymentFilters(f ?? filters)));
+    const params = withReportScope(
+      cleanFilterParams(stripSummaryReportHiddenFilters(omitPaymentFilters(f ?? filters))),
+      scope,
+    );
     dispatch(fetchReportSummary(params));
     dispatch(fetchHeadSummary(params));
-  }, [dispatch, filters]);
+  }, [dispatch, filters, scope]);
 
   useEffect(() => {
-    dispatch(fetchReportSummary(cleanFilterParams(omitPaymentFilters({}))));
-    dispatch(fetchHeadSummary(cleanFilterParams(omitPaymentFilters({}))));
-  }, [dispatch]);
+    setFilters({});
+    dispatch(clearReport());
+    const params = withReportScope(cleanFilterParams(omitPaymentFilters({})), scope);
+    dispatch(fetchReportSummary(params));
+    dispatch(fetchHeadSummary(params));
+  }, [dispatch, scope]);
 
   const headTotals = useMemo(
     () => headSummary.reduce(
@@ -33,24 +55,72 @@ export default function SummaryReportPage() {
         gst: acc.gst + (row.gst || 0),
         tds: acc.tds + (row.tds || 0),
         gross: acc.gross + (row.gross || 0),
+        outstanding: acc.outstanding + (row.outstanding || 0),
+        amountPaid: acc.amountPaid + (row.amountPaid || 0),
         count: acc.count + (row.count || 0),
       }),
-      { net: 0, gst: 0, tds: 0, gross: 0, count: 0 },
+      { net: 0, gst: 0, tds: 0, gross: 0, outstanding: 0, amountPaid: 0, count: 0 },
     ),
     [headSummary],
   );
 
   const grossBase = summary?.grossAmount || headTotals.gross || 0;
 
+  const agingChart = useMemo(
+    () => (summary?.buckets || []).filter((row) => (row.value || 0) > 0 || (row.count || 0) > 0),
+    [summary],
+  );
+
+  const headChart = useMemo(
+    () => headSummary
+      .map((row) => ({
+        name: row._id || '—',
+        value: row.gross || 0,
+        count: row.count || 0,
+      }))
+      .filter((row) => row.value > 0)
+      .slice(0, 8),
+    [headSummary, isDue],
+  );
+
+  const chartsLoading = loading || headSummaryLoading;
+
   return (
     <div>
       <PageBanner
         className="mb-4"
-        title="Summary Report"
-        subtitle={`Total Entries · ${summary?.entryCount ?? 0}`}
-        action={{ to: '/reports/customized', label: 'Customized Report', icon: 'arrow' }}
+        title={labels.summaryTitle}
+        subtitle={`${isDue ? 'Due Bills' : 'Total Entries'} · ${summary?.entryCount ?? 0}`}
+        action={{ to: `/reports/customized/${scope}`, label: 'Customized Report', icon: 'arrow' }}
       />
-      <ReportSummaryStatCards className="mb-4" loading={loading} summary={summary} />
+      {isDue ? (
+        <DueBillsStatCards className="mb-4" loading={loading} summary={summary} variant="summary" />
+      ) : (
+        <ReportSummaryStatCards className="mb-4" loading={loading} summary={summary} />
+      )}
+
+      {isDue ? (
+        chartsLoading && !summary ? (
+          <ChartSkeletonGrid count={2} className="dashboard-grid-2 mb-4" />
+        ) : (
+          <div className="dashboard-grid-2 mb-4">
+            <PieChartCard
+              data={agingChart}
+              loading={loading}
+              title="Bills by Aging"
+              colors={AGING_COLORS}
+            />
+            <BarChartCard
+              data={headChart}
+              loading={headSummaryLoading}
+              title="Bills Generated by Expense Head"
+              xKey="name"
+              color="#f59e0b"
+            />
+          </div>
+        )
+      ) : null}
+
       <FilterPanel
         filters={filters}
         onChange={setFilters}
@@ -66,6 +136,7 @@ export default function SummaryReportPage() {
         headSummary={headSummary}
         headTotals={headTotals}
         grossBase={grossBase}
+        reportScope={scope}
       />
     </div>
   );

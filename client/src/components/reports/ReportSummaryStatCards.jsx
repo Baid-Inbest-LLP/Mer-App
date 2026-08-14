@@ -3,13 +3,29 @@ import StatCardsSkeleton from '../common/StatCardsSkeleton';
 import { formatCurrency } from '../../utils/format';
 import { reportStatIconClass as iconClass } from './reportStatIcons';
 
-export default function ReportSummaryStatCards({ className = 'mb-4', loading, summary }) {
+const formatCount = (value) =>
+  new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number(value) || 0);
+
+export default function ReportSummaryStatCards({
+  className = 'mb-4',
+  loading,
+  summary,
+  showCount = false,
+}) {
+  const gridClass = showCount ? 'dashboard-grid-5' : 'dashboard-grid-4';
+
   if (loading && !summary) {
-    return <StatCardsSkeleton className={className} />;
+    return (
+      <StatCardsSkeleton
+        className={className}
+        count={showCount ? 5 : 4}
+        gridClass={gridClass}
+      />
+    );
   }
 
   return (
-    <div className={`dashboard-grid-4 ${className}`}>
+    <div className={`${gridClass} ${className}`}>
       <StatCard
         label="Net Expense"
         value={formatCurrency(summary?.totalNetAmount)}
@@ -58,6 +74,20 @@ export default function ReportSummaryStatCards({ className = 'mb-4', loading, su
           </svg>
         }
       />
+      {showCount && (
+        <StatCard
+          label="No Of Expenses"
+          value={formatCount(summary?.entryCount)}
+          color="text-amber-700"
+          iconBg="bg-amber-100"
+          accent="bg-amber-500"
+          icon={
+            <svg className={`${iconClass} text-amber-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+            </svg>
+          }
+        />
+      )}
     </div>
   );
 }

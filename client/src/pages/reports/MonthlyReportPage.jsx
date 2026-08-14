@@ -1,17 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import {
   fetchReportSummary,
   fetchMonthlyReport,
+  clearReport,
 } from '../../store/slices/reportSlice';
 import PageBanner from '../../components/common/PageBanner';
 import { BarChartCard } from '../../components/charts/lazyCharts';
 import { ChartSkeletonGrid } from '../../components/charts/LazyChartBoundary';
 import { MonthlyExpensesTable } from '../../components/reports/lazyReportTables';
-import { ReportSummaryStatCards } from '../../components/reports/lazyReportStatCards';
+import { DueBillsStatCards, ReportSummaryStatCards } from '../../components/reports/lazyReportStatCards';
 import { getRecentFinancialYearOptions } from '../../utils/financialYear';
 import { reportApi } from '../../api/report.api';
+import {
+  isDueReportScope,
+  normalizeReportScope,
+  reportScopeLabels,
+  withReportScope,
+} from '../../utils/reportScope';
 
 const CURRENT_MONTH = new Date().toLocaleString('en-US', { month: 'long' });
 
@@ -35,16 +42,21 @@ const mapMonthly = (items = []) => {
       gst: 0,
       tds: 0,
       gross: 0,
+      outstanding: 0,
+      amountPaid: 0,
       count: 0,
     };
+    const amount = item.gross ?? item.total ?? 0;
 
     byMonth.set(month, {
       name: month,
-      value: prev.value + (item.gross ?? item.total ?? 0),
+      value: prev.value + amount,
       net: prev.net + (item.net ?? 0),
       gst: prev.gst + (item.gst ?? 0),
       tds: prev.tds + (item.tds ?? 0),
       gross: prev.gross + (item.gross ?? item.total ?? 0),
+      outstanding: prev.outstanding + (item.outstanding ?? 0),
+      amountPaid: prev.amountPaid + (item.amountPaid ?? 0),
       count: prev.count + (item.count ?? 0),
     });
   }
@@ -66,8 +78,10 @@ const filterMonthlyForFy = (items, fy, currentFY) => {
 
 const PREV_MONTH_BAR_COLOR = '#94a3b8';
 const CURRENT_MONTH_BAR_COLOR = '#3b82f6';
+const DUE_PREV_MONTH_BAR_COLOR = '#fcd34d';
+const DUE_CURRENT_MONTH_BAR_COLOR = '#f59e0b';
 
-const buildMomComparison = (items = []) => {
+const buildMomComparison = (items = [], due = false) => {
   const byName = Object.fromEntries(items.map((item) => [item.name, item]));
   const currentIdx = FY_MONTH_ORDER.indexOf(CURRENT_MONTH);
   const prevMonth = currentIdx > 0 ? FY_MONTH_ORDER[currentIdx - 1] : null;
@@ -77,23 +91,27 @@ const buildMomComparison = (items = []) => {
     const previous = byName[prevMonth];
     chart.push({
       name: prevMonth,
-      value: previous?.gross ?? previous?.value ?? 0,
+      value: previous?.value ?? previous?.gross ?? 0,
       count: previous?.count ?? 0,
-      color: PREV_MONTH_BAR_COLOR,
+      color: due ? DUE_PREV_MONTH_BAR_COLOR : PREV_MONTH_BAR_COLOR,
     });
   }
   const current = byName[CURRENT_MONTH];
   chart.push({
     name: CURRENT_MONTH,
-    value: current?.gross ?? current?.value ?? 0,
+    value: current?.value ?? current?.gross ?? 0,
     count: current?.count ?? 0,
-    color: CURRENT_MONTH_BAR_COLOR,
+    color: due ? DUE_CURRENT_MONTH_BAR_COLOR : CURRENT_MONTH_BAR_COLOR,
   });
   return chart;
 };
 
 export default function MonthlyReportPage() {
   const dispatch = useDispatch();
+  const { reportScope: rawScope } = useParams();
+  const scope = normalizeReportScope(rawScope) || 'expenses';
+  const isDue = isDueReportScope(scope);
+  const labels = reportScopeLabels(scope);
   const [searchParams] = useSearchParams();
   const { lookups } = useSelector((state) => state.common);
   const currentFY = lookups?.currentFinancialYear;
@@ -110,13 +128,21 @@ export default function MonthlyReportPage() {
   const initialMonth = searchParams.get('month') || null;
 
   useEffect(() => {
-    dispatch(fetchReportSummary({ timeframe: 'month' }));
-  }, [dispatch]);
+    dispatch(clearReport());
+  }, [dispatch, scope]);
+
+  useEffect(() => {
+    if (!currentFY) return;
+    dispatch(fetchReportSummary(withReportScope({
+      financialYear: currentFY,
+      month: CURRENT_MONTH,
+    }, scope)));
+  }, [dispatch, scope, currentFY]);
 
   useEffect(() => {
     if (!activeTableFY) return;
-    dispatch(fetchMonthlyReport({ financialYear: activeTableFY }));
-  }, [dispatch, activeTableFY]);
+    dispatch(fetchMonthlyReport(withReportScope({ financialYear: activeTableFY }, scope)));
+  }, [dispatch, activeTableFY, scope]);
 
   const fyOptions = useMemo(
     () => getRecentFinancialYearOptions(lookups?.currentFinancialYear, 2),
@@ -146,22 +172,22 @@ export default function MonthlyReportPage() {
 
     setMonthlyChartLoading(true);
     try {
-      const { data } = await reportApi.monthly({ financialYear: fy });
+      const { data } = await reportApi.monthly(withReportScope({ financialYear: fy }, scope));
       setMonthlyChart(filterMonthlyForFy(mapMonthly(data.data), fy, currentFY));
     } finally {
       setMonthlyChartLoading(false);
     }
-  }, [currentFY]);
+  }, [currentFY, scope, isDue]);
 
   const fetchCharts = useCallback(async () => {
     if (!currentFY) return;
 
-    const { data } = await reportApi.monthly({ financialYear: currentFY });
+    const { data } = await reportApi.monthly(withReportScope({ financialYear: currentFY }, scope));
     const monthlyData = filterMonthlyForFy(mapMonthly(data.data), currentFY, currentFY);
 
-    setMomComparisonChart(buildMomComparison(monthlyData));
+    setMomComparisonChart(buildMomComparison(monthlyData, isDue));
     setMonthlyChart(monthlyData);
-  }, [currentFY]);
+  }, [currentFY, scope, isDue]);
 
   useEffect(() => {
     if (!currentFY) return;
@@ -191,11 +217,15 @@ export default function MonthlyReportPage() {
     <div>
       <PageBanner
         className="mb-4"
-        title="Monthly Report"
+        title={labels.monthlyTitle}
         subtitle={`${lookups?.currentFinancialYear || ''} · ${CURRENT_MONTH}`}
       />
 
-      <ReportSummaryStatCards className="mb-4" loading={loading} summary={summary} />
+      {isDue ? (
+        <DueBillsStatCards className="mb-4" loading={loading || !currentFY} summary={summary} variant="monthly" />
+      ) : (
+        <ReportSummaryStatCards className="mb-4" loading={loading || !currentFY} summary={summary} showCount />
+      )}
 
       {chartLoading ? (
         <ChartSkeletonGrid count={2} className="dashboard-grid-2 mb-4" />
@@ -204,16 +234,17 @@ export default function MonthlyReportPage() {
           <BarChartCard
             data={momComparisonChart}
             loading={false}
-            title={`${CURRENT_MONTH} vs Previous Month`}
+            title={isDue ? `Bills : ${CURRENT_MONTH} vs Previous Month` : `Expenses : ${CURRENT_MONTH} vs Previous Month`}
             xKey="name"
-            color="#3b82f6"
+            color={isDue ? '#f59e0b' : '#3b82f6'}
             changePercent={momChangePercent}
           />
           <BarChartCard
             data={monthlyChart}
             loading={monthlyChartLoading}
-            title="Monthly Comparison"
+            title={isDue ? 'Monthly Bills Comparison' : 'Monthly Expenses Comparison'}
             xKey="name"
+            color={isDue ? '#f59e0b' : '#3b82f6'}
             fyOptions={fyOptions}
             selectedFy={resolvedMonthlyFy}
             onFyChange={handleMonthlyFyChange}
@@ -222,13 +253,14 @@ export default function MonthlyReportPage() {
       )}
 
       <MonthlyExpensesTable
-        key={`${activeTableFY}-${initialMonth ?? 'all'}`}
+        key={`${scope}-${activeTableFY}-${initialMonth ?? 'all'}`}
         loading={monthlyReportLoading}
         monthlyRows={visibleMonthlyRows}
         activeTableFY={activeTableFY}
         fyOptions={fyOptions}
         onTableFyChange={(v) => setTableFY(v || currentFY)}
         initialMonth={initialMonth}
+        reportScope={scope}
       />
     </div>
   );

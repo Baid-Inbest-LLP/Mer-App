@@ -10,6 +10,8 @@ export default function FinancialYearReportStatCards({
   totalEntries,
   peakQuarter,
   yoyChange,
+  totalLabel = 'FY Total Expense',
+  entriesLabel = 'Total Entries',
 }) {
   if (loading) {
     return <StatCardsSkeleton className={className} />;
@@ -18,7 +20,7 @@ export default function FinancialYearReportStatCards({
   return (
     <div className={`dashboard-grid-4 ${className}`}>
       <StatCard
-        label="FY Total Expense"
+        label={totalLabel}
         value={formatCurrency(fyTotal || 0)}
         color="text-purple-700"
         iconBg="bg-purple-100"
@@ -30,8 +32,8 @@ export default function FinancialYearReportStatCards({
         }
       />
       <StatCard
-        label="Total Entries"
-        value={totalEntries}
+        label={entriesLabel}
+        value={new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number(totalEntries) || 0)}
         color="text-amber-700"
         iconBg="bg-amber-100"
         accent="bg-amber-500"

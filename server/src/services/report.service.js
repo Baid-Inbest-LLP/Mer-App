@@ -1,3 +1,4 @@
+import { OPEN_PAYMENT_STATUSES, PAYMENT_STATUS } from '../constants/paymentStatus.js';
 import { Expense } from '../models/Expense.js';
 import { Company } from '../models/Company.js';
 import { Location } from '../models/Location.js';
@@ -95,37 +96,182 @@ const baseMatch = (filter) => ({
   approvalStatus: 'Approved',
 });
 
+const REPORT_MONEY_GROUP = {
+  net: { $sum: '$netAmount' },
+  gst: { $sum: '$totalGST' },
+  tds: { $sum: '$tds' },
+  gross: { $sum: '$grossAmount' },
+  outstanding: { $sum: '$balanceDue' },
+  amountPaid: { $sum: '$amountPaid' },
+  count: { $sum: 1 },
+};
+
+const pickMoney = (row = {}) => ({
+  net: row.net || 0,
+  gst: row.gst || 0,
+  tds: row.tds || 0,
+  gross: row.gross || 0,
+  outstanding: row.outstanding || 0,
+  amountPaid: row.amountPaid || 0,
+  count: row.count || 0,
+});
+
+const DUE_BUCKETS = [
+  { key: 'overdue', name: 'Overdue' },
+  { key: 'due_today', name: 'Due today' },
+  { key: 'due_7', name: 'Due in 7 days' },
+  { key: 'due_month', name: 'Due this month' },
+  { key: 'later', name: 'Later' },
+  { key: 'paid', name: 'Paid' },
+];
+
+const startOfDay = (d = new Date()) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+};
+
+const endOfDay = (d = new Date()) => {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
+};
+
+const dueAgingSwitch = (todayStart, todayEnd, in7, monthEnd) => ({
+  $switch: {
+    branches: [
+      { case: { $eq: ['$status', PAYMENT_STATUS.PAID] }, then: 'paid' },
+      { case: { $lt: ['$dueDate', todayStart] }, then: 'overdue' },
+      {
+        case: { $and: [{ $gte: ['$dueDate', todayStart] }, { $lte: ['$dueDate', todayEnd] }] },
+        then: 'due_today',
+      },
+      {
+        case: { $and: [{ $gt: ['$dueDate', todayEnd] }, { $lte: ['$dueDate', in7] }] },
+        then: 'due_7',
+      },
+      {
+        case: { $and: [{ $gt: ['$dueDate', in7] }, { $lte: ['$dueDate', monthEnd] }] },
+        then: 'due_month',
+      },
+    ],
+    default: 'later',
+  },
+});
+
 export const getReportSummary = async (query) => {
   const filter = buildExpenseQuery(query);
+  const match = baseMatch(filter);
 
-  const [summary, vendorCount] = await Promise.all([
+  const todayStart = startOfDay();
+  const todayEnd = endOfDay();
+  const in7 = endOfDay(new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000));
+  const monthEnd = endOfDay(new Date(todayStart.getFullYear(), todayStart.getMonth() + 1, 0));
+
+  const [facetRows, vendorCount] = await Promise.all([
     Expense.aggregate([
-      { $match: baseMatch(filter) },
+      { $match: match },
       {
-        $group: {
-          _id: null,
-          totalNet: { $sum: '$netAmount' },
-          totalGST: { $sum: '$totalGST' },
-          totalTDS: { $sum: '$tds' },
-          grossAmount: { $sum: '$grossAmount' },
-          count: { $sum: 1 },
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                totalNet: { $sum: '$netAmount' },
+                totalGST: { $sum: '$totalGST' },
+                totalTDS: { $sum: '$tds' },
+                grossAmount: { $sum: '$grossAmount' },
+                outstanding: { $sum: '$balanceDue' },
+                amountPaid: { $sum: '$amountPaid' },
+                dueAndOverdue: {
+                  $sum: {
+                    $cond: [
+                      { $in: ['$status', OPEN_PAYMENT_STATUSES] },
+                      '$balanceDue',
+                      0,
+                    ],
+                  },
+                },
+                openCount: {
+                  $sum: {
+                    $cond: [
+                      { $in: ['$status', OPEN_PAYMENT_STATUSES] },
+                      1,
+                      0,
+                    ],
+                  },
+                },
+                count: { $sum: 1 },
+              },
+            },
+          ],
+          byBucket: [
+            {
+              $group: {
+                _id: dueAgingSwitch(todayStart, todayEnd, in7, monthEnd),
+                outstanding: { $sum: '$balanceDue' },
+                amountPaid: { $sum: '$amountPaid' },
+                gross: { $sum: '$grossAmount' },
+                count: { $sum: 1 },
+              },
+            },
+          ],
+          dueThisMonth: [
+            {
+              $match: {
+                status: { $in: OPEN_PAYMENT_STATUSES },
+                dueDate: { $gte: todayStart, $lte: monthEnd },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                outstanding: { $sum: '$balanceDue' },
+                count: { $sum: 1 },
+              },
+            },
+          ],
         },
       },
     ]),
     Expense.aggregate([
-      { $match: baseMatch(filter) },
+      { $match: match },
       { $group: { _id: '$vendor' } },
       { $count: 'vendors' },
     ]),
   ]);
 
+  const facet = facetRows[0] || {};
+  const totals = facet.totals?.[0] || {};
+  const bucketMap = Object.fromEntries(
+    (facet.byBucket || []).map((row) => [row._id, row]),
+  );
+  const buckets = DUE_BUCKETS.map((meta) => {
+    const row = bucketMap[meta.key] || {};
+    return {
+      key: meta.key,
+      name: meta.name,
+      value: meta.key === 'paid' ? (row.gross || row.amountPaid || 0) : (row.outstanding || 0),
+      count: row.count || 0,
+    };
+  });
+
   return {
-    totalNetAmount: summary[0]?.totalNet || 0,
-    totalGST: summary[0]?.totalGST || 0,
-    totalTDS: summary[0]?.totalTDS || 0,
-    grossAmount: summary[0]?.grossAmount || 0,
-    entryCount: summary[0]?.count || 0,
+    totalNetAmount: totals.totalNet || 0,
+    totalGST: totals.totalGST || 0,
+    totalTDS: totals.totalTDS || 0,
+    grossAmount: totals.grossAmount || 0,
+    outstanding: totals.outstanding || 0,
+    amountPaid: totals.amountPaid || 0,
+    dueAndOverdue: totals.dueAndOverdue || 0,
+    openCount: totals.openCount || 0,
+    entryCount: totals.count || 0,
     vendorCount: vendorCount[0]?.vendors || 0,
+    overdue: buckets.find((b) => b.key === 'overdue')?.value || 0,
+    dueToday: buckets.find((b) => b.key === 'due_today')?.value || 0,
+    dueIn7: buckets.find((b) => b.key === 'due_7')?.value || 0,
+    dueThisMonth: facet.dueThisMonth?.[0]?.outstanding || 0,
+    buckets,
   };
 };
 
@@ -136,14 +282,10 @@ export const getExpenseHeadSummary = async (query) => {
     {
       $group: {
         _id: '$headOfExpense',
-        net: { $sum: '$netAmount' },
-        gst: { $sum: '$totalGST' },
-        tds: { $sum: '$tds' },
-        gross: { $sum: '$grossAmount' },
-        count: { $sum: 1 },
+        ...REPORT_MONEY_GROUP,
       },
     },
-    { $sort: { gross: -1 } },
+    { $sort: { outstanding: -1, gross: -1 } },
   ]);
 };
 
@@ -165,7 +307,9 @@ const sortMonthlyRows = (rows) =>
   });
 
 
-const emptyTotals = () => ({ net: 0, gst: 0, tds: 0, gross: 0, count: 0 });
+const emptyTotals = () => ({
+  net: 0, gst: 0, tds: 0, gross: 0, outstanding: 0, amountPaid: 0, count: 0,
+});
 
 const resolveDetailReportMeta = async (query, Company) => {
   if (query.company && query.month) {
@@ -188,11 +332,7 @@ export const getMonthlyReport = async (query) => {
       {
         $group: {
           _id: { company: '$company', month: '$month', merType: '$reportMerType' },
-          net: { $sum: '$netAmount' },
-          gst: { $sum: '$totalGST' },
-          tds: { $sum: '$tds' },
-          gross: { $sum: '$grossAmount' },
-          count: { $sum: 1 },
+          ...REPORT_MONEY_GROUP,
         },
       },
     ]),
@@ -201,11 +341,7 @@ export const getMonthlyReport = async (query) => {
       {
         $group: {
           _id: { company: '$company', month: '$month' },
-          net: { $sum: '$netAmount' },
-          gst: { $sum: '$totalGST' },
-          tds: { $sum: '$tds' },
-          gross: { $sum: '$grossAmount' },
-          count: { $sum: 1 },
+          ...REPORT_MONEY_GROUP,
         },
       },
     ]),
@@ -225,11 +361,7 @@ export const getMonthlyReport = async (query) => {
       company: row._id.company,
       month: row._id.month,
       merType: 'combined',
-      net: row.net,
-      gst: row.gst,
-      tds: row.tds,
-      gross: row.gross,
-      count: row.count,
+      ...pickMoney(row),
     });
   }
 
@@ -242,11 +374,7 @@ export const getMonthlyReport = async (query) => {
       company: row._id.company,
       month: row._id.month,
       merType,
-      net: row.net,
-      gst: row.gst,
-      tds: row.tds,
-      gross: row.gross,
-      count: row.count,
+      ...pickMoney(row),
     });
   }
 
@@ -273,11 +401,7 @@ export const getMonthlyReport = async (query) => {
         month,
         companyCode,
         merType,
-        net: stats.net,
-        gst: stats.gst,
-        tds: stats.tds,
-        gross: stats.gross,
-        count: stats.count,
+        ...pickMoney(stats),
         reportNo: buildMonthlyReportNo({
           companyCode,
           month,
@@ -317,11 +441,7 @@ export const getFinancialYearReport = async (query) => {
             financialYear: '$financialYear',
             merType: '$reportMerType',
           },
-          net: { $sum: '$netAmount' },
-          gst: { $sum: '$totalGST' },
-          tds: { $sum: '$tds' },
-          gross: { $sum: '$grossAmount' },
-          count: { $sum: 1 },
+          ...REPORT_MONEY_GROUP,
         },
       },
     ]),
@@ -330,11 +450,7 @@ export const getFinancialYearReport = async (query) => {
       {
         $group: {
           _id: { company: '$company', financialYear: '$financialYear' },
-          net: { $sum: '$netAmount' },
-          gst: { $sum: '$totalGST' },
-          tds: { $sum: '$tds' },
-          gross: { $sum: '$grossAmount' },
-          count: { $sum: 1 },
+          ...REPORT_MONEY_GROUP,
         },
       },
     ]),
@@ -354,11 +470,7 @@ export const getFinancialYearReport = async (query) => {
       company: row._id.company,
       financialYear: row._id.financialYear,
       merType: 'combined',
-      net: row.net,
-      gst: row.gst,
-      tds: row.tds,
-      gross: row.gross,
-      count: row.count,
+      ...pickMoney(row),
     });
   }
 
@@ -371,11 +483,7 @@ export const getFinancialYearReport = async (query) => {
       company: row._id.company,
       financialYear: row._id.financialYear,
       merType,
-      net: row.net,
-      gst: row.gst,
-      tds: row.tds,
-      gross: row.gross,
-      count: row.count,
+      ...pickMoney(row),
     });
   }
 
@@ -402,11 +510,7 @@ export const getFinancialYearReport = async (query) => {
         financialYear,
         companyCode,
         merType,
-        net: stats.net,
-        gst: stats.gst,
-        tds: stats.tds,
-        gross: stats.gross,
-        count: stats.count,
+        ...pickMoney(stats),
         reportNo: buildFyReportNo({
           companyCode,
           financialYear,
@@ -419,6 +523,12 @@ export const getFinancialYearReport = async (query) => {
   return sortFyRows(mapped);
 };
 
+const previousFinancialYearLabel = (fy) => {
+  const [startYear] = String(fy || '').split('-').map(Number);
+  if (!startYear) return '';
+  return `${startYear - 1}-${String(startYear).slice(-2)}`;
+};
+
 export const getMonthlyDetailedReport = async (query) => {
   const filter = buildExpenseQuery(query);
 
@@ -426,17 +536,50 @@ export const getMonthlyDetailedReport = async (query) => {
     .sort({ invoiceDate: 1 })
     .lean();
 
-  const totals = { net: 0, gst: 0, tds: 0, gross: 0 };
+  const todayStart = startOfDay();
+  const openStatuses = new Set(OPEN_PAYMENT_STATUSES);
+  const totals = {
+    net: 0,
+    gst: 0,
+    tds: 0,
+    gross: 0,
+    amountPaid: 0,
+    outstanding: 0,
+    overdue: 0,
+    due: 0,
+    byQuarter: {},
+  };
   const entries = docs.map((e) => {
+    const gross = e.grossAmount || 0;
+    const paid = e.amountPaid || 0;
+    const balance = e.balanceDue || 0;
     totals.net += e.netAmount || 0;
     totals.gst += e.totalGST || 0;
     totals.tds += e.tds || 0;
-    totals.gross += e.grossAmount || 0;
+    totals.gross += gross;
+    totals.amountPaid += paid;
+    totals.outstanding += balance;
+
+    const quarter = e.quarter || '';
+    if (quarter) {
+      totals.byQuarter[quarter] = (totals.byQuarter[quarter] || 0) + gross;
+    }
+
+    if (openStatuses.has(e.status)) {
+      const dueDate = e.dueDate ? new Date(e.dueDate) : null;
+      if (dueDate && dueDate < todayStart) {
+        totals.overdue += balance;
+      } else {
+        totals.due += balance;
+      }
+    }
+
     return {
       _id: e._id,
       slNo: e.slNo || '',
       invoiceDate: e.invoiceDate || null,
       month: e.month || '',
+      quarter: e.quarter || '',
       company: e.company || '',
       coNames: e.coNames || '',
       headOfExpense: e.headOfExpense || '',
@@ -445,16 +588,31 @@ export const getMonthlyDetailedReport = async (query) => {
       netAmount: e.netAmount || 0,
       totalGST: e.totalGST || 0,
       tds: e.tds || 0,
-      grossAmount: e.grossAmount || 0,
+      grossAmount: gross,
+      amountPaid: paid,
+      balanceDue: balance,
+      status: e.status || '',
       paymentMethod: e.paymentMethod || e.merType || '',
       approvalStatus: e.approvalStatus || '',
     };
   });
 
+  let previousYearGross = 0;
+  const prevFy = previousFinancialYearLabel(query.financialYear);
+  if (prevFy) {
+    const prevFilter = buildExpenseQuery({ ...query, financialYear: prevFy });
+    const prevAgg = await Expense.aggregate([
+      { $match: baseMatch(prevFilter) },
+      { $group: { _id: null, gross: { $sum: '$grossAmount' } } },
+    ]);
+    previousYearGross = prevAgg[0]?.gross || 0;
+  }
+
   return {
     ...(await resolveDetailReportMeta(query, Company)),
     entries,
     totals,
+    previousYearGross,
     count: entries.length,
   };
 };

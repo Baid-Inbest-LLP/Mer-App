@@ -2,6 +2,7 @@ import { Expense } from '../models/Expense.js';
 import { ExpensePayment } from '../models/ExpensePayment.js';
 import { Company } from '../models/Company.js';
 import { buildExpenseQuery } from '../utils/queryBuilder.js';
+import { applyReportScope } from '../utils/reportScope.js';
 import { getFinancialYear } from '../config/index.js';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -159,9 +160,9 @@ export const getExpenseTrends = async (months = 12) => {
 };
 
 /**
- * Average calendar days from due (or invoice) date to full payment,
- * grouped by the month the bill was due. Includes months with no paid
- * bills as avgDays: 0 so the chart stays continuous.
+ * Average calendar days from due date (fallback: invoice date) to full
+ * payment, grouped by the month the bill was due. Empty months stay in
+ * the series so the chart remains continuous.
  */
 export const getAvgDaysToClearByMonth = async (months = 12) => {
   const now = new Date();
@@ -283,10 +284,13 @@ export const getHeadOfExpenseAnalytics = async (query = {}) => {
   ]);
 };
 
-export const getQuarterlyOverview = async (financialYear) => {
-  const match = financialYear
-    ? { ...baseMatch(), financialYear }
-    : baseMatch();
+export const getQuarterlyOverview = async (financialYear, query = {}) => {
+  const scopeFilter = {};
+  applyReportScope(scopeFilter, query.reportScope);
+  const match = {
+    ...baseMatch(scopeFilter),
+    ...(financialYear ? { financialYear } : {}),
+  };
 
   return Expense.aggregate([
     { $match: match },
@@ -296,6 +300,8 @@ export const getQuarterlyOverview = async (financialYear) => {
         total: { $sum: '$grossAmount' },
         net: { $sum: '$netAmount' },
         gst: { $sum: '$totalGST' },
+        outstanding: { $sum: '$balanceDue' },
+        amountPaid: { $sum: '$amountPaid' },
         count: { $sum: 1 },
       },
     },
@@ -303,9 +309,11 @@ export const getQuarterlyOverview = async (financialYear) => {
   ]);
 };
 
-export const getFinancialYearComparison = async (anchorFy, limit = 5) => {
+export const getFinancialYearComparison = async (anchorFy, limit = 5, query = {}) => {
+  const scopeFilter = {};
+  applyReportScope(scopeFilter, query.reportScope);
   const rows = await Expense.aggregate([
-    { $match: baseMatch() },
+    { $match: baseMatch(scopeFilter) },
     {
       $group: {
         _id: '$financialYear',
@@ -314,6 +322,8 @@ export const getFinancialYearComparison = async (anchorFy, limit = 5) => {
         tds: { $sum: '$tds' },
         gross: { $sum: '$grossAmount' },
         total: { $sum: '$grossAmount' },
+        outstanding: { $sum: '$balanceDue' },
+        amountPaid: { $sum: '$amountPaid' },
         count: { $sum: 1 },
       },
     },

@@ -424,7 +424,7 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
                 rules={{ required: 'Payment date is required' }}
                 render={({ field, fieldState }) => (
                   <FormDateInput
-                    label="Date"
+                    label="Payment Date"
                     required
                     value={field.value}
                     onChange={field.onChange}

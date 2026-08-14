@@ -46,6 +46,17 @@ const serializePayload = (data) => {
   const payload = {};
   MER_FORM_FIELDS.forEach((key) => {
     const value = data[key];
+    // Allow clearing due date on update (null). Other empty values are omitted.
+    if (key === 'dueDate') {
+      if (value instanceof Date) {
+        payload[key] = value.toISOString();
+      } else if (typeof value === 'string' && value.trim()) {
+        payload[key] = value;
+      } else if (value === null || value === '') {
+        payload[key] = null;
+      }
+      return;
+    }
     if (value === undefined || value === null) return;
     if (value instanceof Date) {
       payload[key] = value.toISOString();

@@ -1,6 +1,7 @@
 import EmptyState from '../common/EmptyState';
 import ExpenseHeadSummarySkeleton from '../common/ExpenseHeadSummarySkeleton';
 import { formatCurrency } from '../../utils/format';
+import { isDueReportScope } from '../../utils/reportScope';
 
 export default function ExpenseHeadSummaryTable({
   className = '',
@@ -8,7 +9,9 @@ export default function ExpenseHeadSummaryTable({
   headSummary,
   headTotals,
   grossBase,
+  reportScope = 'expenses',
 }) {
+  const isDue = isDueReportScope(reportScope);
   if (loading && !headSummary.length) {
     return <ExpenseHeadSummarySkeleton className={className} />;
   }
@@ -24,7 +27,7 @@ export default function ExpenseHeadSummaryTable({
           </div>
           <div className="min-w-0">
             <h3 className="report-table-title text-sm font-bold text-gray-800 uppercase tracking-wide">
-              Expense Head Summary
+              {isDue ? 'Due Bills by Expense Head' : 'Expense Head Summary'}
             </h3>
           </div>
         </div>
@@ -41,7 +44,9 @@ export default function ExpenseHeadSummaryTable({
       {headSummary.length === 0 ? (
         <EmptyState
           title="No head summary"
-          description="No completed entries match the selected filters."
+          description={isDue
+            ? 'No due bills match the selected filters.'
+            : 'No completed entries match the selected filters.'}
         />
       ) : (
         <div className="table-wrapper">
@@ -50,27 +55,48 @@ export default function ExpenseHeadSummaryTable({
               <tr>
                 <th className="text-center w-14">#</th>
                 <th className="text-center">Expense Head</th>
-                <th className="text-right">Net</th>
-                <th className="text-right">GST</th>
-                <th className="text-right">TDS</th>
-                <th className="text-right">Gross</th>
+                {isDue ? (
+                  <>
+                    <th className="text-right">Outstanding</th>
+                    <th className="text-right">Paid</th>
+                    <th className="text-right">Gross</th>
+                  </>
+                ) : (
+                  <>
+                    <th className="text-right">Net</th>
+                    <th className="text-right">GST</th>
+                    <th className="text-right">TDS</th>
+                    <th className="text-right">Gross</th>
+                  </>
+                )}
                 <th className="text-center w-20">Share</th>
                 <th className="text-center w-16">Count</th>
               </tr>
             </thead>
             <tbody>
               {headSummary.map((h, index) => {
-                const sharePercent = grossBase > 0 ? (h.gross / grossBase) * 100 : 0;
+                const shareValue = h.gross || 0;
+                const sharePercent = grossBase > 0 ? (shareValue / grossBase) * 100 : 0;
                 return (
                   <tr key={h._id}>
                     <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
                     <td className="text-center">
                       <p className="summary-head-report-name font-semibold">{h._id}</p>
                     </td>
-                    <td className="text-right">{formatCurrency(h.net)}</td>
-                    <td className="text-right summary-head-report-value-gst">{formatCurrency(h.gst)}</td>
-                    <td className="text-right summary-head-report-value-tds">{formatCurrency(h.tds)}</td>
-                    <td className="text-right font-semibold">{formatCurrency(h.gross)}</td>
+                    {isDue ? (
+                      <>
+                        <td className="text-right font-semibold text-amber-800">{formatCurrency(h.outstanding)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(h.amountPaid)}</td>
+                        <td className="text-right">{formatCurrency(h.gross)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="text-right">{formatCurrency(h.net)}</td>
+                        <td className="text-right summary-head-report-value-gst">{formatCurrency(h.gst)}</td>
+                        <td className="text-right summary-head-report-value-tds">{formatCurrency(h.tds)}</td>
+                        <td className="text-right font-semibold">{formatCurrency(h.gross)}</td>
+                      </>
+                    )}
                     <td className="text-center">
                       <span className="summary-head-share-label text-xs font-semibold">
                         {sharePercent.toFixed(1)}%
@@ -90,10 +116,20 @@ export default function ExpenseHeadSummaryTable({
                 <td colSpan={2} className="text-left font-bold uppercase tracking-wide text-xs">
                   Total
                 </td>
-                <td className="text-right font-bold">{formatCurrency(headTotals.net)}</td>
-                <td className="text-right font-bold summary-head-report-value-gst">{formatCurrency(headTotals.gst)}</td>
-                <td className="text-right font-bold summary-head-report-value-tds">{formatCurrency(headTotals.tds)}</td>
-                <td className="text-right font-bold">{formatCurrency(headTotals.gross)}</td>
+                {isDue ? (
+                  <>
+                    <td className="text-right font-bold text-amber-800">{formatCurrency(headTotals.outstanding)}</td>
+                    <td className="text-right font-bold text-emerald-700">{formatCurrency(headTotals.amountPaid)}</td>
+                    <td className="text-right font-bold">{formatCurrency(headTotals.gross)}</td>
+                  </>
+                ) : (
+                  <>
+                    <td className="text-right font-bold">{formatCurrency(headTotals.net)}</td>
+                    <td className="text-right font-bold summary-head-report-value-gst">{formatCurrency(headTotals.gst)}</td>
+                    <td className="text-right font-bold summary-head-report-value-tds">{formatCurrency(headTotals.tds)}</td>
+                    <td className="text-right font-bold">{formatCurrency(headTotals.gross)}</td>
+                  </>
+                )}
                 <td className="text-center font-bold">100%</td>
                 <td className="text-center font-bold">{headTotals.count}</td>
               </tr>

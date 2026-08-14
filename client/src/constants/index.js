@@ -16,8 +16,15 @@ export const ROUTES = {
   ENTRY_VIEW: '/entries/:id',
   PURCHASE_ORDERS: '/purchase-orders',
   SUMMARY_REPORT: '/reports/summary',
+  SUMMARY_REPORT_DUE: '/reports/summary/due',
+  SUMMARY_REPORT_EXPENSES: '/reports/summary/expenses',
   CUSTOMIZED_REPORT: '/reports/customized',
+  MONTHLY_REPORT: '/reports/monthly',
+  MONTHLY_REPORT_DUE: '/reports/monthly/due',
+  MONTHLY_REPORT_EXPENSES: '/reports/monthly/expenses',
   FY_REPORT: '/reports/financial-year',
+  FY_REPORT_DUE: '/reports/financial-year/due',
+  FY_REPORT_EXPENSES: '/reports/financial-year/expenses',
   SETTINGS: '/settings',
 };
 
