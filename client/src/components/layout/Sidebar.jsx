@@ -73,7 +73,7 @@ const navItems = [
         label: 'Monthly Report',
         basePath: '/reports/monthly',
         children: [
-          { to: '/reports/monthly/due', label: 'Bills' },
+          { to: '/reports/monthly/due', label: 'Bills - Paid & Unpaid' },
           { to: '/reports/monthly/expenses', label: 'Expenses' },
         ],
       },
@@ -82,7 +82,7 @@ const navItems = [
         label: 'FY Report',
         basePath: '/reports/financial-year',
         children: [
-          { to: '/reports/financial-year/due', label: 'Bills' },
+          { to: '/reports/financial-year/due', label: 'Bills - Paid & Unpaid' },
           { to: '/reports/financial-year/expenses', label: 'Expenses' },
         ],
       },
@@ -92,7 +92,7 @@ const navItems = [
         basePath: '/reports/summary',
         extraActivePaths: ['/reports/customized'],
         children: [
-          { to: '/reports/summary/due', label: 'Bills' },
+          { to: '/reports/summary/due', label: 'Bills - Paid & Unpaid' },
           { to: '/reports/summary/expenses', label: 'Expenses' },
         ],
       },

@@ -9,6 +9,7 @@ import ExcelJS from 'exceljs';
 import {
   buildMerStyledSheet,
   buildDetailTitle,
+  buildTotalsLabel,
   createMerWorkbook,
 } from '../src/utils/excelGenerator.js';
 import { readAssetBuffer, readWatermarkBuffer } from '../src/utils/assetLoader.js';
@@ -53,6 +54,42 @@ assets.forEach((name) => {
 
 assert(amountToWordsINR(125000).includes('Rupees'), 'amountToWordsINR failed');
 console.log(`✓ amountToWordsINR: ${amountToWordsINR(125000)}`);
+
+const flattenTitle = (title) => (
+  title && Array.isArray(title.richText)
+    ? title.richText.map((part) => part.text).join('')
+    : String(title || '')
+);
+
+const expenseTitle = flattenTitle(buildDetailTitle(query, companyCtx));
+assert(expenseTitle.includes('MONTHLY EXPENSE REPORT COMBINED'), 'expense title should stay MER');
+assert(!expenseTitle.includes('BILLS (PAID & UNPAID)'), 'expense title should not use bills wording');
+console.log(`✓ expense title: ${expenseTitle}`);
+
+const billsMonthlyTitle = flattenTitle(buildDetailTitle({ ...query, month: 'April', financialYear: '2026-27', reportScope: 'due' }, companyCtx));
+assert(
+  billsMonthlyTitle === "BILLP - MONTHLY BILLS (PAID & UNPAID) REPORT COMBINED - APR'2026",
+  `unexpected bills monthly title: ${billsMonthlyTitle}`,
+);
+console.log(`✓ bills monthly title: ${billsMonthlyTitle}`);
+
+const billsFyTitle = flattenTitle(buildDetailTitle({ financialYear: '2026-27', merType: 'combined', reportScope: 'due' }, companyCtx));
+assert(
+  billsFyTitle === 'BILLP - FY BILLS (PAID & UNPAID) REPORT COMBINED - FY 2026-27',
+  `unexpected bills FY title: ${billsFyTitle}`,
+);
+console.log(`✓ bills FY title: ${billsFyTitle}`);
+
+const expenseTotals = buildTotalsLabel(query, companyCtx);
+assert(expenseTotals.includes('Expense'), 'expense totals should stay Expense');
+assert(!expenseTotals.includes('BILLS(PAID & UNPAID)'), 'expense totals should not use bills wording');
+
+const billsTotals = buildTotalsLabel({ ...query, month: 'April', financialYear: '2026-27', reportScope: 'due' }, companyCtx);
+assert(
+  billsTotals === "Total Combined BILLS(PAID & UNPAID) - BILLP - APR'26",
+  `unexpected bills totals: ${billsTotals}`,
+);
+console.log(`✓ bills totals: ${billsTotals}`);
 
 const watermarkBuf = readWatermarkBuffer();
 assert(watermarkBuf && watermarkBuf.length > 0, 'Watermark buffer missing');

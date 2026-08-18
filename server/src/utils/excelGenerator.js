@@ -3,6 +3,7 @@ import { readAssetBuffer } from './assetLoader.js';
 import { amountToWordsINR } from './amountToWords.js';
 import { abbreviateMonthName, monthToDateInFy } from './merSerial.js';
 import { getFinancialYear } from '../config/index.js';
+import { normalizeReportScope, REPORT_SCOPE } from './reportScope.js';
 
 const DATA_FIRST_COL = 2; // B
 const DATA_LAST_COL = 22; // V (21 data columns)
@@ -46,6 +47,9 @@ const COLUMN_CELL_FILLS = new Map([
   ['Payment\nMethod', COL_FILL_PAYMENT],
   ['Payment\nRef No', COL_FILL_PAYMENT],
   ['Payment\nDate', COL_FILL_PAYMENT],
+  ['Date', COL_FILL_PAYMENT],
+  ['Payment\nStatus', COL_FILL_PAYMENT],
+  ['Remarks', COL_FILL_PAYMENT],
 ]);
 
 const solidFill = (argb) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
@@ -95,6 +99,9 @@ const HEADER_MIN_WIDTHS = {
   'Payment\nMethod': 14,
   'Payment\nRef No': 22,
   'Payment\nDate': 12,
+  Date: 12,
+  'Payment\nStatus': 16,
+  Remarks: 18,
 };
 
 const fmtDateDMY = (d) => {
@@ -621,6 +628,8 @@ const formatTitleMerType = (merType) => {
   return normalized ? normalized.toUpperCase() : 'COMBINED';
 };
 
+const isBillsReport = (query = {}) => normalizeReportScope(query.reportScope) === REPORT_SCOPE.DUE;
+
 /** e.g. April + 2024-25 → APR'24 */
 const formatShortMonthPeriod = (month, financialYear) => {
   const abbr = abbreviateMonthName(month);
@@ -641,6 +650,7 @@ const formatFullMonthPeriod = (month, financialYear) => {
 
 /**
  * Total Bank Expense - BSIBPL - APR'24
+ * Bills: Total Combined BILLS(PAID & UNPAID) - BILLP - APR'26
  */
 export const buildTotalsLabel = (query = {}, companyCtx = {}) => {
   const companyCode = String(companyCtx.companyCode || '').trim().toUpperCase() || 'COMPANY';
@@ -650,18 +660,22 @@ export const buildTotalsLabel = (query = {}, companyCtx = {}) => {
   const period = query.month
     ? formatShortMonthPeriod(query.month, fy)
     : (fy ? `FY ${fy}` : '');
+  const noun = isBillsReport(query) ? 'BILLS(PAID & UNPAID)' : 'Expense';
 
-  return `Total ${merTitleCase} Expense - ${companyCode}${period ? ` - ${period}` : ''}`;
+  return `Total ${merTitleCase} ${noun} - ${companyCode}${period ? ` - ${period}` : ''}`;
 };
 
 /**
  * BSIBPL - MONTHLY EXPENSE REPORT COMBINED (black) - APR'2024 / FY 2024-25 (bright red)
+ * Bills: BILLP - MONTHLY BILLS (PAID & UNPAID) REPORT COMBINED - APR'2026
  * Plain string titles (summary sheets) remain supported by callers.
  */
 export const buildDetailTitle = (query = {}, companyCtx = {}) => {
   const companyCode = String(companyCtx.companyCode || '').trim().toUpperCase();
   const merLabel = formatTitleMerType(query.merType);
   const fy = query.financialYear || getFinancialYear();
+  const bills = isBillsReport(query);
+  const periodKind = query.month ? 'MONTHLY' : 'FY';
 
   let period = '';
   if (query.month) {
@@ -670,9 +684,9 @@ export const buildDetailTitle = (query = {}, companyCtx = {}) => {
     period = `FY ${fy}`;
   }
 
-  const middle = merLabel
-    ? `MONTHLY EXPENSE REPORT ${merLabel}`
-    : 'MONTHLY EXPENSE REPORT';
+  const middle = bills
+    ? `${periodKind} BILLS (PAID & UNPAID) REPORT ${merLabel}`
+    : (merLabel ? `MONTHLY EXPENSE REPORT ${merLabel}` : 'MONTHLY EXPENSE REPORT');
 
   if (!companyCode && !period) {
     return middle;

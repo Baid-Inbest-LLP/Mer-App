@@ -132,8 +132,9 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
               <thead>
                 <tr>
                   <th className="text-center">{isPaidView ? 'Expense No' : 'Bill No'}</th>
-                  <th className="text-center">Month</th>
-                  <th className="text-center">Invoice Date</th>
+                  {!isPaidView && <th className="text-center">Month</th>}
+                  <th className="text-center whitespace-nowrap">Invoice Date</th>
+                  <th className="text-center">Invoice No</th>
                   <th className="text-center">Due Date</th>
                   <th className="text-center">Company</th>
                   <th className="text-center">Co Name</th>
@@ -151,8 +152,9 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                 {Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
                     <td className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></td>
-                    <td className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></td>
+                    {!isPaidView && <td className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></td>}
                     <td className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></td>
+                    <td className="text-center"><Skeleton className="h-4 w-24 mx-auto" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-16 mx-auto" /></td>
                     <td className="text-center"><Skeleton className="h-4 w-20 mx-auto" /></td>
@@ -182,8 +184,9 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
               <thead>
                 <tr>
                   <th className="text-center">{isPaidView ? 'Expense No' : 'Bill No'}</th>
-                  <th className="text-center">Month</th>
-                  <th className="text-center">Invoice Date</th>
+                  {!isPaidView && <th className="text-center">Month</th>}
+                  <th className="text-center whitespace-nowrap">Invoice Date</th>
+                  <th className="text-center">Invoice No</th>
                   <th className="text-center">Due Date</th>
                   <th className="text-center">Company</th>
                   <th className="text-center">Co Name</th>
@@ -223,8 +226,9 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                           '—'
                         )}
                       </td>
-                      <td className="text-center">{e.month}</td>
-                      <td className="text-center">{formatDate(e.invoiceDate)}</td>
+                      {!isPaidView && <td className="text-center">{e.month}</td>}
+                      <td className="text-center whitespace-nowrap">{formatDate(e.invoiceDate)}</td>
+                      <td className="text-center">{e.invoiceNo || '—'}</td>
                       <td className="text-center">{formatDate(e.dueDate)}</td>
                       <td className="text-center">
                         <span className="font-mono text-xs bg-primary-50 text-primary-700 border border-primary-200 px-2 py-0.5 rounded-md">

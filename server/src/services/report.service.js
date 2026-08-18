@@ -14,6 +14,7 @@ import {
   resolveCustomizedReportMeta,
 } from '../utils/merReportSerial.js';
 import { reportMerTypeAddFieldsStage, REPORT_MER_TYPES } from '../utils/reportMerType.js';
+import { normalizeReportScope, REPORT_SCOPE } from '../utils/reportScope.js';
 import {
   buildDetailTitle,
   buildTotalsLabel,
@@ -646,6 +647,36 @@ const DETAIL_HEADERS = [
   'Payment\nDate',
 ];
 
+const BILLS_DETAIL_HEADERS = [
+  'Sl\nNo',
+  'Exp\nType',
+  'Month',
+  'Co\nName',
+  'Loc',
+  'Invoice\nDate',
+  'Invoice\nNo',
+  'Head of\nExp',
+  'Particulars',
+  'Net\nAmt',
+  'CGST',
+  'SGST',
+  'IGST',
+  'Total\nGST',
+  'TDS',
+  'Gross\nAmt',
+  'Date',
+  'Payment\nStatus',
+  'Remarks',
+];
+
+const isBillsReport = (query = {}) => normalizeReportScope(query.reportScope) === REPORT_SCOPE.DUE;
+
+const formatPaymentStatus = (status) => {
+  if (status === PAYMENT_STATUS.PARTIALLY_PAID) return 'Partially Paid';
+  if (status === PAYMENT_STATUS.HOLD) return 'On Hold';
+  return status || PAYMENT_STATUS.PENDING;
+};
+
 const formatExpenseType = (expenseType) => {
   if (expenseType === 'Capital') return 'CE';
   if (expenseType === 'Revenue') return 'RE';
@@ -686,6 +717,7 @@ const buildMonthlyReportModel = async (query) => {
     Company.find({}).select('name code').lean(),
   ]);
   const { reportNo, filename } = meta;
+  const isBills = isBillsReport(query);
 
   const companyCodeByName = new Map(
     companies.map((c) => [c.name, c.code || c.name]),
@@ -702,7 +734,7 @@ const buildMonthlyReportModel = async (query) => {
     totals.tds += e.tds || 0;
     totals.gross += e.grossAmount || 0;
     const companyCode = resolveCompanyCode(e.company);
-    return [
+    const base = [
       index + 1,
       formatExpenseType(e.expenseType),
       formatReportMonthLabel(e.month, { invoiceDate: e.invoiceDate, financialYear }),
@@ -719,6 +751,17 @@ const buildMonthlyReportModel = async (query) => {
       e.totalGST || 0,
       e.tds || 0,
       e.grossAmount || 0,
+    ];
+    if (isBills) {
+      return [
+        ...base,
+        fmtDateDMY(e.dueDate || e.paymentDate),
+        formatPaymentStatus(e.status),
+        '',
+      ];
+    }
+    return [
+      ...base,
       companyCode,
       formatPaymentFrom(e),
       e.paymentMethod || e.merType || '',
@@ -727,18 +770,31 @@ const buildMonthlyReportModel = async (query) => {
     ];
   });
 
-  const totalsRow = [
-    entries.length,
-    '', '', '', '', '', '', '', '',
-    totals.net,
-    totals.cgst,
-    totals.sgst,
-    totals.igst,
-    totals.gst,
-    totals.tds,
-    totals.gross,
-    '', '', '', '', '',
-  ];
+  const totalsRow = isBills
+    ? [
+      entries.length,
+      '', '', '', '', '', '', '', '',
+      totals.net,
+      totals.cgst,
+      totals.sgst,
+      totals.igst,
+      totals.gst,
+      totals.tds,
+      totals.gross,
+      '', '', '',
+    ]
+    : [
+      entries.length,
+      '', '', '', '', '', '', '', '',
+      totals.net,
+      totals.cgst,
+      totals.sgst,
+      totals.igst,
+      totals.gst,
+      totals.tds,
+      totals.gross,
+      '', '', '', '', '',
+    ];
 
   return {
     filename,
@@ -747,7 +803,7 @@ const buildMonthlyReportModel = async (query) => {
     sheetName: query.month || 'All Months',
     title: buildDetailTitle(query, companyCtx),
     totalsLabel: buildTotalsLabel(query, companyCtx),
-    headers: DETAIL_HEADERS,
+    headers: isBills ? BILLS_DETAIL_HEADERS : DETAIL_HEADERS,
     rows,
     totalsRow,
     grandTotal: totals.gross,

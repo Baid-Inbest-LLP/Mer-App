@@ -8,7 +8,7 @@ const TABS = [
   { value: 'all', label: 'All Bills' },
   { value: 'due', label: 'Due Bills (Unpaid)' },
   { value: 'paid', label: 'Expenses (Paid)' },
-  { value: 'recurring', label: 'Recurring bills' },
+  { value: 'recurring', label: 'Fixed Bills' },
 ];
 
 const SUBTITLES = {

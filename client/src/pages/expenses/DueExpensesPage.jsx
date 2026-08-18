@@ -147,7 +147,8 @@ export default function DueExpensesPage({ embedded = false }) {
               <thead>
                 <tr>
                   <th className="text-center">Bill No</th>
-                  <th className="text-center">Invoice Date</th>
+                  <th className="text-center whitespace-nowrap">Invoice Date</th>
+                  <th className="text-center">Invoice No</th>
                   <th className="text-center">Due Date</th>
                   <th className="text-center">Nature</th>
                   <th className="text-center">Company</th>
@@ -174,7 +175,8 @@ export default function DueExpensesPage({ embedded = false }) {
                           {formatMerSerial(e.slNo) || '—'}
                         </Link>
                       </td>
-                      <td className="text-center">{formatDate(e.invoiceDate)}</td>
+                      <td className="text-center whitespace-nowrap">{formatDate(e.invoiceDate)}</td>
+                      <td className="text-center">{e.invoiceNo || '—'}</td>
                       <td className={`text-center ${overdue ? 'text-red-600 font-semibold' : ''}`}>
                         {formatDate(e.dueDate)}
                       </td>

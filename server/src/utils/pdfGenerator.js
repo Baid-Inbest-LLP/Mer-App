@@ -50,6 +50,9 @@ const COLUMN_CELL_FILLS = new Map([
   ['Payment\nMethod', COL_FILL_PAYMENT],
   ['Payment\nRef No', COL_FILL_PAYMENT],
   ['Payment\nDate', COL_FILL_PAYMENT],
+  ['Date', COL_FILL_PAYMENT],
+  ['Payment\nStatus', COL_FILL_PAYMENT],
+  ['Remarks', COL_FILL_PAYMENT],
 ]);
 
 /**
@@ -81,6 +84,29 @@ const DETAIL_COL_WIDTHS = [
   '3.8%',  // 20 Payment Date
 ];
 
+/** Bills (paid & unpaid): drop payment-instrument cols, add Date + Payment Status. */
+const BILLS_DETAIL_COL_WIDTHS = [
+  '2.4%',  // 0  Sl No
+  '2.8%',  // 1  Exp Type
+  '3.2%',  // 2  Month
+  '8%',    // 3  Co Name
+  '3%',    // 4  Loc
+  '4.2%',  // 5  Invoice Date
+  '5.6%',  // 6  Invoice No
+  '7.6%',  // 7  Head of Exp
+  '10%',   // 8  Particulars
+  '6.2%',  // 9  Net Amt
+  '4.8%',  // 10 CGST
+  '4.8%',  // 11 SGST
+  '4.8%',  // 12 IGST
+  '5.4%',  // 13 Total GST
+  '4.6%',  // 14 TDS
+  '6.2%',  // 15 Gross Amt
+  '4.6%',  // 16 Date
+  '5.8%',  // 17 Payment Status
+  '6%',    // 18 Remarks
+];
+
 /** Columns that must stay on one line (no word break). */
 const NOWRAP_HEADERS = new Set([
   'Exp\nType',
@@ -96,6 +122,8 @@ const NOWRAP_HEADERS = new Set([
   'TDS',
   'Gross\nAmt',
   'Payment\nMethod',
+  'Date',
+  'Payment\nStatus',
 ]);
 
 /** Text columns that should wrap when content is long. */
@@ -104,6 +132,7 @@ const WRAP_HEADERS = new Set([
   'Head of\nExp',
   'Particulars',
   'Payment\nRef No',
+  'Remarks',
 ]);
 
 /** Sl No header wraps to 2 lines; cell values stay short. */
@@ -176,8 +205,13 @@ const colClass = (header) => {
 };
 
 const renderColGroup = (headers) => {
-  if (headers.length !== DETAIL_COL_WIDTHS.length) return '';
-  const cols = DETAIL_COL_WIDTHS.map((w) => `<col style="width:${w}" />`).join('');
+  const widths = headers.length === BILLS_DETAIL_COL_WIDTHS.length
+    ? BILLS_DETAIL_COL_WIDTHS
+    : headers.length === DETAIL_COL_WIDTHS.length
+      ? DETAIL_COL_WIDTHS
+      : null;
+  if (!widths) return '';
+  const cols = widths.map((w) => `<col style="width:${w}" />`).join('');
   return `<colgroup>${cols}</colgroup>`;
 };
 
