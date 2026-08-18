@@ -12,6 +12,7 @@ import {
   requiresPaymentRef,
 } from '../constants/paymentMethods.js';
 import { APPROVAL_STATUS, isAdminRole } from '../constants/roles.js';
+import { applySerialKind, serialKindForStatus } from '../utils/merSerial.js';
 
 const asTrimmed = (value) => {
   if (value == null || value === '') return '';
@@ -132,6 +133,9 @@ export const recalculateExpensePaymentState = async (expenseId, { preserveHold =
   expense.amountPaid = amountPaid;
   expense.balanceDue = balanceDue;
   expense.status = nextStatus;
+  if (asTrimmed(expense.slNo)) {
+    expense.slNo = applySerialKind(expense.slNo, serialKindForStatus(nextStatus));
+  }
 
   // Fully paid bills become expenses: mark approval Completed (Pending → Completed).
   // Leave Completed/Approved as-is; do not demote if a payment is later voided.

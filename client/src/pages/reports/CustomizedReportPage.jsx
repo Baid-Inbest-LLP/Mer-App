@@ -6,7 +6,13 @@ import { useSelector } from 'react-redux';
 import PageBanner from '../../components/common/PageBanner';
 import FilterSelect from '../../components/common/FilterSelect';
 import EmptyState from '../../components/common/EmptyState';
-import { formatCurrency, formatDate, buildCustomizedReportFilename } from '../../utils/format';
+import {
+  formatCurrency,
+  formatDate,
+  buildCustomizedReportFilename,
+  formatMerSerial,
+  getSerialLabel,
+} from '../../utils/format';
 import { buildCompanySelectOptions } from '../../utils/companySelect';
 import { getRecentFinancialYearOptions } from '../../utils/financialYear';
 import { MER_ENTRY_TYPE_OPTIONS } from '../../utils/paymentMethods';
@@ -339,7 +345,7 @@ export default function CustomizedReportPage() {
                 <thead className="sticky top-0 z-10">
                   <tr>
                     <th className="text-center w-14">S.No</th>
-                    <th className="text-center">Expense No</th>
+                    <th className="text-center">{isDue ? 'Bill No' : 'Expense No'}</th>
                     <th className="text-center">Date</th>
                     <th className="text-center">Company</th>
                     <th className="text-center">Co Name</th>
@@ -357,7 +363,12 @@ export default function CustomizedReportPage() {
                   {preview.entries.map((e, index) => (
                     <tr key={e._id}>
                       <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
-                      <td className="text-center table-serial-link font-medium text-primary-700">{e.slNo || '—'}</td>
+                      <td
+                        className="text-center table-serial-link font-medium text-primary-700"
+                        title={getSerialLabel(e.slNo)}
+                      >
+                        {formatMerSerial(e.slNo) || '—'}
+                      </td>
                       <td className="text-center whitespace-nowrap">{formatDate(e.invoiceDate)}</td>
                       <td className="text-center">{companyCode(e.company)}</td>
                       <td className="text-center">{e.coNames || '—'}</td>

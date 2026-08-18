@@ -11,6 +11,7 @@ import {
   formatCurrency,
   formatDate,
   formatMerSerial,
+  getSerialLabel,
   getPaymentStatusBadge,
   getPaymentStatusLabel,
 } from '../../utils/format';
@@ -145,7 +146,7 @@ export default function DueExpensesPage({ embedded = false }) {
             <table>
               <thead>
                 <tr>
-                  <th className="text-center">Expense No</th>
+                  <th className="text-center">Bill No</th>
                   <th className="text-center">Invoice Date</th>
                   <th className="text-center">Due Date</th>
                   <th className="text-center">Nature</th>
@@ -168,6 +169,7 @@ export default function DueExpensesPage({ embedded = false }) {
                           to={`/entries/${e._id}`}
                           state={{ from: '/due-expenses' }}
                           className="table-serial-link font-semibold text-primary-700 hover:underline"
+                          title={`View ${getSerialLabel(e.slNo).toLowerCase()} details`}
                         >
                           {formatMerSerial(e.slNo) || '—'}
                         </Link>

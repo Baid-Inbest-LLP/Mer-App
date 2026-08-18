@@ -14,6 +14,9 @@ import {
   buildFyReportFilename,
   buildFyReportNo,
   formatFyShortLabel,
+  formatMerSerial,
+  getSerialLabel,
+  getPaymentStatusLabel,
 } from '../../utils/format';
 import { reportApi } from '../../api/report.api';
 import { downloadBlob, withExtension } from '../../utils/download';
@@ -119,8 +122,9 @@ export default function FinancialYearDetailPage() {
       companyCode: companyCode(company),
       financialYear,
       merType,
+      reportScope: scope,
     })
-    : buildCustomizedReportNo({ financialYear }, companyCodeByName));
+    : buildCustomizedReportNo({ financialYear, reportScope: scope }, companyCodeByName));
 
   if (loading && !data) {
     return <ReportDetailSkeleton />;
@@ -255,46 +259,105 @@ export default function FinancialYearDetailPage() {
             <table>
               <thead className="sticky top-0 z-10">
                 <tr>
-                  <th className="text-center w-14">S.No</th>
-                  <th className="text-left">Expense No</th>
-                  <th className="text-center">Date</th>
-                  <th className="text-center">Company</th>
-                  <th className="text-center">Co Name</th>
-                  <th className="text-center">Head</th>
-                  <th className="text-center">Particulars</th>
-                  <th className="text-center">Type</th>
-                  <th className="text-right">Net</th>
-                  <th className="text-right">GST</th>
-                  <th className="text-right">TDS</th>
-                  <th className="text-right">Gross</th>
-                  <th className="text-center">Payment</th>
+                  {isDue ? (
+                    <>
+                      <th className="text-center w-14">S.No</th>
+                      <th className="text-center">Bill Nature</th>
+                      <th className="text-center">bill Type</th>
+                      <th className="text-left">Bill / EXP No</th>
+                      <th className="text-center">INV Date</th>
+                      <th className="text-center">Company</th>
+                      <th className="text-center">Co Name</th>
+                      <th className="text-center">Head</th>
+                      <th className="text-center">Particulars</th>
+                      <th className="text-right">Net</th>
+                      <th className="text-right">GST</th>
+                      <th className="text-right">TDS</th>
+                      <th className="text-right">Gross</th>
+                      <th className="text-center whitespace-nowrap min-w-[120px]">DUE Date</th>
+                      <th className="text-center">Payment Status</th>
+                    </>
+                  ) : (
+                    <>
+                      <th className="text-center w-14">S.No</th>
+                      <th className="text-center">Bill Nature</th>
+                      <th className="text-center">EXP Type</th>
+                      <th className="text-left">EXP No</th>
+                      <th className="text-center whitespace-nowrap">INV Date</th>
+                      <th className="text-center">Company</th>
+                      <th className="text-center">Co Name</th>
+                      <th className="text-center">Head</th>
+                      <th className="text-center">Particulars</th>
+                      <th className="text-center">Type</th>
+                      <th className="text-right">Net</th>
+                      <th className="text-right">GST</th>
+                      <th className="text-right">TDS</th>
+                      <th className="text-right">Gross</th>
+                      <th className="text-center whitespace-nowrap">Payment Method</th>
+                      <th className="text-center whitespace-nowrap">Payment Date</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {entries.map((e, index) => (
                   <tr key={e._id}>
-                    <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
-                    <td className="text-left">
-                      <Link
-                        to={`/entries/${e._id}`}
-                        state={{ from: returnTo }}
-                        className="table-serial-link font-medium text-primary-700 hover:text-primary-900 hover:underline"
-                        title="View expense details"
-                      >
-                        {e.slNo || '—'}
-                      </Link>
-                    </td>
-                    <td className="text-center whitespace-nowrap">{formatDate(e.invoiceDate)}</td>
-                    <td className="text-center">{companyCode(e.company)}</td>
-                    <td className="text-center">{e.coNames || '—'}</td>
-                    <td className="text-center">{e.headOfExpense || '—'}</td>
-                    <td className="text-center max-w-[220px] truncate" title={e.particulars}>{e.particulars || '—'}</td>
-                    <td className="text-center">{e.expenseType || '—'}</td>
-                    <td className="text-right">{formatCurrency(e.netAmount)}</td>
-                    <td className="text-right text-emerald-700">{formatCurrency(e.totalGST)}</td>
-                    <td className="text-right text-orange-700">{formatCurrency(e.tds)}</td>
-                    <td className="text-right font-semibold">{formatCurrency(e.grossAmount)}</td>
-                    <td className="text-center">{e.paymentMethod || '—'}</td>
+                    {isDue ? (
+                      <>
+                        <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
+                        <td className="text-center">{e.expenseNature || '—'}</td>
+                        <td className="text-center">{e.expenseType || '—'}</td>
+                        <td className="text-left">
+                          <Link
+                            to={`/entries/${e._id}`}
+                            state={{ from: returnTo }}
+                            className="table-serial-link font-medium text-primary-700 hover:text-primary-900 hover:underline"
+                            title={`View ${getSerialLabel(e.slNo).toLowerCase()} details`}
+                          >
+                            {formatMerSerial(e.slNo) || '—'}
+                          </Link>
+                        </td>
+                        <td className="text-center whitespace-nowrap">{formatDate(e.invoiceDate)}</td>
+                        <td className="text-center">{companyCode(e.company)}</td>
+                        <td className="text-center">{e.coNames || '—'}</td>
+                        <td className="text-center">{e.headOfExpense || '—'}</td>
+                        <td className="text-center max-w-[220px] truncate" title={e.particulars}>{e.particulars || '—'}</td>
+                        <td className="text-right">{formatCurrency(e.netAmount)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(e.totalGST)}</td>
+                        <td className="text-right text-orange-700">{formatCurrency(e.tds)}</td>
+                        <td className="text-right font-semibold">{formatCurrency(e.grossAmount)}</td>
+                        <td className="text-center whitespace-nowrap">{formatDate(e.dueDate)}</td>
+                        <td className="text-center">{getPaymentStatusLabel(e.status)}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="text-center summary-head-report-index font-semibold">{index + 1}</td>
+                        <td className="text-center">{e.expenseNature || '—'}</td>
+                        <td className="text-center">{e.expenseType || '—'}</td>
+                        <td className="text-left">
+                          <Link
+                            to={`/entries/${e._id}`}
+                            state={{ from: returnTo }}
+                            className="table-serial-link font-medium text-primary-700 hover:text-primary-900 hover:underline"
+                            title={`View ${getSerialLabel(e.slNo).toLowerCase()} details`}
+                          >
+                            {formatMerSerial(e.slNo) || '—'}
+                          </Link>
+                        </td>
+                        <td className="text-center whitespace-nowrap">{formatDate(e.invoiceDate)}</td>
+                        <td className="text-center">{companyCode(e.company)}</td>
+                        <td className="text-center">{e.coNames || '—'}</td>
+                        <td className="text-center">{e.headOfExpense || '—'}</td>
+                        <td className="text-center max-w-[220px] truncate" title={e.particulars}>{e.particulars || '—'}</td>
+                        <td className="text-center">{e.expenseType || '—'}</td>
+                        <td className="text-right">{formatCurrency(e.netAmount)}</td>
+                        <td className="text-right text-emerald-700">{formatCurrency(e.totalGST)}</td>
+                        <td className="text-right text-orange-700">{formatCurrency(e.tds)}</td>
+                        <td className="text-right font-semibold">{formatCurrency(e.grossAmount)}</td>
+                        <td className="text-center whitespace-nowrap">{e.paymentMethod || '—'}</td>
+                        <td className="text-center whitespace-nowrap">{formatDate(e.paymentDate)}</td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>

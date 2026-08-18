@@ -1,3 +1,7 @@
+import { isDueReportScope } from './reportScope';
+
+const reportSerialKind = (reportScope) => (isDueReportScope(reportScope) ? 'BILL' : 'MER');
+
 export const formatCurrency = (value) => {
   const num = Number(value) || 0;
   return new Intl.NumberFormat('en-IN', {
@@ -175,14 +179,15 @@ const abbreviateMonthlyReportMerType = (merType) => {
 };
 
 /**
- * {COMPANY_CODE}/MER/{MER_TYPE}/{MONTH'FY}
- * Example: BILLP/MER/COMBINED/Apr'26
+ * {COMPANY_CODE}/{KIND}/{MER_TYPE}/{MONTH'FY}
+ * Example: BILLP/MER/COMBINED/Apr'26 | BILLP/BILL/BNK/Apr'26
  */
 export const buildMonthlyReportNo = ({
   companyCode,
   month,
   financialYear,
   merType = 'combined',
+  reportScope,
 } = {}) => {
   const code = String(companyCode || '').trim();
   const type = abbreviateMonthlyReportMerType(merType);
@@ -197,13 +202,18 @@ export const buildMonthlyReportNo = ({
   const [startYear] = String(financialYear).split('-');
   const yy = String(startYear).slice(-2);
   const period = `${monthLabel}'${yy}`;
+  const kind = reportSerialKind(reportScope);
 
-  return `${code}/MER/${type}/${period}`;
+  return `${code}/${kind}/${type}/${period}`;
 };
 
 export const buildMonthlyReportFilename = (params) => {
   const reportNo = buildMonthlyReportNo(params);
-  if (!reportNo) return 'MER-monthly-report.xlsx';
+  if (!reportNo) {
+    return reportSerialKind(params?.reportScope) === 'BILL'
+      ? 'BILL-monthly-report.xlsx'
+      : 'MER-monthly-report.xlsx';
+  }
   const slug = reportNo
     .replace(/\//g, '-')
     .replace(/'/g, '')
@@ -221,24 +231,30 @@ export const formatFyShortLabel = (financialYear) => {
 };
 
 /**
- * {COMPANY_CODE}/MER/{MER_TYPE}/{FY_SHORT}
- * Example: BILLP/MER/COMBINED/25-26
+ * {COMPANY_CODE}/{KIND}/{MER_TYPE}/{FY_SHORT}
+ * Example: BILLP/MER/COMBINED/25-26 | BILLP/BILL/CASH/25-26
  */
 export const buildFyReportNo = ({
   companyCode,
   financialYear,
   merType = 'combined',
+  reportScope,
 } = {}) => {
   const code = String(companyCode || '').trim();
   const type = abbreviateMonthlyReportMerType(merType);
   const fyShort = formatFyShortLabel(financialYear);
   if (!code || !type || !fyShort) return null;
-  return `${code}/MER/${type}/${fyShort}`;
+  const kind = reportSerialKind(reportScope);
+  return `${code}/${kind}/${type}/${fyShort}`;
 };
 
 export const buildFyReportFilename = (params) => {
   const reportNo = buildFyReportNo(params);
-  if (!reportNo) return 'MER-fy-report.xlsx';
+  if (!reportNo) {
+    return reportSerialKind(params?.reportScope) === 'BILL'
+      ? 'BILL-fy-report.xlsx'
+      : 'MER-fy-report.xlsx';
+  }
   const slug = reportNo
     .replace(/\//g, '-')
     .replace(/'/g, '')
@@ -260,16 +276,25 @@ const abbreviateMonth = (month) => {
 };
 
 /**
- * MER/{companyCode}/{coName}/{location}/{expenseType}/{merType}/{fy}/{month}
+ * {KIND}/{companyCode}/{coName}/{location}/{expenseType}/{merType}/{fy}/{month}
  * Only includes filter segments provided by the user (financial year required).
  */
 export const buildCustomizedReportNo = (params, companyCodeByName = {}) => {
-  const { financialYear, month, company, coNames, location, expenseType, merType } = params;
+  const {
+    financialYear,
+    month,
+    company,
+    coNames,
+    location,
+    expenseType,
+    merType,
+    reportScope,
+  } = params;
   if (!financialYear) return null;
 
   const [start, end] = String(financialYear).split('-');
   const fyShort = start && end ? `${String(start).slice(-2)}-${end}` : String(financialYear);
-  const segments = ['MER'];
+  const segments = [reportSerialKind(reportScope)];
 
   if (company && companyCodeByName[company]) segments.push(companyCodeByName[company]);
   if (coNames) segments.push(String(coNames).trim().replace(/\s+/g, '').toUpperCase());
@@ -284,10 +309,14 @@ export const buildCustomizedReportNo = (params, companyCodeByName = {}) => {
   return segments.join('/');
 };
 
-/** MER-{companyCode}-{location}-{expenseType}-{merType}-{fy}-{month}.xlsx */
+/** MER-...xlsx | BILL-...xlsx */
 export const buildCustomizedReportFilename = (params, companyCodeByName = {}) => {
   const reportNo = buildCustomizedReportNo(params, companyCodeByName);
-  if (!reportNo) return 'MER-report.xlsx';
+  if (!reportNo) {
+    return reportSerialKind(params?.reportScope) === 'BILL'
+      ? 'BILL-report.xlsx'
+      : 'MER-report.xlsx';
+  }
   const slug = reportNo
     .replace(/\//g, '-')
     .replace(/[^a-zA-Z0-9-]+/g, '-')
@@ -296,7 +325,7 @@ export const buildCustomizedReportFilename = (params, companyCodeByName = {}) =>
   return `${slug}.xlsx`;
 };
 
-/** Display expense serial with abbreviated month (handles legacy full month names in DB). */
+/** Display bill / expense serial with abbreviated month (handles legacy full month names in DB). */
 export const formatMerSerial = (slNo) => {
   if (!slNo) return slNo;
   let result = String(slNo).replace(/^MER\//, 'EXP/');
@@ -305,6 +334,10 @@ export const formatMerSerial = (slNo) => {
   });
   return result;
 };
+
+export const isExpenseSerial = (slNo) => /^([^/]+)\/EXP\//i.test(String(slNo || '').trim());
+
+export const getSerialLabel = (slNo) => (isExpenseSerial(slNo) ? 'Expense No' : 'Bill No');
 
 export const formatDate = (date) => {
   if (!date) return '-';

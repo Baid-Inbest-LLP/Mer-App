@@ -407,6 +407,7 @@ export const getMonthlyReport = async (query) => {
           month,
           financialYear,
           merType,
+          reportScope: query.reportScope,
         }),
       });
     }
@@ -515,6 +516,7 @@ export const getFinancialYearReport = async (query) => {
           companyCode,
           financialYear,
           merType,
+          reportScope: query.reportScope,
         }),
       });
     }
@@ -578,6 +580,7 @@ export const getMonthlyDetailedReport = async (query) => {
       _id: e._id,
       slNo: e.slNo || '',
       invoiceDate: e.invoiceDate || null,
+      dueDate: e.dueDate || null,
       month: e.month || '',
       quarter: e.quarter || '',
       company: e.company || '',
@@ -585,6 +588,7 @@ export const getMonthlyDetailedReport = async (query) => {
       headOfExpense: e.headOfExpense || '',
       particulars: e.particulars || '',
       expenseType: e.expenseType || '',
+      expenseNature: e.expenseNature || '',
       netAmount: e.netAmount || 0,
       totalGST: e.totalGST || 0,
       tds: e.tds || 0,
@@ -593,6 +597,7 @@ export const getMonthlyDetailedReport = async (query) => {
       balanceDue: balance,
       status: e.status || '',
       paymentMethod: e.paymentMethod || e.merType || '',
+      paymentDate: e.paymentDate || null,
       approvalStatus: e.approvalStatus || '',
     };
   });

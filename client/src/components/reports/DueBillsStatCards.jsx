@@ -14,7 +14,7 @@ const MonthlyCards = ({ summary }) => {
   return (
     <>
       <StatCard
-        label="Total Billing Amount"
+        label="Billing Amount"
         value={formatCurrency(summary?.grossAmount)}
         color="text-amber-700"
         iconBg="bg-amber-100"
@@ -26,7 +26,7 @@ const MonthlyCards = ({ summary }) => {
         }
       />
       <StatCard
-        label="Total No Of Bills"
+        label="No Of Bills"
         value={formatCount(summary?.entryCount)}
         color="text-blue-700"
         iconBg="bg-blue-100"
@@ -38,7 +38,7 @@ const MonthlyCards = ({ summary }) => {
         }
       />
       <StatCard
-        label="Already Paid"
+        label="Paid"
         value={formatCurrency(summary?.amountPaid)}
         color="text-emerald-700"
         iconBg="bg-emerald-100"

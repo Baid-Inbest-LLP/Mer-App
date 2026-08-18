@@ -1,4 +1,30 @@
 import { getFinancialYear } from '../config/index.js';
+import { PAYMENT_STATUS } from '../constants/paymentStatus.js';
+
+export const SERIAL_KIND = {
+  BILL: 'BILL',
+  EXPENSE: 'EXP',
+};
+
+/** Paid entries use EXP; open/cancelled bills use BILL. */
+export const serialKindForStatus = (status) => (
+  String(status || '').trim() === PAYMENT_STATUS.PAID
+    ? SERIAL_KIND.EXPENSE
+    : SERIAL_KIND.BILL
+);
+
+const normalizeSerialKind = (kind) => (
+  String(kind || '').trim().toUpperCase() === SERIAL_KIND.EXPENSE
+    ? SERIAL_KIND.EXPENSE
+    : SERIAL_KIND.BILL
+);
+
+/** Swap BILL / EXP / MER in a stored serial, keeping company, type, period, and sequence. */
+export const applySerialKind = (slNo, kind) => {
+  if (!slNo) return slNo;
+  const next = normalizeSerialKind(kind);
+  return String(slNo).replace(/\/(BILL|EXP|MER)\//i, `/${next}/`);
+};
 
 const MONTH_ABBREV = {
   january: 'Jan',
@@ -103,21 +129,27 @@ export const formatMonthFyLabel = (month, invoiceDate) => {
 };
 
 /**
- * {COMPANY_CODE}/EXP/{MER_TYPE}/{MONTH'FY}
- * Example: BSIBPL/EXP/BNK/Apr'26
+ * {COMPANY_CODE}/{BILL|EXP}/{MER_TYPE}/{MONTH'FY}
+ * Example: BSIBPL/BILL/BNK/Apr'26 | BSIBPL/EXP/BNK/Apr'26
  */
-export const buildMerSerialBase = ({ companyCode, month, invoiceDate, merType }) => {
+export const buildMerSerialBase = ({
+  companyCode,
+  month,
+  invoiceDate,
+  merType,
+  kind = SERIAL_KIND.BILL,
+}) => {
   const code = String(companyCode || '').trim();
   const type = abbreviateMerType(merType);
   const period = formatMonthFyLabel(month, invoiceDate);
   if (!code || !type || !period) return null;
 
-  return `${code}/EXP/${type}/${period}`;
+  return `${code}/${normalizeSerialKind(kind)}/${type}/${period}`;
 };
 
 /**
  * Appends /001, /002, … (always padded, including the first entry).
- * Example: BSIBPL/EXP/BNK/Apr'26/001
+ * Example: BSIBPL/BILL/BNK/Apr'26/001
  */
 export const buildMerSerial = (base, sequence) => {
   if (!base) return null;
@@ -132,4 +164,20 @@ export const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/
 export const buildMerSerialPattern = (base) => {
   if (!base) return null;
   return new RegExp(`^${escapeRegex(base)}/\\d{3}$`, 'i');
+};
+
+/**
+ * Sequence is shared across BILL and EXP (and legacy MER) for the same
+ * company / type / period, so 003 stays 003 when a bill becomes an expense.
+ */
+export const buildMerSerialCountPattern = (base) => {
+  if (!base) return null;
+  const parts = String(base).split('/');
+  if (parts.length < 4) return null;
+  const [code, , type, period] = parts;
+  if (!code || !type || !period) return null;
+  return new RegExp(
+    `^${escapeRegex(code)}/(?:BILL|EXP|MER)/${escapeRegex(type)}/${escapeRegex(period)}/\\d{3}$`,
+    'i',
+  );
 };

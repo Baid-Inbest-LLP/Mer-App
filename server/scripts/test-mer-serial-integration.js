@@ -21,7 +21,7 @@ const cases = [
       invoiceDate: '2026-04-15',
       merType: 'Cash',
     },
-    expectPattern: /^BILLP\/EXP\/CASH\/Apr'26\/\d{3}$/,
+    expectPattern: /^BILLP\/BILL\/CASH\/Apr'26\/\d{3}$/,
   },
   {
     label: 'BSIBPL bank July',
@@ -31,7 +31,7 @@ const cases = [
       invoiceDate: '2026-07-07',
       merType: 'Bank',
     },
-    expectPattern: /^BSIBPL\/EXP\/BNK\/Jul'26\/\d{3}$/,
+    expectPattern: /^BSIBPL\/BILL\/BNK\/Jul'26\/\d{3}$/,
   },
 ];
 

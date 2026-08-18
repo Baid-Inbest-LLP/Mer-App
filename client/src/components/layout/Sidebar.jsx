@@ -42,7 +42,7 @@ const navItems = [
   },
   {
     to: '/purchase-orders',
-    label: 'Approved POs',
+    label: 'PO As Expense',
     icon: (
       <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path
@@ -73,7 +73,7 @@ const navItems = [
         label: 'Monthly Report',
         basePath: '/reports/monthly',
         children: [
-          { to: '/reports/monthly/due', label: 'Due bills' },
+          { to: '/reports/monthly/due', label: 'Bills' },
           { to: '/reports/monthly/expenses', label: 'Expenses' },
         ],
       },
@@ -82,7 +82,7 @@ const navItems = [
         label: 'FY Report',
         basePath: '/reports/financial-year',
         children: [
-          { to: '/reports/financial-year/due', label: 'Due bills' },
+          { to: '/reports/financial-year/due', label: 'Bills' },
           { to: '/reports/financial-year/expenses', label: 'Expenses' },
         ],
       },
@@ -92,7 +92,7 @@ const navItems = [
         basePath: '/reports/summary',
         extraActivePaths: ['/reports/customized'],
         children: [
-          { to: '/reports/summary/due', label: 'Due bills' },
+          { to: '/reports/summary/due', label: 'Bills' },
           { to: '/reports/summary/expenses', label: 'Expenses' },
         ],
       },
@@ -136,14 +136,13 @@ const roleLabel = (role) => {
   return role || '';
 };
 
+const navActiveClass = 'bg-white/75 text-[#0b2f81] shadow-sm';
+const navInactiveClass = 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]';
+
 const linkClass = (isOpen, isActive) =>
   `flex min-w-0 items-center overflow-hidden rounded-lg text-md font-medium transition-colors ${
     isOpen ? 'gap-3 justify-start px-3 py-2' : 'justify-center px-2 py-2.5'
-  } ${
-    isActive
-      ? 'bg-white/75 text-[#0b2f81] shadow-sm'
-      : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
-  }`;
+  } ${isActive ? navActiveClass : navInactiveClass}`;
 
 const firstNestedPath = (item) =>
   item?.children?.[0]?.children?.[0]?.to || item?.children?.[0]?.to || item?.to;
@@ -262,9 +261,7 @@ const Sidebar = ({ isOpen = true }) => {
                               }))
                             }
                             className={`flex w-full cursor-pointer items-center gap-2 rounded-lg border-0 pl-3 pr-2 py-1.5 text-sm font-medium transition-colors ${
-                              groupActive
-                                ? 'bg-white/50 text-white'
-                                : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
+                              groupActive ? navActiveClass : navInactiveClass
                             }`}
                           >
                             <span className="flex-1 overflow-hidden text-left text-ellipsis whitespace-nowrap">
@@ -285,8 +282,8 @@ const Sidebar = ({ isOpen = true }) => {
                                   className={() =>
                                     `flex items-center gap-3 rounded-lg pl-4 pr-3 py-1.5 text-sm font-medium transition-colors ${
                                       isReportChildActive(location.pathname, child)
-                                        ? 'bg-white/75 text-[#0b2f81] shadow-sm'
-                                        : 'text-primary-100 hover:bg-white/70 hover:text-[#0b2f81]'
+                                        ? navActiveClass
+                                        : navInactiveClass
                                     }`
                                   }
                                 >

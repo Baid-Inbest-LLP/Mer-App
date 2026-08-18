@@ -82,7 +82,7 @@ const formatDate = (date) => {
 
 const formatSerial = (slNo) => {
   if (!slNo) return 'Bill';
-  return String(slNo).replace(/^MER\//, 'EXP/');
+  return String(slNo).replace(/^MER\//, 'BILL/');
 };
 
 const escapeHtml = (value) =>

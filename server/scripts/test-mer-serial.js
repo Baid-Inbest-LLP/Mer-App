@@ -3,12 +3,15 @@
  * Run: node scripts/test-mer-serial.js
  */
 import {
+  applySerialKind,
   abbreviateMerType,
   abbreviateMonthName,
   formatMonthFyLabel,
   buildMerSerialBase,
   buildMerSerial,
+  buildMerSerialCountPattern,
   buildMerSerialPattern,
+  SERIAL_KIND,
 } from '../src/utils/merSerial.js';
 
 let passed = 0;
@@ -57,32 +60,46 @@ const baseCash = buildMerSerialBase({
   invoiceDate: new Date('2026-04-10'),
   merType: 'Cash',
 });
-assert('cash base', baseCash, "BILLP/EXP/CASH/Apr'26");
+assert('cash base', baseCash, "BILLP/BILL/CASH/Apr'26");
 
 const baseBank = buildMerSerialBase({
   companyCode: 'BSIBPL',
   month: 'May',
   invoiceDate: new Date('2026-05-20'),
   merType: 'Bank',
+  kind: SERIAL_KIND.EXPENSE,
 });
-assert('bank base', baseBank, "BSIBPL/EXP/BNK/May'26");
+assert('bank expense base', baseBank, "BSIBPL/EXP/BNK/May'26");
 
 console.log('\nbuildMerSerial');
-assert('sequence 1', buildMerSerial(baseCash, 1), "BILLP/EXP/CASH/Apr'26/001");
-assert('sequence 12', buildMerSerial(baseCash, 12), "BILLP/EXP/CASH/Apr'26/012");
+assert('sequence 1', buildMerSerial(baseCash, 1), "BILLP/BILL/CASH/Apr'26/001");
+assert('sequence 12', buildMerSerial(baseCash, 12), "BILLP/BILL/CASH/Apr'26/012");
 assert('sequence padded', buildMerSerial(baseBank, 2), "BSIBPL/EXP/BNK/May'26/002");
 
 console.log('\nbuildMerSerialPattern');
 const pattern = buildMerSerialPattern(baseCash);
 assert(
   'matches serial',
-  pattern.test("BILLP/EXP/CASH/Apr'26/003"),
+  pattern.test("BILLP/BILL/CASH/Apr'26/003"),
   true,
 );
 assert(
   'rejects different mer type',
-  pattern.test("BILLP/EXP/BNK/Apr'26/001"),
+  pattern.test("BILLP/BILL/BNK/Apr'26/001"),
   false,
+);
+
+console.log('\nbuildMerSerialCountPattern');
+const countPattern = buildMerSerialCountPattern(baseCash);
+assert('matches bill serial for count', countPattern.test("BILLP/BILL/CASH/Apr'26/003"), true);
+assert('matches expense serial for count', countPattern.test("BILLP/EXP/CASH/Apr'26/003"), true);
+assert('matches legacy mer serial for count', countPattern.test("BILLP/MER/CASH/Apr'26/003"), true);
+
+console.log('\napplySerialKind');
+assert(
+  'bill to expense',
+  applySerialKind("BILLP/BILL/CASH/Apr'26/003", SERIAL_KIND.EXPENSE),
+  "BILLP/EXP/CASH/Apr'26/003",
 );
 
 console.log(`\n${passed} passed, ${failed} failed`);

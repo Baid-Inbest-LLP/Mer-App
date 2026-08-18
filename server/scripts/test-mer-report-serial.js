@@ -107,5 +107,65 @@ assert(
   'BILLP-MER-COMBINED-25-26.xlsx',
 );
 
+console.log('\nbuildMonthlyReportNo (due bills)');
+assert(
+  'combined monthly bill',
+  buildMonthlyReportNo({
+    companyCode: 'BILLP',
+    month: 'April',
+    financialYear: '2026-27',
+    merType: 'combined',
+    reportScope: 'due',
+  }),
+  "BILLP/BILL/COMBINED/Apr'26",
+);
+assert(
+  'bank monthly bill',
+  buildMonthlyReportNo({
+    companyCode: 'BILLP',
+    month: 'April',
+    financialYear: '2026-27',
+    merType: 'bank',
+    reportScope: 'due',
+  }),
+  "BILLP/BILL/BNK/Apr'26",
+);
+assert(
+  'cash monthly bill',
+  buildMonthlyReportNo({
+    companyCode: 'BILLP',
+    month: 'April',
+    financialYear: '2026-27',
+    merType: 'cash',
+    reportScope: 'due',
+  }),
+  "BILLP/BILL/CASH/Apr'26",
+);
+
+console.log('\nbuildMonthlyReportFilename (due bills)');
+assert(
+  'bill filename slug',
+  buildMonthlyReportFilename({
+    companyCode: 'BILLP',
+    month: 'April',
+    financialYear: '2026-27',
+    merType: 'bank',
+    reportScope: 'due',
+  }),
+  'BILLP-BILL-BNK-Apr26.xlsx',
+);
+
+console.log('\nbuildFyReportNo (due bills)');
+assert(
+  'combined fy bill',
+  buildFyReportNo({
+    companyCode: 'BILLP',
+    financialYear: '2025-26',
+    merType: 'combined',
+    reportScope: 'due',
+  }),
+  'BILLP/BILL/COMBINED/25-26',
+);
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

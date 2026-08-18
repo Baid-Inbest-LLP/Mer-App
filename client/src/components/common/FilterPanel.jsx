@@ -63,7 +63,7 @@ export default function FilterPanel({
       <SimpleGrid key={resetKey} cols={{ base: 1, sm: 2, md: compact ? 3 : 4, lg: compact ? 4 : 6 }} spacing="sm">
         {!isHidden('search') && (
           <TextInput
-            placeholder="Search expense no, invoice, company, co name..."
+            placeholder="Search bill no / expense no, invoice, company, co name..."
             value={filters.search || ''}
             onChange={(e) => update('search', e.target.value)}
             onKeyDown={(e) => {

@@ -20,7 +20,7 @@ import {
   Card,
   User,
 } from '../models/index.js';
-import { buildMerSerial, buildMerSerialBase } from '../utils/merSerial.js';
+import { buildMerSerial, buildMerSerialBase, serialKindForStatus } from '../utils/merSerial.js';
 import { calculateGST, calculateGrossAmount } from '../utils/gstCalculator.js';
 import { toLocationLabel } from '../utils/locationFormat.js';
 import { formatPaymentInstrumentDisplay } from '../utils/paymentInstrumentDisplay.js';
@@ -265,6 +265,7 @@ const buildExpenseDoc = ({
     month,
     invoiceDate,
     merType: payment.merType,
+    kind: serialKindForStatus(scenario.status || PAYMENT_STATUS.PENDING),
   });
   const next = (seqCounters.get(base) || 0) + 1;
   seqCounters.set(base, next);

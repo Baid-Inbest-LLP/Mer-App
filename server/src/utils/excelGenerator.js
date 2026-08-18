@@ -162,8 +162,10 @@ const ensureMerNoColumnWidths = (ws, textColIndices = []) => {
 const resolveTextColIndices = (headers, textColIndices = []) => {
   const cols = new Set(textColIndices);
   const expenseNoIdx = headers.indexOf('Expense No');
+  const billNoIdx = headers.indexOf('Bill No');
   const reportNoIdx = headers.indexOf('Report No');
   if (expenseNoIdx >= 0) cols.add(expenseNoIdx);
+  if (billNoIdx >= 0) cols.add(billNoIdx);
   if (reportNoIdx >= 0) cols.add(reportNoIdx);
   return [...cols];
 };

@@ -2,7 +2,7 @@ import Skeleton from './Skeleton';
 
 const DEFAULT_COLUMNS = [
   'S.No',
-  'MER No',
+  'Report No',
   'Period',
   'Net',
   'GST',

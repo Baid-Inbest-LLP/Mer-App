@@ -14,6 +14,7 @@ import {
   formatDate,
   formatDaysToClear,
   formatMerSerial,
+  getSerialLabel,
   getEntryApprovalBadge,
   getEntryApprovalLabel,
   getPaymentStatusBadge,
@@ -130,7 +131,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
             <table>
               <thead>
                 <tr>
-                  <th className="text-center">Expense No</th>
+                  <th className="text-center">{isPaidView ? 'Expense No' : 'Bill No'}</th>
                   <th className="text-center">Month</th>
                   <th className="text-center">Invoice Date</th>
                   <th className="text-center">Due Date</th>
@@ -180,7 +181,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
             <table>
               <thead>
                 <tr>
-                  <th className="text-center">Expense No</th>
+                  <th className="text-center">{isPaidView ? 'Expense No' : 'Bill No'}</th>
                   <th className="text-center">Month</th>
                   <th className="text-center">Invoice Date</th>
                   <th className="text-center">Due Date</th>
@@ -214,6 +215,7 @@ export default function ExpenseListPage({ embedded = false, statusFilter = null,
                           <Link
                             to={`/entries/${e._id}`}
                             className="table-serial-link font-semibold text-primary-700 hover:underline"
+                            title={`View ${getSerialLabel(e.slNo).toLowerCase()} details`}
                           >
                             {formatMerSerial(e.slNo)}
                           </Link>

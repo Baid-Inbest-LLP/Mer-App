@@ -145,6 +145,7 @@ export default function MonthlyExpensesTable({
       month: selectedMonth,
       financialYear: activeTableFY,
       merType,
+      reportScope,
     });
 
     return (
@@ -281,7 +282,7 @@ export default function MonthlyExpensesTable({
                 <th className="text-center w-14">S.No</th>
                 <th className="text-center">Company</th>
                 {REPORT_TYPES.map((type) => (
-                  <th key={type.key} className="text-center min-w-[15.5rem]">{type.label} MER</th>
+                  <th key={type.key} className="text-center min-w-[15.5rem]">{type.label} {isDue ? 'Bills' : 'MER'}</th>
                 ))}
                 {isDue ? (
                   <>

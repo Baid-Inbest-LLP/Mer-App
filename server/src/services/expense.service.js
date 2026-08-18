@@ -5,10 +5,13 @@ import { ApiError } from '../utils/ApiError.js';
 import { calculateGST, calculateGSTFromAmount, calculateGrossAmount } from '../utils/gstCalculator.js';
 import { buildExpenseQuery, buildPagination, buildSort } from '../utils/queryBuilder.js';
 import {
+  applySerialKind,
   buildMerSerial,
   buildMerSerialBase,
-  buildMerSerialPattern,
+  buildMerSerialCountPattern,
   monthToDateInFy,
+  SERIAL_KIND,
+  serialKindForStatus,
 } from '../utils/merSerial.js';
 import { getFinancialYear } from '../config/index.js';
 import { toLocationLabel } from '../utils/locationFormat.js';
@@ -64,12 +67,12 @@ const resolveCompanyCode = async (companyName) => {
 const resolveMerType = (merType) => asTrimmedString(merType);
 
 const countSerialSequence = async (base) => {
-  const pattern = buildMerSerialPattern(base);
+  const pattern = buildMerSerialCountPattern(base);
   if (!pattern) return 0;
   return Expense.countDocuments({ slNo: pattern });
 };
 
-const resolveMerSerial = async ({ company, month, invoiceDate, merType }) => {
+const resolveMerSerial = async ({ company, month, invoiceDate, merType, kind = SERIAL_KIND.BILL }) => {
   const type = resolveMerType(merType);
   const companyCode = await resolveCompanyCode(company);
   const monthStr = asTrimmedString(month);
@@ -78,6 +81,7 @@ const resolveMerSerial = async ({ company, month, invoiceDate, merType }) => {
     month: monthStr,
     invoiceDate,
     merType: type,
+    kind,
   });
   if (!base) {
     throw ApiError.badRequest(
@@ -546,7 +550,7 @@ export const migrateApprovalStatus = async () => {
   }
 };
 
-export const getNextSlNo = async ({ company, month, invoiceDate, merType }) => {
+export const getNextSlNo = async ({ company, month, invoiceDate, merType, kind = SERIAL_KIND.BILL }) => {
   const type = resolveMerType(merType);
   const companyCode = await resolveCompanyCode(company);
   const monthStr = asTrimmedString(month);
@@ -555,9 +559,75 @@ export const getNextSlNo = async ({ company, month, invoiceDate, merType }) => {
     month: monthStr,
     invoiceDate,
     merType: type,
+    kind,
   });
   if (!base) return null;
 
   const count = await countSerialSequence(base);
   return buildMerSerial(base, count + 1);
+};
+
+const SERIAL_KIND_BY_STATUS_MIGRATION = 'serial-kind-bill-exp-by-payment-status-v1';
+
+/**
+ * Unpaid bills: COMPANY/BILL/TYPE/Mon'YY/SEQ
+ * Fully paid expenses: COMPANY/EXP/TYPE/Mon'YY/SEQ
+ * Sequence is kept; only the BILL/EXP keyword changes.
+ */
+export const migrateSerialKindByStatus = async () => {
+  const migrations = Expense.db.collection('migrations');
+  const existing = await migrations.findOne({ _id: SERIAL_KIND_BY_STATUS_MIGRATION });
+  if (existing?.status === 'done') return;
+
+  try {
+    await migrations.insertOne({
+      _id: SERIAL_KIND_BY_STATUS_MIGRATION,
+      status: 'running',
+      claimedAt: new Date(),
+    });
+  } catch (err) {
+    if (err?.code === 11000) return;
+    throw err;
+  }
+
+  try {
+    const docs = await Expense.find({ slNo: { $exists: true, $ne: '' } })
+      .select('_id slNo status')
+      .lean();
+
+    const updates = docs
+      .map((doc) => {
+        const nextSlNo = applySerialKind(doc.slNo, serialKindForStatus(doc.status));
+        if (!nextSlNo || nextSlNo === doc.slNo) return null;
+        return { id: doc._id, slNo: nextSlNo };
+      })
+      .filter(Boolean);
+
+    if (updates.length) {
+      await Expense.bulkWrite(
+        updates.map((u) => ({
+          updateOne: {
+            filter: { _id: u.id },
+            update: { $set: { slNo: u.slNo } },
+          },
+        })),
+      );
+    }
+
+    await migrations.updateOne(
+      { _id: SERIAL_KIND_BY_STATUS_MIGRATION },
+      {
+        $set: {
+          status: 'done',
+          appliedAt: new Date(),
+          updated: updates.length,
+        },
+      },
+    );
+
+    console.log(`Updated ${updates.length} serial number(s) to BILL/EXP by payment status`);
+  } catch (err) {
+    await migrations.deleteOne({ _id: SERIAL_KIND_BY_STATUS_MIGRATION });
+    throw err;
+  }
 };

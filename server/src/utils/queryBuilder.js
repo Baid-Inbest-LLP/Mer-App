@@ -22,12 +22,17 @@ const buildSearchConditions = (rawSearch) => {
     { location: searchRegex },
   ];
 
-  const serialAlias = term.replace(/^exp\//i, 'EXP/').replace(/^mer\//i, 'MER/');
+  const serialAlias = term
+    .replace(/^exp\//i, 'EXP/')
+    .replace(/^bill\//i, 'BILL/')
+    .replace(/^mer\//i, 'MER/');
   if (serialAlias !== term) {
     conditions.push({ slNo: new RegExp(escapeRegex(serialAlias), 'i') });
   }
 
-  const legacySerial = term.replace(/^exp\//i, 'MER/');
+  const legacySerial = term
+    .replace(/^exp\//i, 'MER/')
+    .replace(/^bill\//i, 'MER/');
   if (legacySerial !== term && legacySerial !== serialAlias) {
     conditions.push({ slNo: new RegExp(escapeRegex(legacySerial), 'i') });
   }

@@ -1,6 +1,7 @@
 /**
- * Migrates existing expense slNo values to:
- * {COMPANY_CODE}/EXP/{MER_TYPE}/{MONTH'FY}/{SEQ}
+ * Migrates existing serial values to:
+ * open bills   → {COMPANY_CODE}/BILL/{MER_TYPE}/{MONTH'FY}/{SEQ}
+ * paid expense → {COMPANY_CODE}/EXP/{MER_TYPE}/{MONTH'FY}/{SEQ}
  *
  * Run: node scripts/migrate-expense-slno.js
  */
@@ -9,7 +10,12 @@ import mongoose from 'mongoose';
 import { normalizeMongoUri } from '../src/config/index.js';
 import { getConnectionOptions } from '../src/config/database.js';
 import { Expense, Company } from '../src/models/index.js';
-import { buildMerSerial, buildMerSerialBase } from '../src/utils/merSerial.js';
+import {
+  applySerialKind,
+  buildMerSerial,
+  buildMerSerialBase,
+  serialKindForStatus,
+} from '../src/utils/merSerial.js';
 
 dotenv.config();
 
@@ -52,7 +58,7 @@ const migrate = async () => {
     slNo: { $exists: true, $ne: '' },
     isDraft: { $ne: true },
   })
-    .select('_id slNo company month invoiceDate createdAt merType paymentMethod')
+    .select('_id slNo company month invoiceDate createdAt merType paymentMethod status')
     .lean();
 
   console.log(`Found ${expenses.length} expense(s) to migrate.`);
@@ -73,6 +79,7 @@ const migrate = async () => {
       month: expense.month,
       invoiceDate: expense.invoiceDate,
       merType,
+      kind: serialKindForStatus(expense.status),
     });
 
     if (!base) {
@@ -80,17 +87,18 @@ const migrate = async () => {
       continue;
     }
 
-    const key = base;
+    const key = applySerialKind(base, 'BILL');
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push({ ...expense, merType, base });
   }
 
   const updates = [];
 
-  for (const [base, group] of groups) {
+  for (const [groupBase, group] of groups) {
     group.sort(sortExpenses);
     group.forEach((expense, index) => {
-      const newSlNo = buildMerSerial(base, index + 1);
+      const statusBase = applySerialKind(groupBase, serialKindForStatus(expense.status));
+      const newSlNo = buildMerSerial(statusBase, index + 1);
       if (newSlNo !== expense.slNo) {
         updates.push({
           id: expense._id,

@@ -146,6 +146,7 @@ export default function FinancialYearExpensesTable({
       companyCode: report.companyCode,
       financialYear: selectedFy,
       merType,
+      reportScope,
     });
 
     return (
@@ -282,7 +283,7 @@ export default function FinancialYearExpensesTable({
                 <th className="text-center w-14">S.No</th>
                 <th className="text-center">Company</th>
                 {REPORT_TYPES.map((type) => (
-                  <th key={type.key} className="text-center min-w-[15.5rem]">{type.label} MER</th>
+                  <th key={type.key} className="text-center min-w-[15.5rem]">{type.label} {isDue ? 'Bills' : 'MER'}</th>
                 ))}
                 {isDue ? (
                   <>

@@ -7,8 +7,9 @@ const start = async () => {
   await connectDatabase();
   await ensureDefaultUsers();
   await ensureSuperAdminAccount();
-  const { migrateApprovalStatus } = await import('./services/expense.service.js');
+  const { migrateApprovalStatus, migrateSerialKindByStatus } = await import('./services/expense.service.js');
   await migrateApprovalStatus();
+  await migrateSerialKindByStatus();
   const { migratePaymentLedger, migratePaidBillsToCompleted } = await import('./services/payment.service.js');
   await migratePaymentLedger();
   await migratePaidBillsToCompleted();
