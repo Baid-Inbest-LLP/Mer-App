@@ -147,7 +147,7 @@ export default function ShareBillModal({ open, expense: seed, onClose }) {
 
         <div className="share-bill-modal__body">
           {loading && !expense ? (
-            <Skeleton className="h-56 w-full rounded-xl" />
+            <Skeleton className="h-full min-h-[28rem] w-full rounded-none" />
           ) : expense ? (
             <div className="wa-chat" aria-label="WhatsApp message preview">
               <div className="wa-chat__thread">

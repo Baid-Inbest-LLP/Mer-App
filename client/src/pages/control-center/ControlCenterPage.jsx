@@ -6,12 +6,14 @@ import { fetchCompanies } from '../../store/slices/companiesSlice';
 import CompanyListPage from '../companies/CompanyListPage';
 import BankAccountsSection from './BankAccountsSection';
 import CardsSection from './CardsSection';
+import ExpenseHeadsSection from './ExpenseHeadsSection';
 import ReminderSection from './ReminderSection';
 
 const TABS = [
   { to: '/control-center/companies', label: 'Companies', end: true },
   { to: '/control-center/bank-accounts', label: 'Bank Accounts' },
   { to: '/control-center/cards', label: 'Cards' },
+  { to: '/control-center/expense-heads', label: 'Expense Head' },
   { to: '/control-center/reminder', label: 'Reminder' },
 ];
 
@@ -29,7 +31,9 @@ export default function ControlCenterPage() {
     ? 'Manage payer bank accounts for expense entries'
     : location.pathname.includes('cards')
       ? 'Manage credit and debit cards for expense entries'
-      : 'Legal entities, locations, bank accounts, and cards';
+      : location.pathname.includes('expense-heads')
+        ? 'Manage expense heads used on bills and expenses'
+        : 'Legal entities, locations, bank accounts, and cards';
 
   return (
     <div>
@@ -61,6 +65,7 @@ export default function ControlCenterPage() {
         <Route path="companies" element={<CompanyListPage embedded />} />
         <Route path="bank-accounts" element={<BankAccountsSection />} />
         <Route path="cards" element={<CardsSection />} />
+        <Route path="expense-heads" element={<ExpenseHeadsSection />} />
         <Route path="reminder" element={<ReminderSection />} />
         {/* Recurring schedules moved to Bills → Recurring */}
         <Route path="recurring" element={<Navigate to="/bills?tab=recurring" replace />} />

@@ -1,7 +1,7 @@
 import {
-  abbreviateMonthName,
   formatFyShort,
   formatMonthFyLabel,
+  formatMonthRangeAbbrev,
   monthToDateInFy,
 } from './merSerial.js';
 import { toLocationLabel } from './locationFormat.js';
@@ -162,13 +162,20 @@ export const buildCustomizedReportNo = ({
   const fyShort = formatFyShort(financialYear);
   if (!fyShort) return null;
 
-  const segments = [reportSerialKind(reportScope)];
+  const kind = reportSerialKind(reportScope);
+  const monthLabel = formatMonthRangeAbbrev(month);
+  const months = monthLabel ? monthLabel.split('-').filter(Boolean) : [];
+
+  if (months.length > 1) {
+    return `${kind}/${fyShort}/${monthLabel}`;
+  }
+
+  const segments = [kind];
   const code = asSegment(companyCode);
   const coName = asCoNameSegment(coNames);
   const branch = location ? toLocationLabel(location) : null;
   const type = asSegment(expenseType);
   const mer = asSegment(merType)?.toUpperCase() || null;
-  const monthLabel = month ? abbreviateMonthName(month) : null;
 
   if (code) segments.push(code);
   if (coName) segments.push(coName);

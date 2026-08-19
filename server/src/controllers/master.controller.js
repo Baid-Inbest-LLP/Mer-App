@@ -48,7 +48,58 @@ const crud = (Model, name) => ({
 export const vendorController = crud(Vendor, 'Vendor');
 export const companyController = crud(Company, 'Company');
 export const locationController = crud(Location, 'Location');
-export const expenseHeadController = crud(ExpenseHead, 'Expense head');
+
+const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+export const expenseHeadController = {
+  list: asyncHandler(async (req, res) => {
+    const filter = req.query.activeOnly === 'false' ? {} : { isActive: { $ne: false } };
+    const search = String(req.query.search || '').trim();
+    if (search) filter.name = { $regex: escapeRegex(search), $options: 'i' };
+    const items = await ExpenseHead.find(filter).sort({ sortOrder: 1, name: 1 }).lean();
+    ApiResponse.success(res, items);
+  }),
+  create: asyncHandler(async (req, res) => {
+    const name = String(req.body.name || '').trim();
+    if (!name) throw ApiError.badRequest('Expense head name is required');
+    const existing = await ExpenseHead.findOne({ name: { $regex: `^${escapeRegex(name)}$`, $options: 'i' } });
+    if (existing) throw ApiError.conflict('Expense head already exists');
+    const last = await ExpenseHead.findOne().sort({ sortOrder: -1 }).select('sortOrder').lean();
+    const item = await ExpenseHead.create({
+      name,
+      category: String(req.body.category || '').trim() || undefined,
+      sortOrder: Number.isFinite(Number(req.body.sortOrder)) ? Number(req.body.sortOrder) : (last?.sortOrder ?? -1) + 1,
+      isActive: req.body.isActive !== false,
+    });
+    ApiResponse.created(res, item, 'Expense head created');
+  }),
+  update: asyncHandler(async (req, res) => {
+    const payload = { ...req.body };
+    if (payload.name !== undefined) {
+      payload.name = String(payload.name).trim();
+      if (!payload.name) throw ApiError.badRequest('Expense head name is required');
+      const existing = await ExpenseHead.findOne({
+        _id: { $ne: req.params.id },
+        name: { $regex: `^${escapeRegex(payload.name)}$`, $options: 'i' },
+      });
+      if (existing) throw ApiError.conflict('Expense head already exists');
+    }
+    if (payload.category !== undefined) {
+      payload.category = String(payload.category).trim() || undefined;
+    }
+    const item = await ExpenseHead.findByIdAndUpdate(req.params.id, payload, {
+      new: true,
+      runValidators: true,
+    });
+    if (!item) throw ApiError.notFound('Expense head not found');
+    ApiResponse.success(res, item, 'Expense head updated');
+  }),
+  remove: asyncHandler(async (req, res) => {
+    const item = await ExpenseHead.findByIdAndDelete(req.params.id);
+    if (!item) throw ApiError.notFound('Expense head not found');
+    ApiResponse.success(res, null, 'Expense head deleted');
+  }),
+};
 
 export const getLookupData = asyncHandler(async (_req, res) => {
   const [vendors, companies, locationDocs, heads, bankAccounts, cards] = await Promise.all([
@@ -59,7 +110,7 @@ export const getLookupData = asyncHandler(async (_req, res) => {
       .select('name label company isDefault')
       .sort({ label: 1 })
       .lean(),
-    ExpenseHead.find({ isActive: true }).select('name').sort({ name: 1 }).lean(),
+    ExpenseHead.find({ isActive: true }).select('name').sort({ sortOrder: 1, name: 1 }).lean(),
     BankAccount.find({ isActive: true })
       .populate('company', 'code name')
       .select('bankName last4 company companyName')

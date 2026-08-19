@@ -41,6 +41,38 @@ const MONTH_ABBREV = {
   december: 'Dec',
 };
 
+export const FY_MONTH_ORDER = [
+  'April', 'May', 'June', 'July', 'August', 'September',
+  'October', 'November', 'December', 'January', 'February', 'March',
+];
+
+/** Accept `April`, `April,May`, or `['April','May']` and return FY-ordered unique names. */
+export const parseMonthList = (value) => {
+  if (value == null || value === '') return [];
+  const raw = Array.isArray(value)
+    ? value.flatMap((item) => String(item).split(','))
+    : String(value).split(',');
+  const seen = new Set();
+  const months = [];
+  for (const item of raw) {
+    const name = String(item || '').trim();
+    if (!name || seen.has(name)) continue;
+    seen.add(name);
+    months.push(name);
+  }
+  return months.sort((a, b) => {
+    const ai = FY_MONTH_ORDER.indexOf(a);
+    const bi = FY_MONTH_ORDER.indexOf(b);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+};
+
+export const formatMonthRangeAbbrev = (value) => {
+  const months = parseMonthList(value);
+  if (!months.length) return null;
+  return months.map((month) => abbreviateMonthName(month)).join('-');
+};
+
 /** Full month name → three-letter label (Jan, Feb, …). */
 export const abbreviateMonthName = (month) => {
   if (!month) return month;

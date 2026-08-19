@@ -214,8 +214,8 @@ export default function MonthlyExpensesTable({
                   <th className="text-center">Companies</th>
                   {isDue ? (
                     <>
-                      <th className="text-right">Outstanding</th>
                       <th className="text-right">Paid</th>
+                      <th className="text-right">Unpaid</th>
                       <th className="text-right">Gross</th>
                     </>
                   ) : (
@@ -246,8 +246,8 @@ export default function MonthlyExpensesTable({
                     <td className="text-center">{m.companyCount}</td>
                     {isDue ? (
                       <>
-                        <td className="text-right font-semibold text-amber-800">{formatCurrency(m.outstanding)}</td>
                         <td className="text-right text-emerald-700">{formatCurrency(m.amountPaid)}</td>
+                        <td className="text-right font-semibold text-orange-700">{formatCurrency(m.outstanding)}</td>
                         <td className="text-right">{formatCurrency(m.gross)}</td>
                       </>
                     ) : (
@@ -286,8 +286,8 @@ export default function MonthlyExpensesTable({
                 ))}
                 {isDue ? (
                   <>
-                    <th className="text-right">Outstanding</th>
                     <th className="text-right">Paid</th>
+                    <th className="text-right">Unpaid</th>
                     <th className="text-right">Gross</th>
                   </>
                 ) : (
@@ -316,8 +316,8 @@ export default function MonthlyExpensesTable({
                     ))}
                     {isDue ? (
                       <>
-                        <td className="text-right font-semibold text-amber-800">{formatCurrency(combined?.outstanding)}</td>
                         <td className="text-right text-emerald-700">{formatCurrency(combined?.amountPaid)}</td>
+                        <td className="text-right font-semibold text-orange-700">{formatCurrency(combined?.outstanding)}</td>
                         <td className="text-right">{formatCurrency(combined?.gross)}</td>
                       </>
                     ) : (

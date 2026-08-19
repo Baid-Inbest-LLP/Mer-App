@@ -24,15 +24,15 @@ export const reportScopeLabels = (scope) => {
   const due = isDueReportScope(scope);
   return {
     noun: due ? 'Due Bills' : 'Expenses',
-    monthlyTitle: due ? 'Monthly Due Bills Report' : 'Monthly Expenses Report',
-    fyTitle: due ? 'FY Due Bills Report' : 'FY Expenses Report',
-    summaryTitle: due ? 'Due Bills Summary Report' : 'Expenses Summary Report',
-    customizedTitle: due ? 'Customized Due Bills Report' : 'Customized Expenses Report',
+    monthlyTitle: due ? 'Monthly Bills (Paid & Unpaid) Report' : 'Monthly Expenses Report',
+    fyTitle: due ? 'FY Bills (Paid & Unpaid) Report' : 'FY Expenses Report',
+    summaryTitle: due ? 'Bills (Paid & Unpaid) Summary Report' : 'Expenses Summary Report',
+    customizedTitle: due ? 'Customized Bills (Paid & Unpaid) Report' : 'Customized Expenses Report',
     customizedSubtitle: due
-      ? 'Build Due Bills Reports with Flexible Filters'
+      ? 'Build Bills (Paid & Unpaid) Reports with Flexible Filters'
       : 'Build Expense Reports with Flexible Filters',
-    monthlyTable: due ? 'Due Bills Monthly' : 'Expenses Monthly',
-    fyTable: due ? 'Due Bills by Financial Year' : 'Expenses by Financial Year',
+    monthlyTable: due ? 'Monthly Bills (Paid & Unpaid)' : 'Monthly Expenses',
+    fyTable: due ? 'Bills (Paid & Unpaid) by Financial Year' : 'Expenses by Financial Year',
     entriesHeading: due ? 'Due Bill Entries' : 'Expense Entries',
     fyTotalLabel: due ? 'FY Bills Generated' : 'FY Total Expense',
     emptyPeriod: due

@@ -54,8 +54,9 @@ export const exportMonthlyExcel = asyncHandler(async (req, res) => {
 
 export const exportMonthlyPdf = asyncHandler(async (req, res) => {
   const { buffer, filename } = await reportService.generateMonthlyPdf(req.query);
+  const safeName = String(filename || 'report.pdf').replace(/"/g, '');
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
   res.setHeader('Content-Length', String(buffer.length));
   res.end(buffer);
 });

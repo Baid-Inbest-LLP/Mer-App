@@ -7,6 +7,7 @@ import reportReducer from './slices/reportSlice';
 import companiesReducer from './slices/companiesSlice';
 import bankAccountsReducer from './slices/bankAccountsSlice';
 import cardsReducer from './slices/cardsSlice';
+import expenseHeadsReducer from './slices/expenseHeadsSlice';
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     companies: companiesReducer,
     bankAccounts: bankAccountsReducer,
     cards: cardsReducer,
+    expenseHeads: expenseHeadsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({ serializableCheck: false }),

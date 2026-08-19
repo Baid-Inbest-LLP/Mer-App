@@ -275,6 +275,21 @@ const abbreviateMonth = (month) => {
   return trimmed.slice(0, 3).charAt(0).toUpperCase() + trimmed.slice(1, 3).toLowerCase();
 };
 
+const monthRangeLabel = (month) => {
+  if (!month) return null;
+  const parts = (Array.isArray(month)
+    ? month
+    : String(month).split(',').map((item) => item.trim()).filter(Boolean));
+  if (!parts.length) return null;
+  const order = [
+    'April', 'May', 'June', 'July', 'August', 'September',
+    'October', 'November', 'December', 'January', 'February', 'March',
+  ];
+  const unique = [...new Set(parts)];
+  unique.sort((a, b) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)));
+  return unique.map((item) => abbreviateMonth(item)).filter(Boolean).join('-');
+};
+
 /**
  * {KIND}/{companyCode}/{coName}/{location}/{expenseType}/{merType}/{fy}/{month}
  * Only includes filter segments provided by the user (financial year required).
@@ -294,6 +309,13 @@ export const buildCustomizedReportNo = (params, companyCodeByName = {}) => {
 
   const [start, end] = String(financialYear).split('-');
   const fyShort = start && end ? `${String(start).slice(-2)}-${end}` : String(financialYear);
+  const monthLabel = monthRangeLabel(month);
+  const monthCount = monthLabel ? monthLabel.split('-').filter(Boolean).length : 0;
+
+  if (monthCount > 1) {
+    return `${reportSerialKind(reportScope)}/${fyShort}/${monthLabel}`;
+  }
+
   const segments = [reportSerialKind(reportScope)];
 
   if (company && companyCodeByName[company]) segments.push(companyCodeByName[company]);
@@ -302,8 +324,6 @@ export const buildCustomizedReportNo = (params, companyCodeByName = {}) => {
   if (expenseType) segments.push(String(expenseType).trim());
   if (merType) segments.push(String(merType).trim().toUpperCase());
   segments.push(fyShort);
-
-  const monthLabel = abbreviateMonth(month);
   if (monthLabel) segments.push(monthLabel);
 
   return segments.join('/');

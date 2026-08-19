@@ -1,7 +1,7 @@
 import ExcelJS from 'exceljs';
 import { readAssetBuffer } from './assetLoader.js';
 import { amountToWordsINR } from './amountToWords.js';
-import { abbreviateMonthName, monthToDateInFy } from './merSerial.js';
+import { abbreviateMonthName, formatFyShort, monthToDateInFy, parseMonthList } from './merSerial.js';
 import { getFinancialYear } from '../config/index.js';
 import { normalizeReportScope, REPORT_SCOPE } from './reportScope.js';
 
@@ -657,17 +657,34 @@ export const buildTotalsLabel = (query = {}, companyCtx = {}) => {
   const merLabel = formatTitleMerType(query.merType);
   const merTitleCase = merLabel.charAt(0) + merLabel.slice(1).toLowerCase();
   const fy = query.financialYear || getFinancialYear();
-  const period = query.month
-    ? formatShortMonthPeriod(query.month, fy)
-    : (fy ? `FY ${fy}` : '');
+  const months = parseMonthList(query.month);
+  let period = fy ? `FY ${fy}` : '';
+  if (months.length === 1) {
+    period = formatShortMonthPeriod(months[0], fy);
+  } else if (months.length > 1) {
+    period = `${formatShortMonthPeriod(months[0], fy)}–${formatShortMonthPeriod(months[months.length - 1], fy)}`;
+  }
   const noun = isBillsReport(query) ? 'BILLS(PAID & UNPAID)' : 'Expense';
 
   return `Total ${merTitleCase} ${noun} - ${companyCode}${period ? ` - ${period}` : ''}`;
 };
 
+/** April, May, June, August + 2026-27 → ( APR/MAY/JUN/AUG - 26-27 ) */
+const formatMultiMonthPeriod = (months, financialYear) => {
+  const labels = months
+    .map((month) => abbreviateMonthName(month)?.toUpperCase())
+    .filter(Boolean);
+  const fyShort = formatFyShort(financialYear);
+  if (!labels.length && !fyShort) return '';
+  if (!labels.length) return `( ${fyShort} )`;
+  if (!fyShort) return `( ${labels.join('/')} )`;
+  return `( ${labels.join('/')} - ${fyShort} )`;
+};
+
 /**
  * BSIBPL - MONTHLY EXPENSE REPORT COMBINED (black) - APR'2024 / FY 2024-25 (bright red)
  * Bills: BILLP - MONTHLY BILLS (PAID & UNPAID) REPORT COMBINED - APR'2026
+ * Multi-month: FY BILL REPORT COMBINED ( APR/MAY/JUN/AUG - 26-27 )
  * Plain string titles (summary sheets) remain supported by callers.
  */
 export const buildDetailTitle = (query = {}, companyCtx = {}) => {
@@ -675,11 +692,25 @@ export const buildDetailTitle = (query = {}, companyCtx = {}) => {
   const merLabel = formatTitleMerType(query.merType);
   const fy = query.financialYear || getFinancialYear();
   const bills = isBillsReport(query);
-  const periodKind = query.month ? 'MONTHLY' : 'FY';
+  const months = parseMonthList(query.month);
+  const periodKind = months.length === 1 ? 'MONTHLY' : 'FY';
+
+  if (months.length > 1) {
+    const middle = bills
+      ? `FY BILL REPORT ${merLabel}`
+      : `FY EXPENSE REPORT ${merLabel}`;
+    const period = formatMultiMonthPeriod(months, fy);
+    const richText = [{ text: middle, font: titlePartFont(TITLE_BLACK) }];
+    if (period) {
+      richText.push({ text: ' ', font: titlePartFont(TITLE_BLACK) });
+      richText.push({ text: period, font: titlePartFont(TITLE_RED) });
+    }
+    return { richText };
+  }
 
   let period = '';
-  if (query.month) {
-    period = formatFullMonthPeriod(query.month, fy);
+  if (months.length === 1) {
+    period = formatFullMonthPeriod(months[0], fy);
   } else if (fy) {
     period = `FY ${fy}`;
   }

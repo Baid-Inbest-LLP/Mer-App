@@ -4,7 +4,7 @@ import { Company } from '../models/Company.js';
 import { Location } from '../models/Location.js';
 import { buildExpenseQuery } from '../utils/queryBuilder.js';
 import { getFinancialYear } from '../config/index.js';
-import { formatReportMonthLabel } from '../utils/merSerial.js';
+import { formatReportMonthLabel, formatMonthRangeAbbrev, parseMonthList } from '../utils/merSerial.js';
 import { toLocationLabel } from '../utils/locationFormat.js';
 import {
   buildMonthlyReportNo,
@@ -313,8 +313,12 @@ const emptyTotals = () => ({
 });
 
 const resolveDetailReportMeta = async (query, Company) => {
-  if (query.company && query.month) {
-    return resolveMonthlyReportMeta(query, Company);
+  const months = parseMonthList(query.month);
+  if (query.company && months.length === 1) {
+    return resolveMonthlyReportMeta({ ...query, month: months[0] }, Company);
+  }
+  if (months.length > 1) {
+    return resolveCustomizedReportMeta(query, Company);
   }
   if (query.company && query.financialYear) {
     return resolveFyReportMeta(query, Company);
@@ -800,7 +804,7 @@ const buildMonthlyReportModel = async (query) => {
     filename,
     reportNo,
     companyCtx,
-    sheetName: query.month || 'All Months',
+    sheetName: formatMonthRangeAbbrev(query.month) || 'All Months',
     title: buildDetailTitle(query, companyCtx),
     totalsLabel: buildTotalsLabel(query, companyCtx),
     headers: isBills ? BILLS_DETAIL_HEADERS : DETAIL_HEADERS,
@@ -834,8 +838,9 @@ export const generateMonthlyPdf = async (query) => {
 
   const html = buildMonthlyReportHtml(rest);
   const buffer = await renderHtmlToPdfBuffer(html);
+  const pdfName = String(filename || 'MER-report.xlsx').replace(/\.xlsx$/i, '.pdf');
 
-  return { buffer, filename: filename.replace(/\.xlsx$/i, '.pdf') };
+  return { buffer: Buffer.from(buffer), filename: pdfName };
 };
 
 export const generateSummaryExcel = async (query) => {

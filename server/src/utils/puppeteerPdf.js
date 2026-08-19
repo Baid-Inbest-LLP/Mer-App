@@ -92,7 +92,8 @@ export const renderHtmlToPdfBuffer = async (html) => {
   let page;
   try {
     page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    page.setDefaultTimeout(120000);
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 120000 });
     await page
       .evaluate(() =>
         Promise.all(
@@ -116,6 +117,7 @@ export const renderHtmlToPdfBuffer = async (html) => {
       landscape: true,
       printBackground: true,
       preferCSSPageSize: true,
+      timeout: 120000,
       margin: { top: '0mm', bottom: '0mm', left: '0mm', right: '0mm' },
     });
 

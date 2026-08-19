@@ -80,6 +80,18 @@ assert(
 );
 console.log(`✓ bills FY title: ${billsFyTitle}`);
 
+const billsRangeTitle = flattenTitle(buildDetailTitle({
+  financialYear: '2026-27',
+  month: 'April,June,August',
+  merType: 'combined',
+  reportScope: 'due',
+}, companyCtx));
+assert(
+  billsRangeTitle === 'FY BILL REPORT COMBINED ( APR/JUN/AUG - 26-27 )',
+  `unexpected bills range title: ${billsRangeTitle}`,
+);
+console.log(`✓ bills range title: ${billsRangeTitle}`);
+
 const expenseTotals = buildTotalsLabel(query, companyCtx);
 assert(expenseTotals.includes('Expense'), 'expense totals should stay Expense');
 assert(!expenseTotals.includes('BILLS(PAID & UNPAID)'), 'expense totals should not use bills wording');

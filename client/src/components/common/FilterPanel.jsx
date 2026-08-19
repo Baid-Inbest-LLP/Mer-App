@@ -33,7 +33,9 @@ export default function FilterPanel({
       : lookups?.locations;
 
   const update = (key, value) => {
-    const next = { ...filters, [key]: value || undefined };
+    const normalized = value || undefined;
+    if (filters[key] === normalized) return;
+    const next = { ...filters, [key]: normalized };
     if (key === 'company' && value !== filters.company) {
       const validLocations = lookups?.companyLocations?.[value];
       if (validLocations && filters.location && !validLocations.includes(filters.location)) {

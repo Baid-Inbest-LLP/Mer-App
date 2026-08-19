@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { notifications } from '@mantine/notifications';
@@ -29,8 +29,15 @@ export default function ApprovedPurchaseOrdersPage() {
   const [addingId, setAddingId] = useState(null);
   const [excludeTarget, setExcludeTarget] = useState(null);
   const [excluding, setExcluding] = useState(false);
+  const requestIdRef = useRef(0);
 
-  const load = useCallback(async (page = 1, searchTerm = search) => {
+  const applyListResult = useCallback((data) => {
+    setOrders(data.data || []);
+    setPagination(data.pagination || { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 0 });
+  }, []);
+
+  const load = useCallback(async (page = 1, searchTerm = '') => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const { data } = await purchaseOrderApi.listCompleted({
@@ -38,22 +45,45 @@ export default function ApprovedPurchaseOrdersPage() {
         limit: PAGE_SIZE,
         search: searchTerm || undefined,
       });
-      setOrders(data.data || []);
-      setPagination(data.pagination || { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 0 });
+      if (requestId !== requestIdRef.current) return;
+      applyListResult(data);
     } catch (err) {
+      if (requestId !== requestIdRef.current) return;
       notifications.show({
         message: err.response?.data?.message || 'Failed to load approved purchase orders',
         color: 'red',
       });
       setOrders([]);
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [search]);
+  }, [applyListResult]);
 
   useEffect(() => {
-    load(1, search);
-  }, [load, search]);
+    const requestId = ++requestIdRef.current;
+
+    purchaseOrderApi
+      .listCompleted({ page: 1, limit: PAGE_SIZE })
+      .then(({ data }) => {
+        if (requestId !== requestIdRef.current) return;
+        applyListResult(data);
+      })
+      .catch((err) => {
+        if (requestId !== requestIdRef.current) return;
+        notifications.show({
+          message: err.response?.data?.message || 'Failed to load approved purchase orders',
+          color: 'red',
+        });
+        setOrders([]);
+      })
+      .finally(() => {
+        if (requestId === requestIdRef.current) setLoading(false);
+      });
+
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, [applyListResult]);
 
   const handleAddAsExpense = async (poId) => {
     setAddingId(poId);
@@ -97,7 +127,7 @@ export default function ApprovedPurchaseOrdersPage() {
       <PageBanner
         className="mb-4"
         title="Approved Purchase Orders"
-        subtitle={`Final-approved by Superadmin · ${pagination.total || orders.length}`}
+        subtitle={`Final Approved Purchase Orders - ${pagination.total || orders.length}`}
       />
 
       <div className="card p-4 mb-4 flex flex-wrap items-center gap-3">
@@ -106,7 +136,11 @@ export default function ApprovedPurchaseOrdersPage() {
             className="input-field"
             placeholder="Search by PO number..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              load(1, value);
+            }}
           />
         </div>
       </div>

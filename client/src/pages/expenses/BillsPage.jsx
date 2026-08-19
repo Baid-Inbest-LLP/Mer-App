@@ -12,10 +12,10 @@ const TABS = [
 ];
 
 const SUBTITLES = {
-  all: 'All bills — paid and unpaid',
-  due: 'Unpaid, partially paid, and held bills',
-  paid: 'Fully paid bills (expenses) — approval Completed',
-  recurring: 'Active Fixed bills that will repeat on schedule',
+  all: 'All bills - Paid and Unpaid',
+  due: 'Unpaid, Partially paid, and Held bills',
+  paid: 'Fully Paid Bills (expenses) - Approval Completed',
+  recurring: 'Active Fixed Bills - Will Repeat on Schedule',
 };
 
 export default function BillsPage() {

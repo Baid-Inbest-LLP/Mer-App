@@ -3,6 +3,7 @@
  */
 import { buildReportMerTypeFilter } from './reportMerType.js';
 import { applyReportScope } from './reportScope.js';
+import { parseMonthList } from './merSerial.js';
 
 const escapeRegex = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -58,7 +59,9 @@ export const buildExpenseQuery = (query) => {
   if (query.paymentMethod) filter.paymentMethod = query.paymentMethod;
   if (query.headOfExpense) filter.headOfExpense = query.headOfExpense;
   if (query.financialYear) filter.financialYear = query.financialYear;
-  if (query.month) filter.month = query.month;
+  const months = parseMonthList(query.month);
+  if (months.length === 1) filter.month = months[0];
+  else if (months.length > 1) filter.month = { $in: months };
   if (query.quarter) filter.quarter = query.quarter;
   if (query.location) filter.location = query.location;
   if (query.company) filter.company = query.company;

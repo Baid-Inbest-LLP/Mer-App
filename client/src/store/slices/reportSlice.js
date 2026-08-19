@@ -13,10 +13,17 @@ export const fetchReportSummary = createAsyncThunk(
   },
 );
 
-export const fetchHeadSummary = createAsyncThunk('report/heads', async (params) => {
-  const { data } = await reportApi.headSummary(params);
-  return data.data;
-});
+export const fetchHeadSummary = createAsyncThunk(
+  'report/heads',
+  async (params, { rejectWithValue }) => {
+    try {
+      const { data } = await reportApi.headSummary(params);
+      return Array.isArray(data.data) ? data.data : [];
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.message || 'Failed to load head summary');
+    }
+  },
+);
 
 export const fetchMonthlyReport = createAsyncThunk('report/monthly', async (params) => {
   const { data } = await reportApi.monthly(params);
@@ -41,12 +48,14 @@ const reportSlice = createSlice({
       state.summary = null;
       state.headSummary = [];
       state.monthlyReport = [];
+      state.error = null;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchReportSummary.pending, (state) => {
         state.loading = true;
+        state.error = null;
       })
       .addCase(fetchReportSummary.fulfilled, (state, action) => {
         state.loading = false;
@@ -63,8 +72,10 @@ const reportSlice = createSlice({
         state.headSummaryLoading = false;
         state.headSummary = action.payload;
       })
-      .addCase(fetchHeadSummary.rejected, (state) => {
+      .addCase(fetchHeadSummary.rejected, (state, action) => {
         state.headSummaryLoading = false;
+        state.headSummary = [];
+        state.error = action.payload || state.error;
       })
       .addCase(fetchMonthlyReport.pending, (state) => {
         state.monthlyReportLoading = true;

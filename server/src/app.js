@@ -51,12 +51,16 @@ app.use(morgan(config.env === 'development' ? 'dev' : 'combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 500,
-  message: { success: false, message: 'Too many requests' },
-});
-app.use('/api', limiter);
+if (config.env === 'production') {
+  app.use(
+    '/api',
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 2000,
+      message: { success: false, message: 'Too many requests' },
+    }),
+  );
+}
 
 app.use('/uploads', express.static(path.resolve(config.upload.dir)));
 

@@ -57,8 +57,8 @@ export default function ExpenseHeadSummaryTable({
                 <th className="text-center">Expense Head</th>
                 {isDue ? (
                   <>
-                    <th className="text-right">Outstanding</th>
                     <th className="text-right">Paid</th>
+                    <th className="text-right">Unpaid</th>
                     <th className="text-right">Gross</th>
                   </>
                 ) : (
@@ -85,8 +85,8 @@ export default function ExpenseHeadSummaryTable({
                     </td>
                     {isDue ? (
                       <>
-                        <td className="text-right font-semibold text-amber-800">{formatCurrency(h.outstanding)}</td>
                         <td className="text-right text-emerald-700">{formatCurrency(h.amountPaid)}</td>
+                        <td className="text-right font-semibold text-orange-700">{formatCurrency(h.outstanding)}</td>
                         <td className="text-right">{formatCurrency(h.gross)}</td>
                       </>
                     ) : (
@@ -118,8 +118,8 @@ export default function ExpenseHeadSummaryTable({
                 </td>
                 {isDue ? (
                   <>
-                    <td className="text-right font-bold text-amber-800">{formatCurrency(headTotals.outstanding)}</td>
                     <td className="text-right font-bold text-emerald-700">{formatCurrency(headTotals.amountPaid)}</td>
+                    <td className="text-right font-bold text-orange-700">{formatCurrency(headTotals.outstanding)}</td>
                     <td className="text-right font-bold">{formatCurrency(headTotals.gross)}</td>
                   </>
                 ) : (
