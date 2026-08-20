@@ -59,6 +59,16 @@ function DetailRow({ label, value }) {
   );
 }
 
+/** Labeled status chip so Pending / Paid etc. are never ambiguous. */
+function StatusChip({ label, badgeClass, value }) {
+  return (
+    <div className="expense-status-chip">
+      <span className="expense-status-chip__label">{label}</span>
+      <span className={`${badgeClass} expense-status-chip__badge`}>{value}</span>
+    </div>
+  );
+}
+
 const TIMELINE_EVENT_META = {
   created: {
     label: 'Created',
@@ -264,12 +274,20 @@ export default function ExpenseViewPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-3 mb-1">
                     <h1 className="expense-view-title text-2xl font-bold tracking-tight">{serial || 'Expense'}</h1>
-                    <span className={`${getEntryApprovalBadge(e)} !text-xs`}>
-                      {getEntryApprovalLabel(e)}
-                    </span>
-                    <span className={`${getPaymentStatusBadge(e.status)} !text-xs`}>
-                      {getPaymentStatusLabel(e.status)}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StatusChip
+                        label="Approval"
+                        badgeClass={getEntryApprovalBadge(e)}
+                        value={getEntryApprovalLabel(e)}
+                      />
+                      {!e.isDraft && (
+                        <StatusChip
+                          label="Payment"
+                          badgeClass={getPaymentStatusBadge(e.status)}
+                          value={getPaymentStatusLabel(e.status)}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
 

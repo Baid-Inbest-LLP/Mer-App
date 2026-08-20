@@ -9,6 +9,8 @@ import {
 } from 'recharts';
 import ChartCard from '../common/ChartCard';
 import ChartSkeleton from '../common/ChartSkeleton';
+import ChartFySelect from './ChartFySelect';
+import ChartLoadingOverlay from './ChartLoadingOverlay';
 
 const formatDays = (value) => {
   if (value == null || Number.isNaN(Number(value))) return '—';
@@ -18,8 +20,14 @@ const formatDays = (value) => {
   return `${rounded} days`;
 };
 
-export default function DaysToClearChart({ data, loading }) {
-  if (loading) {
+export default function DaysToClearChart({
+  data,
+  loading,
+  fyOptions,
+  selectedFy,
+  onFyChange,
+}) {
+  if (loading && !(data || []).length) {
     return <ChartSkeleton />;
   }
 
@@ -41,11 +49,21 @@ export default function DaysToClearChart({ data, loading }) {
         </svg>
       }
       bodyClassName="p-4"
+      headerRight={
+        fyOptions?.length ? (
+          <ChartFySelect
+            fyOptions={fyOptions}
+            selectedFy={selectedFy}
+            onFyChange={onFyChange}
+          />
+        ) : null
+      }
     >
-      <div style={{ height: 300 }}>
+      <div className="relative" style={{ height: 300 }}>
+        <ChartLoadingOverlay show={loading} />
         {!hasAny ? (
           <div className="flex items-center justify-center h-full text-sm text-gray-400">
-            No fully paid bills in the last 12 months yet
+            No fully paid bills for this financial year yet
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">

@@ -37,3 +37,17 @@ export const FY_INFO = {
   peakQuarter: 'Highest-spend quarter this year',
   yoyChange: 'Change vs last financial year',
 };
+
+export const DASHBOARD_INFO = {
+  fyBillingAmount: 'Total Billed (Paid & Unpaid) Amount this FY',
+  fyExpense: 'Total Expenses (Paid Bills) this FY',
+  yearlyChange: 'Expense Change vs last FY',
+  monthlyChange: 'Expense Change vs last Month',
+  collectionRate: 'Share of Billed Amount Collected this FY',
+  thisMonthExpense: 'Expenses (Paid Bills) this Month',
+  paidThisMonth: 'Bill Paid this Month',
+  overdue: 'Unpaid Amount past the Due Date on Open Bills',
+  pendingPayment: 'Bills pending for payment',
+  pendingApprovals: 'Bills Waiting for Approval',
+};
+

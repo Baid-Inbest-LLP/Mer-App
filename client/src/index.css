@@ -502,6 +502,18 @@
     @apply text-gray-900;
   }
 
+  .expense-status-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50/90 pl-2.5 pr-1 py-1;
+  }
+
+  .expense-status-chip__label {
+    @apply text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-gray-500 whitespace-nowrap;
+  }
+
+  .expense-status-chip__badge {
+    @apply !text-[11px] !font-semibold;
+  }
+
   .expense-section-divider {
     @apply border-t border-gray-100 pt-5;
   }
@@ -1874,6 +1886,15 @@
   color: #bfdbfe;
   background-color: #1e40af;
   border-color: #4dabf7;
+}
+
+[data-theme='dark'] #root .expense-status-chip {
+  background-color: #2c2e33;
+  border-color: #373a40;
+}
+
+[data-theme='dark'] #root .expense-status-chip__label {
+  color: #a6a7ab;
 }
 
 [data-theme='dark'] #root .expense-view-title,

@@ -2,6 +2,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from 'recha
 import ChartCard from '../common/ChartCard';
 import ChartSkeleton from '../common/ChartSkeleton';
 import ChartMonthSelect from './ChartMonthSelect';
+import ChartFySelect from './ChartFySelect';
 import ChartLoadingOverlay from './ChartLoadingOverlay';
 import { formatCurrency } from '../../utils/format';
 
@@ -13,6 +14,9 @@ export default function CompanyWiseChart({
   fyMonthOptions = [],
   selectedMonth,
   onMonthChange,
+  fyOptions,
+  selectedFy,
+  onFyChange,
 }) {
   if (loading && !(data || []).length) {
     return <ChartSkeleton />;
@@ -32,11 +36,20 @@ export default function CompanyWiseChart({
       }
       bodyClassName="p-4"
       headerRight={
-        <ChartMonthSelect
-          fyMonthOptions={fyMonthOptions}
-          selectedMonth={selectedMonth}
-          onMonthChange={onMonthChange}
-        />
+        <div className="flex items-center gap-2 shrink-0">
+          {fyOptions?.length ? (
+            <ChartFySelect
+              fyOptions={fyOptions}
+              selectedFy={selectedFy}
+              onFyChange={onFyChange}
+            />
+          ) : null}
+          <ChartMonthSelect
+            fyMonthOptions={fyMonthOptions}
+            selectedMonth={selectedMonth}
+            onMonthChange={onMonthChange}
+          />
+        </div>
       }
     >
       <div className="relative" style={{ height: 300 }}>

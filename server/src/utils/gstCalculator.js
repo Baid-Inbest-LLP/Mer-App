@@ -1,5 +1,5 @@
 /**
- * Round to nearest whole number (half-up):
+ * Round to nearest whole rupee (half-up):
  * 305.67 → 306, 298.33 → 298, 298.50 → 299
  */
 export const roundGstAmount = (amount) => Math.round(Number(amount) || 0);
@@ -11,7 +11,7 @@ const toPaise = (amount) => Math.round((Number(amount) || 0) * 100) / 100;
  * Calculate GST components from net amount and GST percentage
  * Uses CGST+SGST for intra-state (default) or IGST for inter-state
  * CGST/SGST keep full decimal amounts; Total GST (and IGST) are rounded
- * to the nearest whole rupee.
+ * to the nearest whole rupee. Gross is rounded separately in calculateGrossAmount.
  */
 const splitGst = (rawGST, useIGST = false) => {
   const totalGST = roundGstAmount(rawGST);
@@ -44,9 +44,10 @@ export const calculateGST = (netAmount, gstPercent, useIGST = false) => {
 export const calculateGSTFromAmount = (gstAmount, useIGST = false) =>
   splitGst(parseFloat(gstAmount) || 0, useIGST);
 
+/** Gross amount rounded to the nearest whole rupee (summary / persisted). */
 export const calculateGrossAmount = (netAmount, totalGST, tds) => {
   const net = parseFloat(netAmount) || 0;
   const gst = parseFloat(totalGST) || 0;
   const tdsAmount = parseFloat(tds) || 0;
-  return Math.round((net + gst - tdsAmount) * 100) / 100;
+  return Math.round(net + gst - tdsAmount);
 };

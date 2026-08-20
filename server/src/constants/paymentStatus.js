@@ -48,6 +48,7 @@ export const FIXED_FREQUENCIES = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly
 
 export const MONEY_EPSILON = 0.01;
 
+/** Round money to 2 decimal places (paise). Gross uses Math.round separately. */
 export const roundMoney = (value) => {
   const n = Number(value);
   if (!Number.isFinite(n)) return 0;

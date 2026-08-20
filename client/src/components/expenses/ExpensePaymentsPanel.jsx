@@ -19,11 +19,14 @@ import {
   getPaymentMethodRules,
   PAYMENT_METHOD_OPTIONS,
 } from '../../utils/paymentMethods';
+import { isSuperAdmin } from '../../constants/roles';
 
 const toSelectValue = (value) => (value == null || value === '' ? null : value);
 
 export default function ExpensePaymentsPanel({ expense, canManage, onChanged, autoOpen = false }) {
   const { lookups } = useSelector((state) => state.common);
+  const { user } = useSelector((state) => state.auth);
+  const canDeletePayments = isSuperAdmin(user?.role);
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [voidTarget, setVoidTarget] = useState(null);
@@ -553,7 +556,7 @@ export default function ExpensePaymentsPanel({ expense, canManage, onChanged, au
                       {p.paymentRefNumber ? ` · ${p.paymentRefNumber}` : ''}
                     </p>
                   </div>
-                  {canManage && !voided ? (
+                  {canDeletePayments && !voided ? (
                     <button
                       type="button"
                       className="expense-payments-void-btn inline-flex items-center justify-center p-1.5 rounded"

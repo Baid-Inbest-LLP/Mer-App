@@ -1,5 +1,9 @@
+import dayjs from 'dayjs';
+import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { DateInput } from '@mantine/dates';
 import { IconCalendar } from '@tabler/icons-react';
+
+dayjs.extend(customParseFormat);
 
 export default function FormDateInput({ classNames, popoverProps, ...props }) {
   return (

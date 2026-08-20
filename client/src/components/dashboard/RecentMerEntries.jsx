@@ -5,8 +5,8 @@ import {
   formatCurrency,
   formatDate,
   formatMerSerial,
-  getApprovalStatusBadge,
-  getEntryApprovalLabel,
+  getPaymentStatusBadge,
+  getPaymentStatusLabel,
 } from '../../utils/format';
 
 export default function RecentMerEntries({ entries = [], loading }) {
@@ -48,7 +48,7 @@ export default function RecentMerEntries({ entries = [], loading }) {
             </svg>
           </div>
           <h3 className="text-sm sm:text-base lg:text-lg xl:text-xl font-semibold text-gray-700 tracking-tight">
-            Recent Expense Entries
+            Recent Bill/Expense Entries
           </h3>
         </div>
         <Link to="/entries" className="recent-entries-view-all text-base font-semibold hover:underline">
@@ -61,7 +61,7 @@ export default function RecentMerEntries({ entries = [], loading }) {
             <svg className="recent-entries-empty-icon w-10 h-10 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <p className="recent-entries-empty-text text-sm">No expense entries yet</p>
+            <p className="recent-entries-empty-text text-sm">No bill/expense entries yet</p>
           </div>
         )}
         {recent.map((entry) => (
@@ -88,8 +88,8 @@ export default function RecentMerEntries({ entries = [], loading }) {
             <div className="text-right flex items-center gap-3 shrink-0 ml-3">
               <div>
                 <p className="recent-entries-amount">{formatCurrency(entry.grossAmount)}</p>
-                <span className={`${getApprovalStatusBadge(entry.approvalStatus)} !text-[10px]`}>
-                  {getEntryApprovalLabel(entry)}
+                <span className={`${getPaymentStatusBadge(entry.status)} !text-[10px]`}>
+                  {getPaymentStatusLabel(entry.status)}
                 </span>
               </div>
               <svg className="recent-entries-chevron" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

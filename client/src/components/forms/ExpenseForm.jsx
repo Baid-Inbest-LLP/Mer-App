@@ -61,16 +61,83 @@ const MONTH_OPTIONS = [
   'December',
 ];
 
-const monthNameFromDate = (value) => {
+const MONTH_NAME_TO_INDEX = Object.fromEntries(
+  MONTH_OPTIONS.map((name, index) => [name, index]),
+);
+
+const toDateOrNull = (value) => {
   if (!value) return null;
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const startOfLocalDay = (value) => {
+  const date = toDateOrNull(value);
+  if (!date) return null;
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+const getMonthIndex = (monthName) => {
+  if (!monthName) return null;
+  if (MONTH_NAME_TO_INDEX[monthName] !== undefined) return MONTH_NAME_TO_INDEX[monthName];
+  const idx = MONTH_OPTIONS.findIndex(
+    (name) => name.toLowerCase() === String(monthName).trim().toLowerCase(),
+  );
+  return idx >= 0 ? idx : null;
+};
+
+const monthNameFromDate = (value) => {
+  const date = toDateOrNull(value);
+  if (!date) return null;
   return date.toLocaleString('en-US', { month: 'long' });
 };
 
-const formatSummaryAmount = (value) => `₹${formatNumber(value, 2)}`;
+const isCurrentBillingMonth = (monthName, relativeTo = new Date()) => {
+  const monthIndex = getMonthIndex(monthName);
+  if (monthIndex == null) return false;
+  return monthIndex === relativeTo.getMonth();
+};
 
-function SummaryRow({ label, value, bold = false, large = false }) {
+/** Calendar year for the billing month: keep year if date is already in that month, else current year. */
+const resolveBillingMonthYear = (monthName, preferredDate = new Date()) => {
+  const monthIndex = getMonthIndex(monthName);
+  const preferred = toDateOrNull(preferredDate) || new Date();
+  if (monthIndex == null) return preferred.getFullYear();
+  if (preferred.getMonth() === monthIndex) return preferred.getFullYear();
+  return new Date().getFullYear();
+};
+
+const getBillingMonthDateBounds = (monthName, preferredDate = new Date()) => {
+  const monthIndex = getMonthIndex(monthName);
+  if (monthIndex == null) {
+    return { minDate: undefined, maxDate: undefined, calendarDate: undefined };
+  }
+  const year = resolveBillingMonthYear(monthName, preferredDate);
+  const minDate = new Date(year, monthIndex, 1);
+  const maxDate = new Date(year, monthIndex + 1, 0);
+  return { minDate, maxDate, calendarDate: minDate };
+};
+
+const isDateWithinBillingMonthBounds = (value, monthName, preferredDate = new Date()) => {
+  const date = startOfLocalDay(value);
+  const { minDate, maxDate } = getBillingMonthDateBounds(monthName, preferredDate);
+  if (!date || !minDate || !maxDate) return true;
+  const min = startOfLocalDay(minDate);
+  const max = startOfLocalDay(maxDate);
+  return date >= min && date <= max;
+};
+
+const formatSummaryAmount = (value, decimals = 2) => `₹${formatNumber(value, decimals)}`;
+
+function SummaryRow({ label, value, bold = false, large = false, decimals = 2 }) {
   return (
     <div className="flex justify-between items-center text-sm">
       <span
@@ -81,7 +148,7 @@ function SummaryRow({ label, value, bold = false, large = false }) {
       <span
         className={`expense-form-summary-row-value ${large ? 'text-xl' : ''} ${bold ? 'expense-form-summary-row-value-bold font-bold text-primary-800' : 'font-medium text-gray-900'}`}
       >
-        {formatSummaryAmount(value)}
+        {formatSummaryAmount(value, decimals)}
       </span>
     </div>
   );
@@ -104,11 +171,11 @@ const defaultValues = {
   recurringDueDay: 1,
   recurringStartDate: null,
   recurringEndDate: null,
-  netAmount: 0,
-  gstPercent: 0,
-  gstAmount: 0,
+  netAmount: '',
+  gstPercent: '',
+  gstAmount: '',
   useIGST: false,
-  tds: 0,
+  tds: '',
   paymentMode: 'none',
   recordPaymentNow: false,
   autoPay: false,
@@ -118,7 +185,7 @@ const defaultValues = {
   paymentRefNumber: '',
   bankAccountNumber: '',
   cardNumber: '',
-  merType: null,
+  merType: 'Bank',
   paymentMethod: null,
   hasBillOrReceipt: false,
   notes: '',
@@ -168,7 +235,7 @@ const buildInitialFormValues = (initialData) => {
   return {
     ...defaultValues,
     ...initialData,
-    merType,
+    merType: merType || 'Bank',
     paymentMethod,
     gstAmount: isPoExpense
       ? (initialData.gstAmount ?? initialData.totalGST ?? 0)
@@ -321,9 +388,10 @@ export default function ExpenseForm({
     if (!isFixed || isExistingEntry) return;
     const day = Number(recurringDueDay);
     if (!Number.isInteger(day) || day < 1 || day > 28) return;
-    const anchor = getValues('recurringStartDate') || getValues('invoiceDate') || new Date();
-    const date = anchor instanceof Date ? anchor : new Date(anchor);
-    if (Number.isNaN(date.getTime())) return;
+    const date = toDateOrNull(
+      getValues('recurringStartDate') || getValues('invoiceDate') || new Date(),
+    );
+    if (!date) return;
     setValue('dueDate', new Date(date.getFullYear(), date.getMonth(), day));
   }, [isFixed, isExistingEntry, recurringDueDay, recurringStartDate, getValues, setValue]);
 
@@ -457,8 +525,8 @@ export default function ExpenseForm({
     const gst = isPoExpense
       ? calculateGSTFromAmount(gstAmount, useIGST)
       : calculateGST(netAmount, gstPercent, useIGST);
-    const netForGross = isPoExpense ? Math.round(Number(netAmount) || 0) : Number(netAmount) || 0;
-    const gross = calculateGross(netForGross, gst.totalGST, tds);
+    // Inputs stay as entered; only gross is rounded for summary / payload.
+    const gross = calculateGross(Number(netAmount) || 0, gst.totalGST, tds);
     setValue('cgst', gst.cgst);
     setValue('sgst', gst.sgst);
     setValue('igst', gst.igst);
@@ -502,7 +570,24 @@ export default function ExpenseForm({
 
   const requireInvoiceDate = (value) => {
     if (getValues('expenseNature') === 'Fixed') return true;
-    return value ? true : 'Invoice date is required';
+    if (!value) return 'Invoice date is required';
+    const month = getValues('month');
+    if (month && !isDateWithinBillingMonthBounds(value, month, value)) {
+      return `Invoice date must be within ${month}`;
+    }
+    return true;
+  };
+
+  const requireDueDate = (value) => {
+    if (!value) return true;
+    const invoice = getValues('invoiceDate');
+    if (!invoice) return true;
+    const due = startOfLocalDay(value);
+    const inv = startOfLocalDay(invoice);
+    if (due && inv && due < inv) {
+      return 'Due date cannot be before invoice date';
+    }
+    return true;
   };
 
   const requireRecurringDueDay = (value) => {
@@ -517,6 +602,10 @@ export default function ExpenseForm({
   const submit = (data, isDraft = false) => {
     const payload = { ...data, isDraft };
     payload.dueDate = data.dueDate || null;
+    payload.netAmount = Number(payload.netAmount) || 0;
+    payload.gstPercent = Number(payload.gstPercent) || 0;
+    payload.gstAmount = Number(payload.gstAmount) || 0;
+    payload.tds = Number(payload.tds) || 0;
 
     const mode = payload.paymentMode || 'none';
     const recording = mode === 'full' || mode === 'partial' || mode === 'autopay';
@@ -611,9 +700,9 @@ export default function ExpenseForm({
   const sgst = watch('sgst') || 0;
   const igst = watch('igst') || 0;
   const totalGST = watch('totalGST') || 0;
-  const summaryNetAmount = isPoExpense ? Math.round(Number(netAmount) || 0) : (netAmount || 0);
-  const summaryGstAmount = isPoExpense ? Math.round(Number(gstAmount) || 0) : totalGST;
-  const summaryIgst = isPoExpense ? Math.round(Number(gstAmount) || 0) : igst;
+  const summaryNetAmount = netAmount || 0;
+  const summaryGstAmount = isPoExpense ? (Number(gstAmount) || 0) : totalGST;
+  const summaryIgst = isPoExpense ? (Number(gstAmount) || 0) : igst;
   const paidNow = (paymentMode === 'full' || isAutoPayMode)
     ? Number(grossAmount) || 0
     : Number(initialPaymentAmount) || 0;
@@ -757,7 +846,23 @@ export default function ExpenseForm({
                   lookups?.months?.length ? lookups.months : MONTH_OPTIONS,
                 )}
                 value={toSelectValue(field.value)}
-                onChange={(value) => field.onChange(toSelectValue(value))}
+                onChange={(value) => {
+                  const month = toSelectValue(value);
+                  field.onChange(month);
+                  if (!month || isFixed) return;
+
+                  if (isCurrentBillingMonth(month)) {
+                    const today = new Date();
+                    setValue('invoiceDate', today, { shouldValidate: shouldShowErrors });
+                    const due = getValues('dueDate');
+                    if (due && startOfLocalDay(due) < startOfLocalDay(today)) {
+                      setValue('dueDate', today, { shouldValidate: shouldShowErrors });
+                    }
+                    return;
+                  }
+
+                  setValue('invoiceDate', null, { shouldValidate: shouldShowErrors });
+                }}
                 onBlur={field.onBlur}
                 name={field.name}
                 ref={field.ref}
@@ -809,7 +914,7 @@ export default function ExpenseForm({
                   clearable
                   popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
                   value={field.value}
-                  onChange={field.onChange}
+                  onChange={(value) => field.onChange(toDateOrNull(value))}
                 />
               )}
             />
@@ -822,7 +927,7 @@ export default function ExpenseForm({
                   clearable
                   popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
                   value={field.value}
-                  onChange={field.onChange}
+                  onChange={(value) => field.onChange(toDateOrNull(value))}
                 />
               )}
             />
@@ -932,39 +1037,75 @@ export default function ExpenseForm({
             name="invoiceDate"
             control={control}
             rules={{ validate: requireInvoiceDate }}
-            render={({ field, fieldState }) => (
-              <FormDateInput
-                label="Invoice Date"
-                required={!isFixed}
-                clearable={isFixed}
-                popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
-                value={field.value}
-                onChange={(value) => {
-                  field.onChange(value);
-                  if (value && !isFixed) {
-                    setValue('month', monthNameFromDate(value));
-                  }
-                }}
-                onBlur={field.onBlur}
-                error={showControllerError('invoiceDate', fieldState)}
-              />
-            )}
+            render={({ field, fieldState }) => {
+              const bounds = selectedMonth
+                ? getBillingMonthDateBounds(selectedMonth, field.value || new Date())
+                : { minDate: undefined, maxDate: undefined, calendarDate: undefined };
+              return (
+                <FormDateInput
+                  label="Invoice Date"
+                  required={!isFixed}
+                  clearable={isFixed}
+                  popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
+                  value={field.value}
+                  date={field.value || bounds.calendarDate}
+                  minDate={bounds.minDate}
+                  maxDate={bounds.maxDate}
+                  maxLevel="month"
+                  onChange={(value) => {
+                    let next = toDateOrNull(value);
+                    if (
+                      next
+                      && selectedMonth
+                      && !isDateWithinBillingMonthBounds(next, selectedMonth, next)
+                    ) {
+                      next = null;
+                    }
+                    field.onChange(next);
+                    const due = getValues('dueDate');
+                    if (next && due && startOfLocalDay(due) < startOfLocalDay(next)) {
+                      setValue('dueDate', next, { shouldValidate: shouldShowErrors });
+                    } else if (shouldShowErrors) {
+                      trigger('dueDate');
+                    }
+                  }}
+                  onBlur={field.onBlur}
+                  error={showControllerError('invoiceDate', fieldState)}
+                />
+              );
+            }}
           />
 
           <Controller
             name="dueDate"
             control={control}
-            render={({ field, fieldState }) => (
-              <FormDateInput
-                label="Due Date"
-                clearable
-                popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
-                value={field.value}
-                onChange={field.onChange}
-                onBlur={field.onBlur}
-                error={showControllerError('dueDate', fieldState)}
-              />
-            )}
+            rules={{ validate: requireDueDate }}
+            render={({ field, fieldState }) => {
+              const invoiceDay = startOfLocalDay(invoiceDate);
+              const invoiceKey = invoiceDay ? invoiceDay.getTime() : 'none';
+              return (
+                <FormDateInput
+                  key={`due-date-${invoiceKey}`}
+                  label="Due Date"
+                  clearable
+                  popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
+                  value={field.value}
+                  minDate={invoiceDay || undefined}
+                  defaultDate={invoiceDay || field.value || undefined}
+                  excludeDate={
+                    invoiceDay
+                      ? (date) => {
+                        const day = startOfLocalDay(date);
+                        return Boolean(day && day < invoiceDay);
+                      }
+                      : undefined
+                  }
+                  onChange={(value) => field.onChange(toDateOrNull(value))}
+                  onBlur={field.onBlur}
+                  error={showControllerError('dueDate', fieldState)}
+                />
+              );
+            }}
           />
         </SimpleGrid>
       </Paper>
@@ -1019,7 +1160,11 @@ export default function ExpenseForm({
                     fixedDecimalScale={false}
                     hideControls
                     classNames={TEXT_INPUT_CLASS_NAMES}
-                    {...field}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
                     error={showControllerError('netAmount', fieldState)}
                   />
                 )}
@@ -1039,7 +1184,11 @@ export default function ExpenseForm({
                       fixedDecimalScale={false}
                       hideControls
                       classNames={TEXT_INPUT_CLASS_NAMES}
-                      {...field}
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
                     />
                   )}
                 />
@@ -1054,7 +1203,11 @@ export default function ExpenseForm({
                       max={100}
                       hideControls
                       classNames={TEXT_INPUT_CLASS_NAMES}
-                      {...field}
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
                     />
                   )}
                 />
@@ -1069,7 +1222,11 @@ export default function ExpenseForm({
                     prefix="₹"
                     hideControls
                     classNames={TEXT_INPUT_CLASS_NAMES}
-                    {...field}
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
                   />
                 )}
               />
@@ -1121,7 +1278,7 @@ export default function ExpenseForm({
                 Gross
               </span>
               <span className="expense-payment-strip-value expense-payment-strip-value--gross text-[14px] font-bold tabular-nums">
-                {formatSummaryAmount(grossAmount)}
+                {formatSummaryAmount(grossAmount, 0)}
               </span>
             </div>
             <div className="flex min-w-0 items-baseline justify-between gap-1.5 px-2 py-1.5">
@@ -1344,7 +1501,7 @@ export default function ExpenseForm({
                       clearable
                       popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
                       value={field.value}
-                      onChange={field.onChange}
+                      onChange={(value) => field.onChange(toDateOrNull(value))}
                       onBlur={field.onBlur}
                       error={showControllerError('paymentDate', fieldState)}
                     />
@@ -1415,7 +1572,7 @@ export default function ExpenseForm({
             <SummaryRow label="TDS" value={tds || 0} />
 
             <div className="expense-form-summary-gross-divider border-t border-gray-200 pt-3">
-              <SummaryRow label="Gross" value={grossAmount} bold large />
+              <SummaryRow label="Gross" value={grossAmount} bold large decimals={0} />
             </div>
 
             <div className="expense-amount-words-box rounded-lg border px-4 py-3 mt-1">

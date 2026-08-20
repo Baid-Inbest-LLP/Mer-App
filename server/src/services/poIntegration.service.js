@@ -167,7 +167,7 @@ export const mapPoToExpenseDraft = (po) => {
   const invoiceDate = po.orderDate ? new Date(po.orderDate) : new Date();
   const month = invoiceDate.toLocaleString('en-US', { month: 'long' });
   // Pre-GST amount only: Σ((unitPrice × qty) − discount) — excludes GST.
-  // Keep full decimals in the form input; summary rounds for display.
+  // Keep full decimals in the form input; summary gross rounds to nearest rupee.
   const netAmount = parseFloat(
     (po.lineItems || []).reduce((sum, item) => sum + lineNet(item), 0).toFixed(2),
   );

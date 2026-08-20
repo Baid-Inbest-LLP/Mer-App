@@ -111,9 +111,8 @@ export const applyCalculations = (data) => {
     ? (net > 0 ? parseFloat(((rawGstAmount / net) * 100).toFixed(2)) : 0)
     : rest.gstPercent;
 
-  // PO expenses: persist/display gross from rounded net + rounded GST.
-  const netForGross = isPoExpense ? Math.round(net) : net;
-  const grossAmount = calculateGrossAmount(netForGross, gst.totalGST, rest.tds);
+  // Inputs stay as entered; only gross is rounded to nearest rupee (summary).
+  const grossAmount = calculateGrossAmount(net, gst.totalGST, rest.tds);
 
   return {
     ...rest,

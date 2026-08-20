@@ -9,12 +9,21 @@ import {
 } from 'recharts';
 import ChartCard from '../common/ChartCard';
 import ChartSkeleton from '../common/ChartSkeleton';
+import ChartFySelect from './ChartFySelect';
+import ChartLoadingOverlay from './ChartLoadingOverlay';
 import { formatCurrency } from '../../utils/format';
 
 const PIE_COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#06b6d4'];
 
-export default function ExpenseTrendChart({ data, loading, title = 'Monthly Expense Trend' }) {
-  if (loading) {
+export default function ExpenseTrendChart({
+  data,
+  loading,
+  title = 'Monthly Expense Trend',
+  fyOptions,
+  selectedFy,
+  onFyChange,
+}) {
+  if (loading && !(data || []).length) {
     return <ChartSkeleton />;
   }
 
@@ -28,8 +37,18 @@ export default function ExpenseTrendChart({ data, loading, title = 'Monthly Expe
         </svg>
       }
       bodyClassName="p-4"
+      headerRight={
+        fyOptions?.length ? (
+          <ChartFySelect
+            fyOptions={fyOptions}
+            selectedFy={selectedFy}
+            onFyChange={onFyChange}
+          />
+        ) : null
+      }
     >
-      <div style={{ height: 300 }}>
+      <div className="relative" style={{ height: 300 }}>
+        <ChartLoadingOverlay show={loading} />
         {(data || []).length === 0 ? (
           <div className="flex items-center justify-center h-full text-sm text-gray-400">
             No expense data available yet

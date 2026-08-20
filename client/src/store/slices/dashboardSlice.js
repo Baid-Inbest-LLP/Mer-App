@@ -6,13 +6,34 @@ const chartDataKeys = {
   expenseTypes: 'expenseTypes',
   paymentMethods: 'paymentMethods',
   head: 'headAnalytics',
+  trends: 'trends',
+  daysToClear: 'daysToClear',
+  quarterly: 'quarterly',
 };
 
+const MONTH_CHART_KEYS = new Set(['company', 'expenseTypes', 'paymentMethods', 'head']);
+
 const createChartThunk = (name, apiFn, chartKey) =>
-  createAsyncThunk(`dashboard/${name}`, async ({ month }, { rejectWithValue }) => {
+  createAsyncThunk(`dashboard/${name}`, async (params = {}, { rejectWithValue }) => {
     try {
-      const { data } = await apiFn({ month });
-      return { chartKey, ...data.data };
+      const { data } = await apiFn(params);
+      const body = data.data;
+      // Most chart endpoints return { data, selectedMonth, financialYear, ... }.
+      // Quarterly still returns a bare array for report-page compatibility.
+      if (Array.isArray(body)) {
+        return {
+          chartKey,
+          financialYear: params.financialYear || '',
+          data: body,
+        };
+      }
+      return {
+        chartKey,
+        financialYear: body?.financialYear || params.financialYear || '',
+        selectedMonth: body?.selectedMonth,
+        fyMonthOptions: body?.fyMonthOptions,
+        data: body?.data,
+      };
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load chart');
     }
@@ -46,12 +67,26 @@ export const fetchPaymentMethodsChart = createChartThunk(
   'paymentMethods',
 );
 export const fetchHeadChart = createChartThunk('fetchHeadChart', analyticsApi.heads, 'head');
+export const fetchTrendsChart = createChartThunk('fetchTrendsChart', analyticsApi.trends, 'trends');
+export const fetchDaysToClearChart = createChartThunk(
+  'fetchDaysToClearChart',
+  analyticsApi.daysToClear,
+  'daysToClear',
+);
+export const fetchQuarterlyChart = createChartThunk(
+  'fetchQuarterlyChart',
+  analyticsApi.quarterly,
+  'quarterly',
+);
 
 const chartThunks = [
   [fetchCompanyChart, 'company'],
   [fetchExpenseTypesChart, 'expenseTypes'],
   [fetchPaymentMethodsChart, 'paymentMethods'],
   [fetchHeadChart, 'head'],
+  [fetchTrendsChart, 'trends'],
+  [fetchDaysToClearChart, 'daysToClear'],
+  [fetchQuarterlyChart, 'quarterly'],
 ];
 
 const chartThunkByKey = {
@@ -59,6 +94,9 @@ const chartThunkByKey = {
   expenseTypes: fetchExpenseTypesChart,
   paymentMethods: fetchPaymentMethodsChart,
   head: fetchHeadChart,
+  trends: fetchTrendsChart,
+  daysToClear: fetchDaysToClearChart,
+  quarterly: fetchQuarterlyChart,
 };
 
 export { chartThunkByKey };
@@ -68,6 +106,9 @@ const initialChartLoading = {
   expenseTypes: false,
   paymentMethods: false,
   head: false,
+  trends: false,
+  daysToClear: false,
+  quarterly: false,
 };
 
 const initialState = {
@@ -79,13 +120,36 @@ const initialState = {
 
 const applyChartPayload = (state, payload) => {
   if (!state.data || !payload) return;
-  const { chartKey, selectedMonth, data } = payload;
+  const {
+    chartKey,
+    selectedMonth,
+    financialYear,
+    fyMonthOptions,
+    data: chartData,
+  } = payload;
   const dataKey = chartDataKeys[chartKey];
-  if (dataKey) state.data[dataKey] = data;
+  if (dataKey && chartData != null) {
+    state.data[dataKey] = chartData;
+  }
+
   if (selectedMonth) {
     state.data.selectedMonths = {
       ...state.data.selectedMonths,
       [chartKey]: selectedMonth,
+    };
+  }
+
+  if (financialYear) {
+    state.data.selectedFys = {
+      ...state.data.selectedFys,
+      [chartKey]: financialYear,
+    };
+  }
+
+  if (MONTH_CHART_KEYS.has(chartKey) && fyMonthOptions?.length) {
+    state.data.chartMonthOptions = {
+      ...state.data.chartMonthOptions,
+      [chartKey]: fyMonthOptions,
     };
   }
 };

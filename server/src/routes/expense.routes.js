@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as expenseController from '../controllers/expense.controller.js';
 import * as paymentController from '../controllers/payment.controller.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createExpenseValidator, expenseIdValidator } from '../validators/expense.validator.js';
 import {
@@ -34,6 +34,7 @@ router.post(
 );
 router.delete(
   '/:id/payments/:paymentId',
+  authorize('superadmin'),
   voidPaymentValidator,
   validate,
   paymentController.voidPayment,

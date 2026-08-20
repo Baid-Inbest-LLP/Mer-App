@@ -4,15 +4,23 @@ import { Company } from '../models/Company.js';
 import { buildExpenseQuery } from '../utils/queryBuilder.js';
 import { applyReportScope } from '../utils/reportScope.js';
 import { getFinancialYear } from '../config/index.js';
+import { OPEN_PAYMENT_STATUSES, PAYMENT_STATUS } from '../constants/paymentStatus.js';
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const pad2 = (n) => String(n).padStart(2, '0');
 
-export const getFyMonthContext = (requestedMonth = '') => {
+export const getFyMonthContext = (requestedMonth = '', financialYear = '') => {
   const now = new Date();
   const year = now.getFullYear();
   const monthIdx = now.getMonth();
-  const fyStartYear = monthIdx >= 3 ? year : year - 1;
+  const currentFyStartYear = monthIdx >= 3 ? year : year - 1;
+
+  const requestedFy = String(financialYear || '').trim();
+  const parsedFyStart = parseInt(requestedFy.split('-')[0], 10);
+  const fyStartYear = Number.isFinite(parsedFyStart) && parsedFyStart > 2000
+    ? parsedFyStart
+    : currentFyStartYear;
+  const fyLabel = `${fyStartYear}-${String(fyStartYear + 1).slice(-2)}`;
 
   const fyMonths = [];
   for (let m = 4; m <= 12; m += 1) fyMonths.push({ year: fyStartYear, month: m });
@@ -24,11 +32,14 @@ export const getFyMonthContext = (requestedMonth = '') => {
   }));
 
   const defaultMonth = `${year}-${pad2(monthIdx + 1)}`;
-  const selectedMonth = fyMonthOptions.some((o) => o.value === requestedMonth)
-    ? requestedMonth
-    : fyMonthOptions.some((o) => o.value === defaultMonth)
-      ? defaultMonth
-      : fyMonthOptions[0]?.value;
+  let selectedMonth = fyMonthOptions[0]?.value;
+  if (fyMonthOptions.some((o) => o.value === requestedMonth)) {
+    selectedMonth = requestedMonth;
+  } else if (fyMonthOptions.some((o) => o.value === defaultMonth)) {
+    selectedMonth = defaultMonth;
+  } else if (fyStartYear < currentFyStartYear) {
+    selectedMonth = fyMonthOptions[fyMonthOptions.length - 1]?.value;
+  }
 
   const [selY, selM] = (selectedMonth || '').split('-').map((v) => parseInt(v, 10));
   const monthStart = new Date(selY, (selM || 1) - 1, 1, 0, 0, 0, 0);
@@ -39,8 +50,31 @@ export const getFyMonthContext = (requestedMonth = '') => {
     selectedMonth,
     monthStart,
     monthEnd,
-    fyLabel: `${fyStartYear}-${String(fyStartYear + 1).slice(-2)}`,
+    fyLabel,
+    financialYear: fyLabel,
   };
+};
+
+/** Calendar slots for an Indian FY (Apr–Mar), oldest → newest. */
+export const getFyMonthSlots = (financialYear = '') => {
+  const ctx = getFyMonthContext('', financialYear);
+  const [startYear] = String(ctx.financialYear).split('-').map(Number);
+  const slots = [];
+  for (let m = 4; m <= 12; m += 1) {
+    slots.push({
+      year: startYear,
+      month: m,
+      label: `${MONTH_NAMES[m - 1]} ${String(startYear).slice(-2)}`,
+    });
+  }
+  for (let m = 1; m <= 3; m += 1) {
+    slots.push({
+      year: startYear + 1,
+      month: m,
+      label: `${MONTH_NAMES[m - 1]} ${String(startYear + 1).slice(-2)}`,
+    });
+  }
+  return { financialYear: ctx.financialYear, slots };
 };
 
 const baseMatch = (extra = {}) => ({
@@ -50,42 +84,114 @@ const baseMatch = (extra = {}) => ({
   ...extra,
 });
 
+const previousFinancialYearLabel = (fy) => {
+  const startYear = parseInt(String(fy || '').split('-')[0], 10);
+  if (!startYear) return '';
+  return `${startYear - 1}-${String(startYear).slice(-2)}`;
+};
+
+const pctChange = (current, previous) => {
+  if (!(previous > 0)) return 0;
+  return Math.round((((current - previous) / previous) * 100) * 100) / 100;
+};
+
 export const getDashboardKPIs = async () => {
   const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const fy = getFinancialYear(now);
+  const prevFy = previousFinancialYearLabel(fy);
   const [startYear] = fy.split('-').map(Number);
   const fyStart = new Date(startYear, 3, 1);
   const fyEnd = new Date(startYear + 1, 3, 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
 
+  const paidMatch = { ...baseMatch(), status: PAYMENT_STATUS.PAID };
+  const openMatch = {
+    ...baseMatch(),
+    status: { $in: OPEN_PAYMENT_STATUSES },
+    balanceDue: { $gt: 0 },
+  };
+
   const [
-    thisMonth,
-    lastMonth,
-    fyTotal,
-    pendingCount,
-    totals,
+    fyBillingAgg,
+    fyExpenseAgg,
+    prevFyExpenseAgg,
+    thisMonthExpenseAgg,
+    lastMonthExpenseAgg,
+    fyPaidOnBillsAgg,
     paidThisMonthAgg,
     paidThisFYAgg,
-    outstandingAgg,
+    overdueAgg,
+    pendingPaymentAgg,
+    pendingApprovals,
+    totals,
   ] = await Promise.all([
+    // All approved bills this FY (paid + unpaid), excl. cancelled.
     Expense.aggregate([
-      { $match: { ...baseMatch(), invoiceDate: { $gte: thisMonthStart } } },
+      { $match: { ...baseMatch(), financialYear: fy } },
+      {
+        $group: {
+          _id: null,
+          gross: { $sum: '$grossAmount' },
+          amountPaid: { $sum: '$amountPaid' },
+        },
+      },
+    ]),
+    // Fully paid expenses this FY (invoice gross).
+    Expense.aggregate([
+      { $match: { ...paidMatch, financialYear: fy } },
+      { $group: { _id: null, gross: { $sum: '$grossAmount' } } },
+    ]),
+    Expense.aggregate([
+      { $match: { ...paidMatch, financialYear: prevFy } },
+      { $group: { _id: null, gross: { $sum: '$grossAmount' } } },
+    ]),
+    Expense.aggregate([
+      { $match: { ...paidMatch, invoiceDate: { $gte: thisMonthStart } } },
       { $group: { _id: null, gross: { $sum: '$grossAmount' } } },
     ]),
     Expense.aggregate([
       {
         $match: {
-          ...baseMatch(),
+          ...paidMatch,
           invoiceDate: { $gte: lastMonthStart, $lte: lastMonthEnd },
         },
       },
       { $group: { _id: null, gross: { $sum: '$grossAmount' } } },
     ]),
+    // Amount recorded as paid against FY bills (incl. partials) — for collection rate.
     Expense.aggregate([
       { $match: { ...baseMatch(), financialYear: fy } },
-      { $group: { _id: null, gross: { $sum: '$grossAmount' } } },
+      { $group: { _id: null, amountPaid: { $sum: '$amountPaid' } } },
+    ]),
+    ExpensePayment.aggregate([
+      { $match: { status: 'Active', paymentDate: { $gte: thisMonthStart } } },
+      { $group: { _id: null, paid: { $sum: '$amount' } } },
+    ]),
+    ExpensePayment.aggregate([
+      { $match: { status: 'Active', paymentDate: { $gte: fyStart, $lt: fyEnd } } },
+      { $group: { _id: null, paid: { $sum: '$amount' } } },
+    ]),
+    Expense.aggregate([
+      {
+        $match: {
+          ...openMatch,
+          dueDate: { $ne: null, $lt: todayStart },
+        },
+      },
+      { $group: { _id: null, balance: { $sum: '$balanceDue' } } },
+    ]),
+    Expense.aggregate([
+      { $match: openMatch },
+      {
+        $group: {
+          _id: null,
+          balance: { $sum: '$balanceDue' },
+          count: { $sum: 1 },
+        },
+      },
     ]),
     Expense.countDocuments({
       isDraft: { $ne: true },
@@ -102,51 +208,73 @@ export const getDashboardKPIs = async () => {
         },
       },
     ]),
-    // Cash basis: money actually paid this month (active payment rows).
-    ExpensePayment.aggregate([
-      { $match: { status: 'Active', paymentDate: { $gte: thisMonthStart } } },
-      { $group: { _id: null, paid: { $sum: '$amount' } } },
-    ]),
-    // Cash basis: money actually paid this financial year.
-    ExpensePayment.aggregate([
-      { $match: { status: 'Active', paymentDate: { $gte: fyStart, $lt: fyEnd } } },
-      { $group: { _id: null, paid: { $sum: '$amount' } } },
-    ]),
-    // Still owed across approved, non-cancelled bills.
-    Expense.aggregate([
-      { $match: { ...baseMatch(), balanceDue: { $gt: 0 } } },
-      { $group: { _id: null, balance: { $sum: '$balanceDue' } } },
-    ]),
   ]);
 
-  const thisMonthExpense = thisMonth[0]?.gross || 0;
-  const lastMonthExpense = lastMonth[0]?.gross || 0;
-  const monthlyChange =
-    lastMonthExpense > 0
-      ? ((thisMonthExpense - lastMonthExpense) / lastMonthExpense) * 100
-      : 0;
+  const fyBillingAmount = fyBillingAgg[0]?.gross || 0;
+  const fyExpense = fyExpenseAgg[0]?.gross || 0;
+  const prevFyExpense = prevFyExpenseAgg[0]?.gross || 0;
+  const thisMonthExpense = thisMonthExpenseAgg[0]?.gross || 0;
+  const lastMonthExpense = lastMonthExpenseAgg[0]?.gross || 0;
+  const fyAmountPaid = fyPaidOnBillsAgg[0]?.amountPaid || fyBillingAgg[0]?.amountPaid || 0;
+  const collectionRate = fyBillingAmount > 0
+    ? Math.round(((fyAmountPaid / fyBillingAmount) * 100) * 100) / 100
+    : 0;
 
   return {
+    fyBillingAmount,
+    financialYearExpense: fyExpense,
+    yearlyExpenseChange: pctChange(fyExpense, prevFyExpense),
+    monthlyExpenseChange: pctChange(thisMonthExpense, lastMonthExpense),
+    collectionRate,
     thisMonthExpense,
-    financialYearExpense: fyTotal[0]?.gross || 0,
-    monthlyExpenseChange: Math.round(monthlyChange * 100) / 100,
-    pendingEntries: pendingCount,
+    paidThisMonth: paidThisMonthAgg[0]?.paid || 0,
+    paidThisFY: paidThisFYAgg[0]?.paid || 0,
+    overdue: overdueAgg[0]?.balance || 0,
+    pendingPayment: pendingPaymentAgg[0]?.count || 0,
+    pendingApprovals,
+    // Legacy aliases kept for older clients / charts.
+    pendingEntries: pendingApprovals,
+    outstanding: pendingPaymentAgg[0]?.balance || 0,
     totalGST: totals[0]?.totalGST || 0,
     totalTDS: totals[0]?.totalTDS || 0,
     grossAmount: totals[0]?.grossAmount || 0,
     currentFinancialYear: fy,
-    // Cash-basis figures (actual money out / still owed).
-    paidThisMonth: paidThisMonthAgg[0]?.paid || 0,
-    paidThisFY: paidThisFYAgg[0]?.paid || 0,
-    outstanding: outstandingAgg[0]?.balance || 0,
   };
 };
 
-export const getExpenseTrends = async (months = 12) => {
+export const getExpenseTrends = async (months = 12, financialYear = '') => {
+  if (financialYear) {
+    const { financialYear: fy, slots } = getFyMonthSlots(financialYear);
+    const rows = await Expense.aggregate([
+      { $match: { ...baseMatch(), financialYear: fy } },
+      {
+        $group: {
+          _id: { year: { $year: '$invoiceDate' }, month: { $month: '$invoiceDate' } },
+          total: { $sum: '$grossAmount' },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+    const byKey = Object.fromEntries(
+      rows.map((r) => [`${r._id.year}-${r._id.month}`, r]),
+    );
+    return {
+      financialYear: fy,
+      data: slots.map((slot) => {
+        const row = byKey[`${slot.year}-${slot.month}`];
+        return {
+          label: slot.label,
+          total: row?.total || 0,
+          count: row?.count || 0,
+        };
+      }),
+    };
+  }
+
   const start = new Date();
   start.setMonth(start.getMonth() - months);
 
-  return Expense.aggregate([
+  const rows = await Expense.aggregate([
     { $match: { ...baseMatch(), invoiceDate: { $gte: start } } },
     {
       $group: {
@@ -157,6 +285,15 @@ export const getExpenseTrends = async (months = 12) => {
     },
     { $sort: { '_id.year': 1, '_id.month': 1 } },
   ]);
+
+  return {
+    financialYear: '',
+    data: rows.map((t) => ({
+      label: `${t._id.month}/${t._id.year}`,
+      total: t.total,
+      count: t.count,
+    })),
+  };
 };
 
 /**
@@ -164,18 +301,32 @@ export const getExpenseTrends = async (months = 12) => {
  * payment, grouped by the month the bill was due. Empty months stay in
  * the series so the chart remains continuous.
  */
-export const getAvgDaysToClearByMonth = async (months = 12) => {
-  const now = new Date();
-  const rangeStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1, 0, 0, 0, 0);
+export const getAvgDaysToClearByMonth = async (months = 12, financialYear = '') => {
+  let monthSlots;
+  let rangeStart;
+  let rangeEnd = null;
+  let fyLabel = '';
 
-  const monthSlots = [];
-  for (let i = months - 1; i >= 0; i -= 1) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    monthSlots.push({
-      year: d.getFullYear(),
-      month: d.getMonth() + 1,
-      label: `${MONTH_NAMES[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`,
-    });
+  if (financialYear) {
+    const packed = getFyMonthSlots(financialYear);
+    fyLabel = packed.financialYear;
+    monthSlots = packed.slots;
+    const first = monthSlots[0];
+    const last = monthSlots[monthSlots.length - 1];
+    rangeStart = new Date(first.year, first.month - 1, 1, 0, 0, 0, 0);
+    rangeEnd = new Date(last.year, last.month, 0, 23, 59, 59, 999);
+  } else {
+    const now = new Date();
+    rangeStart = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1, 0, 0, 0, 0);
+    monthSlots = [];
+    for (let i = months - 1; i >= 0; i -= 1) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      monthSlots.push({
+        year: d.getFullYear(),
+        month: d.getMonth() + 1,
+        label: `${MONTH_NAMES[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`,
+      });
+    }
   }
 
   const rows = await Expense.aggregate([
@@ -193,7 +344,11 @@ export const getAvgDaysToClearByMonth = async (months = 12) => {
     },
     {
       $match: {
-        anchorDate: { $gte: rangeStart, $ne: null },
+        anchorDate: {
+          $gte: rangeStart,
+          ...(rangeEnd ? { $lte: rangeEnd } : {}),
+          $ne: null,
+        },
         clearDate: { $ne: null },
       },
     },
@@ -230,14 +385,17 @@ export const getAvgDaysToClearByMonth = async (months = 12) => {
     rows.map((r) => [`${r._id.year}-${r._id.month}`, r]),
   );
 
-  return monthSlots.map((slot) => {
-    const row = byKey[`${slot.year}-${slot.month}`];
-    return {
-      label: slot.label,
-      avgDays: row ? Math.round(row.avgDays * 10) / 10 : null,
-      count: row?.count || 0,
-    };
-  });
+  return {
+    financialYear: fyLabel,
+    data: monthSlots.map((slot) => {
+      const row = byKey[`${slot.year}-${slot.month}`];
+      return {
+        label: slot.label,
+        avgDays: row ? Math.round(row.avgDays * 10) / 10 : null,
+        count: row?.count || 0,
+      };
+    }),
+  };
 };
 
 export const getExpenseTypeBreakdown = async (query = {}) => {
@@ -339,7 +497,10 @@ export const getFinancialYearComparison = async (anchorFy, limit = 5, query = {}
 };
 
 export const getRecentExpenses = async (limit = 5) =>
-  Expense.find({ isDraft: { $ne: true } })
+  Expense.find({
+    isDraft: { $ne: true },
+    status: { $ne: 'Cancelled' },
+  })
     .select(
       'slNo month invoiceDate company coNames headOfExpense grossAmount approvalStatus status createdAt',
     )

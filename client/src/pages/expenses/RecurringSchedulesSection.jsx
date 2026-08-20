@@ -80,11 +80,11 @@ const emptyForm = {
   particulars: '',
   expenseType: 'Revenue',
   amountType: 'Fixed',
-  netAmount: 0,
-  gstPercent: 0,
+  netAmount: '',
+  gstPercent: '',
   useIGST: false,
-  tds: 0,
-  merType: null,
+  tds: '',
+  merType: 'Bank',
   paymentMethod: null,
   autoPay: false,
   autoPayCardNumber: '',
@@ -847,7 +847,11 @@ export default function RecurringSchedulesSection() {
                           prefix="₹"
                           hideControls
                           classNames={TEXT_INPUT_CLASS_NAMES}
-                          {...field}
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                           error={showControllerError('netAmount', fieldState)}
                         />
                       )}
@@ -862,7 +866,11 @@ export default function RecurringSchedulesSection() {
                           max={100}
                           hideControls
                           classNames={TEXT_INPUT_CLASS_NAMES}
-                          {...field}
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       )}
                     />
@@ -876,7 +884,11 @@ export default function RecurringSchedulesSection() {
                           prefix="₹"
                           hideControls
                           classNames={TEXT_INPUT_CLASS_NAMES}
-                          {...field}
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                          onBlur={field.onBlur}
+                          name={field.name}
+                          ref={field.ref}
                         />
                       )}
                     />
@@ -913,7 +925,7 @@ export default function RecurringSchedulesSection() {
                     )}
                     <div className="flex justify-between border-t border-gray-200 pt-2 font-bold text-primary-800">
                       <span>Gross</span>
-                      <span>₹{formatNumber(gstSummary.gross, 2)}</span>
+                      <span>₹{formatNumber(gstSummary.gross, 0)}</span>
                     </div>
                   </div>
                 </Paper>

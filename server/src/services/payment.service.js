@@ -11,7 +11,7 @@ import {
   requiresCardNumber,
   requiresPaymentRef,
 } from '../constants/paymentMethods.js';
-import { APPROVAL_STATUS, isAdminRole } from '../constants/roles.js';
+import { APPROVAL_STATUS, isAdminRole, isSuperAdmin } from '../constants/roles.js';
 import { applySerialKind, serialKindForStatus } from '../utils/merSerial.js';
 
 const asTrimmed = (value) => {
@@ -28,9 +28,18 @@ export const canManagePayments = (expense, user) => {
   return creatorId(expense) === user._id.toString();
 };
 
+/** Only superadmin may void / delete recorded payments. */
+export const canVoidPayments = (user) => isSuperAdmin(user?.role);
+
 const assertCanManagePayments = (expense, user) => {
   if (!canManagePayments(expense, user)) {
     throw ApiError.forbidden('You do not have permission to manage payments for this entry');
+  }
+};
+
+const assertCanVoidPayments = (user) => {
+  if (!canVoidPayments(user)) {
+    throw ApiError.forbidden('Only superadmin can delete payments');
   }
 };
 
@@ -241,7 +250,7 @@ export const addPayment = async (expenseId, data, user) => {
 export const voidPayment = async (expenseId, paymentId, user) => {
   const expense = await Expense.findById(expenseId);
   if (!expense) throw ApiError.notFound('Expense not found');
-  assertCanManagePayments(expense, user);
+  assertCanVoidPayments(user);
 
   const payment = await ExpensePayment.findOne({ _id: paymentId, expenseId });
   if (!payment) throw ApiError.notFound('Payment not found');

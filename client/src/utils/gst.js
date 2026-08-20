@@ -1,5 +1,5 @@
 /**
- * Round to nearest whole number (half-up):
+ * Round to nearest whole rupee (half-up):
  * 305.67 → 306, 298.33 → 298, 298.50 → 299
  */
 export const roundGstAmount = (amount) => Math.round(Number(amount) || 0);
@@ -28,9 +28,10 @@ export const calculateGST = (netAmount, gstPercent, useIGST = false) => {
 export const calculateGSTFromAmount = (gstAmount, useIGST = false) =>
   splitGst(Number(gstAmount) || 0, useIGST);
 
+/** Gross amount rounded to the nearest whole rupee (summary display / payload). */
 export const calculateGross = (netAmount, totalGST, tds) => {
   const net = Number(netAmount) || 0;
   const gst = Number(totalGST) || 0;
   const tdsVal = Number(tds) || 0;
-  return net + gst - tdsVal;
+  return Math.round(net + gst - tdsVal);
 };
