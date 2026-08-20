@@ -1,6 +1,6 @@
 import { body, param } from 'express-validator';
 import { ALL_PAYMENT_METHODS, MER_ENTRY_TYPES } from '../constants/paymentMethods.js';
-import { EXPENSE_NATURES, RECURRING_FREQUENCIES } from '../constants/paymentStatus.js';
+import { AMOUNT_TYPES, EXPENSE_NATURES, RECURRING_FREQUENCIES } from '../constants/paymentStatus.js';
 
 export const createRecurringValidator = [
   body('name').trim().notEmpty().withMessage('Name is required'),
@@ -12,7 +12,13 @@ export const createRecurringValidator = [
     .optional({ values: 'falsy' })
     .isIn(EXPENSE_NATURES)
     .withMessage('Nature must be Fixed or Variable'),
+  body('amountType')
+    .optional({ values: 'falsy' })
+    .isIn(AMOUNT_TYPES)
+    .withMessage('Amount type must be Fixed or Usage'),
   body('netAmount').toFloat().isFloat({ min: 0 }).withMessage('Net amount is required'),
+  body('autoPay').optional({ values: 'falsy' }).isBoolean().withMessage('Auto-pay must be true or false'),
+  body('autoPayCardNumber').optional({ values: 'falsy' }).trim(),
   body('dueDayOfMonth').optional({ values: 'falsy' }).toInt().isInt({ min: 1, max: 28 }).withMessage('Due day must be 1–28'),
   body('frequency')
     .optional({ values: 'falsy' })

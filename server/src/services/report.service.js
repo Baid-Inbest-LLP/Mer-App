@@ -142,7 +142,15 @@ const dueAgingSwitch = (todayStart, todayEnd, in7, monthEnd) => ({
   $switch: {
     branches: [
       { case: { $eq: ['$status', PAYMENT_STATUS.PAID] }, then: 'paid' },
-      { case: { $lt: ['$dueDate', todayStart] }, then: 'overdue' },
+      {
+        case: {
+          $and: [
+            { $ne: ['$dueDate', null] },
+            { $lt: ['$dueDate', todayStart] },
+          ],
+        },
+        then: 'overdue',
+      },
       {
         case: { $and: [{ $gte: ['$dueDate', todayStart] }, { $lte: ['$dueDate', todayEnd] }] },
         then: 'due_today',
@@ -163,13 +171,17 @@ const dueAgingSwitch = (todayStart, todayEnd, in7, monthEnd) => ({
 export const getReportSummary = async (query) => {
   const filter = buildExpenseQuery(query);
   const match = baseMatch(filter);
+  const isExpenses = normalizeReportScope(query.reportScope) === REPORT_SCOPE.EXPENSES;
+  const billsMatch = isExpenses
+    ? baseMatch(buildExpenseQuery({ ...query, reportScope: REPORT_SCOPE.DUE }))
+    : match;
 
   const todayStart = startOfDay();
   const todayEnd = endOfDay();
   const in7 = endOfDay(new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000));
   const monthEnd = endOfDay(new Date(todayStart.getFullYear(), todayStart.getMonth() + 1, 0));
 
-  const [facetRows, vendorCount] = await Promise.all([
+  const [facetRows, vendorCount, cashPaidRows] = await Promise.all([
     Expense.aggregate([
       { $match: match },
       {
@@ -240,6 +252,12 @@ export const getReportSummary = async (query) => {
       { $group: { _id: '$vendor' } },
       { $count: 'vendors' },
     ]),
+    isExpenses
+      ? Expense.aggregate([
+          { $match: billsMatch },
+          { $group: { _id: null, amountPaid: { $sum: '$amountPaid' } } },
+        ])
+      : Promise.resolve([]),
   ]);
 
   const facet = facetRows[0] || {};
@@ -257,13 +275,20 @@ export const getReportSummary = async (query) => {
     };
   });
 
+  const cashPaid = cashPaidRows[0]?.amountPaid;
+  // Expense Gross = money actually paid on the same bills (incl. partials),
+  // matching the Bills "Paid" card — not only fully-settled invoice gross.
+  const grossAmount = isExpenses
+    ? (cashPaid || 0)
+    : (totals.grossAmount || 0);
+
   return {
     totalNetAmount: totals.totalNet || 0,
     totalGST: totals.totalGST || 0,
     totalTDS: totals.totalTDS || 0,
-    grossAmount: totals.grossAmount || 0,
+    grossAmount,
     outstanding: totals.outstanding || 0,
-    amountPaid: totals.amountPaid || 0,
+    amountPaid: isExpenses ? (cashPaid || 0) : (totals.amountPaid || 0),
     dueAndOverdue: totals.dueAndOverdue || 0,
     openCount: totals.openCount || 0,
     entryCount: totals.count || 0,

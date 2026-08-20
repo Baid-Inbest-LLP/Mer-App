@@ -19,7 +19,9 @@ export const normalizeReportScope = (value) => {
 /**
  * Restrict a Mongo filter to bills vs paid expenses.
  * Due/bills reports include every generated bill (paid and unpaid), excluding cancelled.
- * Expense reports include only paid bills.
+ * Expense listings include only fully paid bills.
+ * Expense summary Gross uses amount paid on all bills in the same filters
+ * (including partial payments) so it matches the Bills "Paid" card.
  * Unknown / empty scope leaves the filter unchanged (legacy mixed reports).
  */
 export const applyReportScope = (filter, scope) => {

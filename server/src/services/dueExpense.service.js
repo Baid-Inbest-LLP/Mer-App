@@ -111,7 +111,15 @@ export const getDueExpenses = async (query = {}) => {
                 _id: {
                   $switch: {
                     branches: [
-                      { case: { $lt: ['$dueDate', todayStart] }, then: 'overdue' },
+                      {
+                        case: {
+                          $and: [
+                            { $ne: ['$dueDate', null] },
+                            { $lt: ['$dueDate', todayStart] },
+                          ],
+                        },
+                        then: 'overdue',
+                      },
                       {
                         case: {
                           $and: [

@@ -224,7 +224,7 @@ export default function MonthlyReportPage() {
       {isDue ? (
         <DueBillsStatCards className="mb-4" loading={loading || !currentFY} summary={summary} variant="monthly" />
       ) : (
-        <ReportSummaryStatCards className="mb-4" loading={loading || !currentFY} summary={summary} showCount />
+        <ReportSummaryStatCards className="mb-4" loading={loading || !currentFY} summary={summary} showCount cashGross />
       )}
 
       {chartLoading ? (

@@ -390,6 +390,7 @@ export default function CustomizedReportPage() {
                 yoyChange={yoyChange}
                 totalLabel="Total FY Billing Amount"
                 entriesLabel="Total No Of FY Bills"
+                isDue
               />
             )
           ) : (

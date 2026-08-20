@@ -79,7 +79,7 @@ export default function SummaryReportPage() {
       {isDue ? (
         <DueBillsStatCards className="mb-4" loading={loading} summary={summary} variant="summary" />
       ) : (
-        <ReportSummaryStatCards className="mb-4" loading={loading} summary={summary} />
+        <ReportSummaryStatCards className="mb-4" loading={loading} summary={summary} cashGross />
       )}
 
       <FilterPanel

@@ -200,6 +200,7 @@ export default function FinancialYearReportPage() {
         yoyChange={yoyChange}
         totalLabel={isDue ? 'Total FY Billing Amount' : labels.fyTotalLabel}
         entriesLabel={isDue ? 'Total No Of FY Bills' : 'Total Entries'}
+        isDue={isDue}
       />
       {loading ? (
         <ChartSkeletonGrid count={2} className="dashboard-grid-2" />
