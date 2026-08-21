@@ -34,7 +34,7 @@ export const reportScopeLabels = (scope) => {
     monthlyTable: due ? 'Monthly Bills (Paid & Unpaid)' : 'Monthly Expenses',
     fyTable: due ? 'Bills (Paid & Unpaid) by Financial Year' : 'Expenses by Financial Year',
     entriesHeading: due ? 'Due Bill Entries' : 'Expense Entries',
-    fyTotalLabel: due ? 'FY Bills Generated' : 'FY Total Expense',
+    fyTotalLabel: due ? 'Billing Amount' : 'Total Expense',
     emptyPeriod: due
       ? 'No due bills are available for this period yet.'
       : 'No completed expenses are available for this period yet.',

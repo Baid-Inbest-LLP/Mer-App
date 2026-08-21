@@ -38,6 +38,7 @@ const mapFyComparison = (items = []) =>
     tds: item.tds ?? 0,
     gross: item.gross ?? item.total ?? 0,
     outstanding: item.outstanding ?? 0,
+    amountPaid: item.amountPaid ?? 0,
     count: item.count ?? 0,
   }));
 
@@ -56,6 +57,7 @@ export default function FinancialYearReportPage() {
   const [fyRowsLoading, setFyRowsLoading] = useState(true);
   const [quarterlyChart, setQuarterlyChart] = useState([]);
   const [fyComparisonChart, setFyComparisonChart] = useState([]);
+  const [paymentRate, setPaymentRate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [quarterlyChartLoading, setQuarterlyChartLoading] = useState(false);
   const [tableYearLimit, setTableYearLimit] = useState('2');
@@ -108,10 +110,16 @@ export default function FinancialYearReportPage() {
   const fetchReport = useCallback(async () => {
     if (!currentFY) return;
 
-    const [qRes, fyRes] = await Promise.all([
+    const requests = [
       analyticsApi.quarterly(withReportScope({ financialYear: currentFY }, scope)),
       analyticsApi.fyComparison(withReportScope({ limit: 20 }, scope)),
-    ]);
+    ];
+    // Payment Rate needs all FY bills (paid + unpaid), not expenses-only.
+    if (!isDue) {
+      requests.push(analyticsApi.fyComparison(withReportScope({ limit: 20 }, 'due')));
+    }
+
+    const [qRes, fyRes, billsFyRes] = await Promise.all(requests);
 
     const quarterlyData = mapQuarterly(qRes.data.data);
     const comparisonData = mapFyComparison(fyRes.data.data);
@@ -122,7 +130,17 @@ export default function FinancialYearReportPage() {
     setFyComparisonChart(
       comparisonData.filter((row) => row.count > 0).slice(0, 2),
     );
-  }, [currentFY, scope]);
+
+    if (billsFyRes) {
+      const billsCurrent = mapFyComparison(billsFyRes.data.data)
+        .find((row) => row.name === currentFY);
+      const billed = Number(billsCurrent?.gross) || 0;
+      const paid = Number(billsCurrent?.amountPaid) || 0;
+      setPaymentRate(billed > 0 ? Math.round(((paid / billed) * 100) * 100) / 100 : 0);
+    } else {
+      setPaymentRate(null);
+    }
+  }, [currentFY, scope, isDue]);
 
   useEffect(() => {
     if (!currentFY) return;
@@ -198,8 +216,7 @@ export default function FinancialYearReportPage() {
         totalEntries={totalEntries}
         peakQuarter={peakQuarter}
         yoyChange={yoyChange}
-        totalLabel={isDue ? 'Total FY Billing Amount' : labels.fyTotalLabel}
-        entriesLabel={isDue ? 'Total No Of FY Bills' : 'Total Entries'}
+        paymentRate={paymentRate}
         isDue={isDue}
       />
       {loading ? (

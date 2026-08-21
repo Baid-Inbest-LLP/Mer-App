@@ -504,21 +504,54 @@ export default function ExpenseForm({
   }, [activeCompanies, selectedCompany, selectedLocation, locationOptions, setValue]);
 
   useEffect(() => {
-    if (initialData) return;
     if (!selectedCompany || !selectedMonth || !merType) {
-      setSlNo(null);
-      return;
+      if (!initialData) setSlNo(null);
+      return undefined;
     }
+
+    const serialAnchor = isFixed ? (recurringStartDate || invoiceDate) : invoiceDate;
+    const fyStartYear = (value) => {
+      if (!value) return '';
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) return '';
+      const year = date.getFullYear();
+      return date.getMonth() >= 3 ? year : year - 1;
+    };
+
+    const depsKey = `${selectedCompany}|${selectedMonth}|${merType}|${fyStartYear(serialAnchor)}`;
+    const initialAnchor = initialData
+      ? (initialData.expenseNature === 'Fixed'
+        ? (initialData.recurringStartDate || initialData.invoiceDate)
+        : initialData.invoiceDate)
+      : null;
+    const initialKey = initialData
+      ? `${initialData.company || ''}|${initialData.month || ''}|${initialData.merType || ''}|${fyStartYear(initialAnchor)}`
+      : '';
+
+    // Edit with unchanged serial dependents — keep the saved bill no.
+    if (initialData && depsKey === initialKey && initialData.slNo) {
+      setSlNo(initialData.slNo);
+      return undefined;
+    }
+
+    let cancelled = false;
     expenseApi
       .nextSlNo({
         company: selectedCompany,
         month: selectedMonth,
-        invoiceDate: (isFixed ? (recurringStartDate || invoiceDate) : invoiceDate)?.toISOString?.()
-          ?? (isFixed ? (recurringStartDate || invoiceDate) : invoiceDate),
+        invoiceDate: serialAnchor?.toISOString?.() ?? serialAnchor,
         merType,
       })
-      .then(({ data }) => setSlNo(data.data.slNo))
-      .catch(() => setSlNo(null));
+      .then(({ data }) => {
+        if (!cancelled) setSlNo(data.data.slNo);
+      })
+      .catch(() => {
+        if (!cancelled) setSlNo(initialData?.slNo ?? null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [initialData, selectedCompany, selectedMonth, invoiceDate, recurringStartDate, isFixed, merType]);
 
   useEffect(() => {

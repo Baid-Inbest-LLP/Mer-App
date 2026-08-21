@@ -23,7 +23,7 @@ import {
   canCompleteExpense,
   stripWorkflowFields,
 } from '../utils/expensePermissions.js';
-import { EXPENSE_NATURES, AMOUNT_TYPES, AMOUNT_TYPE, RECURRING_FREQUENCIES, roundMoney } from '../constants/paymentStatus.js';
+import { EXPENSE_NATURES, AMOUNT_TYPES, AMOUNT_TYPE, RECURRING_FREQUENCIES, MONEY_EPSILON, roundMoney } from '../constants/paymentStatus.js';
 import { addPayment, recalculateExpensePaymentState } from './payment.service.js';
 
 const asTrimmedString = (value) => {
@@ -66,13 +66,40 @@ const resolveCompanyCode = async (companyName) => {
 
 const resolveMerType = (merType) => asTrimmedString(merType);
 
-const countSerialSequence = async (base) => {
+const countSerialSequence = async (base, excludeId = null) => {
   const pattern = buildMerSerialCountPattern(base);
   if (!pattern) return 0;
-  return Expense.countDocuments({ slNo: pattern });
+  const filter = { slNo: pattern };
+  if (excludeId) filter._id = { $ne: excludeId };
+  return Expense.countDocuments(filter);
 };
 
-const resolveMerSerial = async ({ company, month, invoiceDate, merType, kind = SERIAL_KIND.BILL }) => {
+/** Company + MER type + period bucket (ignores BILL/EXP/MER kind and sequence). */
+const serialBucketKey = (slNoOrBase) => {
+  const parts = String(slNoOrBase || '').split('/');
+  if (parts.length < 4) return '';
+  const [code, , type, period] = parts;
+  return `${String(code).toUpperCase()}|${String(type).toUpperCase()}|${String(period)}`;
+};
+
+const resolveSerialAnchorDate = (expense) => (
+  expense.invoiceDate
+  || (expense.expenseNature === 'Fixed'
+    ? (expense.recurringStartDate || expense.dueDate)
+    : undefined)
+  || (expense.month
+    ? monthToDateInFy(expense.month, getFinancialYear(new Date()))
+    : undefined)
+);
+
+const resolveMerSerial = async ({
+  company,
+  month,
+  invoiceDate,
+  merType,
+  kind = SERIAL_KIND.BILL,
+  excludeId = null,
+}) => {
   const type = resolveMerType(merType);
   const companyCode = await resolveCompanyCode(company);
   const monthStr = asTrimmedString(month);
@@ -89,8 +116,48 @@ const resolveMerSerial = async ({ company, month, invoiceDate, merType, kind = S
     );
   }
 
-  const count = await countSerialSequence(base);
+  const count = await countSerialSequence(base, excludeId);
   return buildMerSerial(base, count + 1);
+};
+
+/**
+ * Keep slNo aligned with company / month / mer type / FY period.
+ * Regenerates into the new series when those dependents change.
+ */
+const syncExpenseSerial = async (expense) => {
+  const company = asTrimmedString(expense.company);
+  const month = asTrimmedString(expense.month);
+  const merType = resolveMerType(expense.merType);
+  if (!company || !month || !merType) return;
+
+  const kind = serialKindForStatus(expense.status);
+  const serialAnchorDate = resolveSerialAnchorDate(expense);
+  const companyCode = await resolveCompanyCode(company);
+  const nextBase = buildMerSerialBase({
+    companyCode,
+    month,
+    invoiceDate: serialAnchorDate,
+    merType,
+    kind,
+  });
+  if (!nextBase) return;
+
+  const currentKey = serialBucketKey(expense.slNo);
+  const nextKey = serialBucketKey(nextBase);
+
+  if (!asTrimmedString(expense.slNo) || currentKey !== nextKey) {
+    expense.slNo = await resolveMerSerial({
+      company,
+      month,
+      invoiceDate: serialAnchorDate,
+      merType,
+      kind,
+      excludeId: expense._id,
+    });
+    return;
+  }
+
+  expense.slNo = applySerialKind(expense.slNo, kind);
 };
 
 /** Exported for recurring template generation. */
@@ -350,6 +417,8 @@ export const updateExpense = async (id, data, user) => {
   assertCanEdit(existing, user);
 
   const wasDraft = existing.isDraft;
+  const priorAmountPaid = roundMoney(existing.amountPaid || 0);
+
   const cleaned = stripWorkflowFields(data);
   // PO link is immutable after create
   delete cleaned.purchaseOrderId;
@@ -358,6 +427,22 @@ export const updateExpense = async (id, data, user) => {
   delete cleaned.recurringTemplateId;
   delete cleaned.amountPaid;
   delete cleaned.balanceDue;
+
+  // Capture payment intent before stripping settlement-only fields.
+  const recordPaymentNow = cleaned.recordPaymentNow === true
+    || cleaned.recordPaymentNow === 'true'
+    || Boolean(cleaned.paymentDate && cleaned.paymentMethod);
+  const initialAmountRaw = cleaned.initialPaymentAmount ?? cleaned.paymentAmount;
+  const hasExplicitAmount = initialAmountRaw !== undefined
+    && initialAmountRaw !== null
+    && initialAmountRaw !== '';
+  const paymentMethodForRecord = asTrimmedString(cleaned.paymentMethod);
+  const paymentDateForRecord = cleaned.paymentDate;
+  const paymentRefForRecord = cleaned.paymentRefNumber;
+  const bankAccountForRecord = cleaned.bankAccountNumber;
+  const cardNumberForRecord = cleaned.cardNumber || cleaned.autoPayCardNumber;
+  const wantsAutoPay = cleaned.autoPay === true || cleaned.autoPay === 'true';
+
   delete cleaned.recordPaymentNow;
   delete cleaned.initialPaymentAmount;
   delete cleaned.paymentAmount;
@@ -382,6 +467,18 @@ export const updateExpense = async (id, data, user) => {
     calculated.frequency = cleaned.frequency;
   }
 
+  if (wantsAutoPay && calculated.expenseNature === 'Fixed') {
+    calculated.autoPay = true;
+    calculated.paymentMethod = 'Card';
+    calculated.autoPayCardNumber = asTrimmedString(
+      cleaned.autoPayCardNumber || cleaned.cardNumber || calculated.autoPayCardNumber,
+    );
+    if (calculated.autoPayCardNumber) calculated.cardNumber = calculated.autoPayCardNumber;
+  } else if (Object.prototype.hasOwnProperty.call(cleaned, 'autoPay')) {
+    calculated.autoPay = false;
+    calculated.autoPayCardNumber = '';
+  }
+
   const { status: _omitStatus, ...calculatedWithoutStatus } = calculated;
   Object.assign(existing, calculatedWithoutStatus, { updatedBy: user._id });
 
@@ -397,19 +494,60 @@ export const updateExpense = async (id, data, user) => {
 
   if (wasDraft && !existing.isDraft) {
     existing.approvalStatus = APPROVAL_STATUS.PENDING;
+  }
 
-    if (!asTrimmedString(existing.slNo)) {
-      existing.slNo = await resolveMerSerial({
-        company: existing.company,
-        month: existing.month,
-        invoiceDate: existing.invoiceDate,
-        merType: existing.merType,
-      });
-    }
+  // Regenerate bill/expense no when company, month, payment type, or FY period changes.
+  if (
+    !existing.isDraft
+    || (asTrimmedString(existing.company)
+      && asTrimmedString(existing.month)
+      && resolveMerType(existing.merType))
+  ) {
+    await syncExpenseSerial(existing);
   }
 
   await existing.save();
   await recalculateExpensePaymentState(existing._id);
+
+  // Record Pay Full / Pay Other / Auto-pay when editing (same as create).
+  if (!existing.isDraft && recordPaymentNow && paymentMethodForRecord) {
+    const fresh = await Expense.findById(existing._id);
+    const balanceDue = roundMoney(fresh?.balanceDue ?? 0);
+    const grossAmount = roundMoney(fresh?.grossAmount || 0);
+
+    if (balanceDue > 0) {
+      const requested = hasExplicitAmount ? roundMoney(initialAmountRaw) : balanceDue;
+      const isFullSettlement = wantsAutoPay
+        || (hasExplicitAmount && requested + MONEY_EPSILON >= grossAmount)
+        || !hasExplicitAmount;
+      let payAmount = 0;
+
+      if (isFullSettlement) {
+        payAmount = balanceDue;
+      } else if (priorAmountPaid <= 0) {
+        // First partial payment via the edit form.
+        payAmount = Math.min(requested, balanceDue);
+      }
+
+      if (payAmount > 0) {
+        await addPayment(existing._id, {
+          amount: payAmount,
+          paymentDate: paymentDateForRecord || new Date(),
+          paymentMethod: wantsAutoPay ? 'Card' : paymentMethodForRecord,
+          paymentRefNumber: wantsAutoPay
+            ? (asTrimmedString(paymentRefForRecord) || 'AUTO-PAY')
+            : paymentRefForRecord,
+          bankAccountNumber: bankAccountForRecord,
+          cardNumber: cardNumberForRecord || fresh.autoPayCardNumber,
+          merType: fresh.merType,
+          notes: wantsAutoPay
+            ? 'Auto-pay — full balance by credit card'
+            : 'Payment on edit',
+        }, user);
+      }
+    }
+  }
+
   return getExpenseById(existing._id);
 };
 

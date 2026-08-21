@@ -51,7 +51,7 @@ export default function DashboardPage() {
   const fyOptions = useMemo(
     () => getRecentFinancialYearOptions(
       lookups?.currentFinancialYear || data?.currentFinancialYear || kpis?.currentFinancialYear,
-      3,
+      2,
     ),
     [lookups?.currentFinancialYear, data?.currentFinancialYear, kpis?.currentFinancialYear],
   );
@@ -165,12 +165,12 @@ export default function DashboardPage() {
           icon={trendIcon(`${iconClass} ${monthlyTone.iconColor}`)}
         />
         <StatCard
-          label="Collection Rate"
-          value={`${Number(kpis?.collectionRate || 0).toFixed(1)}%`}
+          label="Payment Rate"
+          value={`${Number(kpis?.paymentRate || 0).toFixed(1)}%`}
           color="text-emerald-700"
           iconBg="bg-emerald-100"
           accent="bg-emerald-500"
-          info={DASHBOARD_INFO.collectionRate}
+          info={DASHBOARD_INFO.paymentRate}
           icon={
             <svg className={`${iconClass} text-emerald-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />

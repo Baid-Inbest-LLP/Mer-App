@@ -9,7 +9,6 @@ import {
 import PageBanner from '../../components/common/PageBanner';
 import FilterPanel from '../../components/common/FilterPanel';
 import { ExpenseHeadSummaryTable } from '../../components/reports/lazyReportTables';
-import { DueBillsStatCards, ReportSummaryStatCards } from '../../components/reports/lazyReportStatCards';
 import { omitPaymentFilters, cleanFilterParams, stripSummaryReportHiddenFilters } from '../../utils/filters';
 import {
   isDueReportScope,
@@ -76,11 +75,6 @@ export default function SummaryReportPage() {
           {error}
         </div>
       ) : null}
-      {isDue ? (
-        <DueBillsStatCards className="mb-4" loading={loading} summary={summary} variant="summary" />
-      ) : (
-        <ReportSummaryStatCards className="mb-4" loading={loading} summary={summary} cashGross />
-      )}
 
       <FilterPanel
         filters={filters}

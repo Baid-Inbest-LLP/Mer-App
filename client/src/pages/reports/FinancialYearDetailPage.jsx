@@ -187,8 +187,6 @@ export default function FinancialYearDetailPage() {
           totalEntries={count}
           peakQuarter={peakQuarter}
           yoyChange={yoyChange}
-          totalLabel="Total FY Billing Amount"
-          entriesLabel="Total No Of FY Bills"
           isDue
         />
       ) : (

@@ -120,7 +120,7 @@ export const getDashboardKPIs = async () => {
     prevFyExpenseAgg,
     thisMonthExpenseAgg,
     lastMonthExpenseAgg,
-    fyPaidOnBillsAgg,
+    thisMonthBillingAgg,
     paidThisMonthAgg,
     paidThisFYAgg,
     overdueAgg,
@@ -161,10 +161,16 @@ export const getDashboardKPIs = async () => {
       },
       { $group: { _id: null, gross: { $sum: '$grossAmount' } } },
     ]),
-    // Amount recorded as paid against FY bills (incl. partials) — for collection rate.
+    // This month's billed amount vs amount paid (incl. partials) — for payment rate.
     Expense.aggregate([
-      { $match: { ...baseMatch(), financialYear: fy } },
-      { $group: { _id: null, amountPaid: { $sum: '$amountPaid' } } },
+      { $match: { ...baseMatch(), invoiceDate: { $gte: thisMonthStart } } },
+      {
+        $group: {
+          _id: null,
+          gross: { $sum: '$grossAmount' },
+          amountPaid: { $sum: '$amountPaid' },
+        },
+      },
     ]),
     ExpensePayment.aggregate([
       { $match: { status: 'Active', paymentDate: { $gte: thisMonthStart } } },
@@ -215,9 +221,10 @@ export const getDashboardKPIs = async () => {
   const prevFyExpense = prevFyExpenseAgg[0]?.gross || 0;
   const thisMonthExpense = thisMonthExpenseAgg[0]?.gross || 0;
   const lastMonthExpense = lastMonthExpenseAgg[0]?.gross || 0;
-  const fyAmountPaid = fyPaidOnBillsAgg[0]?.amountPaid || fyBillingAgg[0]?.amountPaid || 0;
-  const collectionRate = fyBillingAmount > 0
-    ? Math.round(((fyAmountPaid / fyBillingAmount) * 100) * 100) / 100
+  const monthBillingAmount = thisMonthBillingAgg[0]?.gross || 0;
+  const monthAmountPaid = thisMonthBillingAgg[0]?.amountPaid || 0;
+  const paymentRate = monthBillingAmount > 0
+    ? Math.round(((monthAmountPaid / monthBillingAmount) * 100) * 100) / 100
     : 0;
 
   return {
@@ -225,7 +232,7 @@ export const getDashboardKPIs = async () => {
     financialYearExpense: fyExpense,
     yearlyExpenseChange: pctChange(fyExpense, prevFyExpense),
     monthlyExpenseChange: pctChange(thisMonthExpense, lastMonthExpense),
-    collectionRate,
+    paymentRate,
     thisMonthExpense,
     paidThisMonth: paidThisMonthAgg[0]?.paid || 0,
     paidThisFY: paidThisFYAgg[0]?.paid || 0,

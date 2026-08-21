@@ -1,11 +1,11 @@
 /** Hover-help copy for report / insight stat cards. Keep short and plain. */
 
 export const BILLS_MONTHLY_INFO = {
-  billingAmount: 'Total value of all bills this period',
-  noOfBills: 'Number of bills this period',
-  paid: 'Amount already paid, including partials',
-  overdue: 'Unpaid amount past the due date',
-  upcomingDues: 'Unpaid amount not yet overdue',
+  billingAmount: 'Total Billed (Paid & Unpaid) Amount this Month',
+  noOfBills: 'Number of Bills this Month',
+  paid: 'Amount Paid on Bills this Month, including Partials',
+  overdue: 'Unpaid Amount past the Due Date',
+  upcomingDue: 'Unpaid Amount not yet Overdue',
 };
 
 export const BILLS_SUMMARY_INFO = {
@@ -16,26 +16,28 @@ export const BILLS_SUMMARY_INFO = {
 };
 
 export const EXPENSES_SUMMARY_INFO = {
-  netExpense: 'Expense before GST and TDS',
-  noOfExpenses: 'Number of paid expenses',
-  gstPaid: 'Total GST on paid expenses',
-  tdsDeducted: 'Total TDS on paid expenses',
-  grossExpense: 'Cash paid this period, including partials',
+  grossExpense: 'Cash Paid this Month, including Partials ',
+  noOfExpenses: 'Number of Fully Paid Expenses this Month',
+  netExpense: 'Net Amount of Fully Paid Expenses (before GST & TDS)',
+  gstPaid: 'Total GST on Fully Paid Expenses this Month',
+  tdsDeducted: 'Total TDS Deducted on Fully Paid Expenses this Month',
 };
 
 /** Detail / customized views where Gross is invoice gross of listed rows. */
 export const EXPENSES_DETAIL_INFO = {
   ...EXPENSES_SUMMARY_INFO,
-  grossExpense: 'Total invoice value of listed expenses',
+  grossExpense: 'Total Invoice Value of Listed Expenses',
 };
 
 export const FY_INFO = {
-  fyTotalExpense: 'Total paid expenses this financial year',
-  fyBillingAmount: 'Total billed amount this financial year',
-  totalEntries: 'Number of paid expenses this year',
-  totalFyBills: 'Number of bills this financial year',
-  peakQuarter: 'Highest-spend quarter this year',
-  yoyChange: 'Change vs last financial year',
+  fyTotalExpense: 'Total Expenses (Paid Bills) this FY',
+  fyBillingAmount: 'Total Billed (Paid & Unpaid) Amount this FY',
+  totalEntries: 'Number of Fully Paid Expenses this FY',
+  totalFyBills: 'Number of Bills this FY',
+  peakQuarter: 'Highest-Spend Quarter this FY',
+  yoyChange: 'Expense Change vs last FY',
+  yoyChangeBills: 'Billing Amount Change vs last FY',
+  paymentRate: 'Share of FY Billed Amount Paid',
 };
 
 export const DASHBOARD_INFO = {
@@ -43,7 +45,7 @@ export const DASHBOARD_INFO = {
   fyExpense: 'Total Expenses (Paid Bills) this FY',
   yearlyChange: 'Expense Change vs last FY',
   monthlyChange: 'Expense Change vs last Month',
-  collectionRate: 'Share of Billed Amount Collected this FY',
+  paymentRate: 'Share of This Month\'s Billed Amount Paid',
   thisMonthExpense: 'Expenses (Paid Bills) this Month',
   paidThisMonth: 'Bill Paid this Month',
   overdue: 'Unpaid Amount past the Due Date on Open Bills',

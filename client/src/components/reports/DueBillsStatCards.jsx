@@ -10,7 +10,7 @@ const formatCount = (value) =>
 const MonthlyCards = ({ summary }) => {
   const overdue = Number(summary?.overdue) || 0;
   const openBalance = Number(summary?.dueAndOverdue ?? summary?.outstanding) || 0;
-  const upcomingDues = Math.max(0, openBalance - overdue);
+  const due = Math.max(0, openBalance - overdue);
 
   return (
     <>
@@ -67,12 +67,12 @@ const MonthlyCards = ({ summary }) => {
         }
       />
       <StatCard
-        label="Upcoming Dues"
-        value={formatCurrency(upcomingDues)}
+        label="Upcoming Due"
+        value={formatCurrency(due)}
         color="text-orange-700"
         iconBg="bg-orange-100"
         accent="bg-orange-500"
-        info={BILLS_MONTHLY_INFO.upcomingDues}
+        info={BILLS_MONTHLY_INFO.upcomingDue}
         icon={
           <svg className={`${iconClass} text-orange-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
