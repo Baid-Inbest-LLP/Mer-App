@@ -9,7 +9,6 @@ import { amountToWordsINR } from './amountToWords.js';
 
 const HEADER_BLUE = '#005887';
 const COMPANY_CODE_BLUE = '#13AFCD';
-const TITLE_RED = '#EF4444';
 const WORDS_BLUE = '#0B2F81';
 const HIGHLIGHT_YELLOW = '#FFFF00';
 const ACCOUNTS_RED = '#EF4444';

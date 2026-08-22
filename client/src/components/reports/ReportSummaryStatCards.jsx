@@ -1,11 +1,8 @@
 import StatCard from '../common/StatCard';
 import StatCardsSkeleton from '../common/StatCardsSkeleton';
-import { formatCurrency } from '../../utils/format';
+import { formatCount, formatCurrency } from '../../utils/format';
 import { reportStatIconClass as iconClass } from './reportStatIcons';
 import { EXPENSES_DETAIL_INFO, EXPENSES_SUMMARY_INFO } from './reportStatCardInfo';
-
-const formatCount = (value) =>
-  new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number(value) || 0);
 
 export default function ReportSummaryStatCards({
   className = 'mb-4',

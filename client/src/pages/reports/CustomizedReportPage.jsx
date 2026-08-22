@@ -17,13 +17,13 @@ import {
 } from '../../utils/format';
 import { buildCompanySelectOptions } from '../../utils/companySelect';
 import { FY_MONTH_ORDER, getRecentFinancialYearOptions } from '../../utils/financialYear';
+import { cleanReportParams } from '../../utils/filters';
 import { MER_ENTRY_TYPE_OPTIONS } from '../../utils/paymentMethods';
 import { reportApi } from '../../api/report.api';
-import { downloadBlob, readBlobError, withExtension } from '../../utils/download';
+import { runMonthlyReportExport } from '../../utils/reportExport';
 import excelIconSrc from '../../assets/excel.svg';
 import pdfIconSrc from '../../assets/pdf.svg';
 import { isDueReportScope, normalizeReportScope, reportScopeLabels, withReportScope } from '../../utils/reportScope';
-import { DueBillsStatCards, FinancialYearReportStatCards, ReportSummaryStatCards } from '../../components/reports/lazyReportStatCards';
 
 const FILTER_LABELS = {
   financialYear: 'FY',
@@ -42,28 +42,6 @@ const filterChipValue = (key, value, companyCodeByName = {}) => {
     return String(value).split(',').join(', ');
   }
   return value;
-};
-
-const cleanParams = (params) => {
-  const out = {};
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    if (key === 'month') {
-      const items = (Array.isArray(value) ? value : String(value).split(','))
-        .map((item) => String(item).trim())
-        .filter(Boolean)
-        .sort((a, b) => FY_MONTH_ORDER.indexOf(a) - FY_MONTH_ORDER.indexOf(b));
-      if (items.length) out.month = items.join(',');
-      return;
-    }
-    if (Array.isArray(value)) {
-      const items = value.filter(Boolean);
-      if (items.length) out[key] = items.join(',');
-      return;
-    }
-    out[key] = value;
-  });
-  return out;
 };
 
 export default function CustomizedReportPage() {
@@ -133,23 +111,11 @@ export default function CustomizedReportPage() {
   const runExport = async (params, filenameHint, format = 'excel') => {
     if (exportingReport[format]) return;
     setExportingReport((prev) => ({ ...prev, [format]: true }));
-    const isPdf = format === 'pdf';
-    const scopedParams = withReportScope(params, scope);
     try {
-      const { data } = isPdf
-        ? await reportApi.exportMonthlyPdf(scopedParams)
-        : await reportApi.exportMonthlyExcel(scopedParams);
-      if (isPdf && data instanceof Blob && data.type && data.type.includes('json')) {
-        throw Object.assign(new Error('PDF export failed'), { response: { data } });
-      }
-      const filename = filenameHint
-        || buildCustomizedReportFilename(params, companyCodeByName);
-      downloadBlob(data, isPdf ? withExtension(filename, 'pdf') : filename);
-      notifications.show({ message: `${isPdf ? 'PDF' : 'Excel'} download started`, color: 'green' });
-    } catch (err) {
-      notifications.show({
-        message: await readBlobError(err) || `Failed to download ${isPdf ? 'PDF' : 'Excel'}`,
-        color: 'red',
+      await runMonthlyReportExport({
+        params: withReportScope(params, scope),
+        format,
+        filename: filenameHint || buildCustomizedReportFilename(params, companyCodeByName),
       });
     } finally {
       setExportingReport((prev) => ({ ...prev, [format]: false }));
@@ -166,7 +132,7 @@ export default function CustomizedReportPage() {
     if (generating || !downloadFilters.financialYear) return;
     setGenerating(true);
     try {
-      const params = withReportScope(cleanParams({ ...downloadFilters }), scope);
+      const params = withReportScope(cleanReportParams({ ...downloadFilters }), scope);
       const { data } = await reportApi.monthlyDetailed(params);
       setPreview({ ...data.data, params });
     } catch {
@@ -175,28 +141,6 @@ export default function CustomizedReportPage() {
       setGenerating(false);
     }
   };
-
-  const selectedMonthCount = String(preview?.params?.month || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean).length;
-  const isMonthlyBillsPreview = isDue && selectedMonthCount === 1;
-  const dueSummary = {
-    grossAmount: preview?.totals?.gross,
-    entryCount: preview?.count ?? 0,
-    amountPaid: preview?.totals?.amountPaid,
-    overdue: preview?.totals?.overdue,
-    dueAndOverdue: (preview?.totals?.due || 0) + (preview?.totals?.overdue || 0),
-  };
-  const byQuarter = preview?.totals?.byQuarter || {};
-  const peakQuarter = Object.entries(byQuarter).reduce(
-    (max, [name, value]) => ((value || 0) > (max?.value || 0) ? { name, value } : max),
-    null,
-  );
-  const previousYearGross = preview?.previousYearGross || 0;
-  const yoyChange = previousYearGross > 0
-    ? ((preview?.totals?.gross - previousYearGross) / previousYearGross) * 100
-    : 0;
 
   return (
     <div>
@@ -377,32 +321,6 @@ export default function CustomizedReportPage() {
               </div>
             </div>
           </div>
-
-          {isDue ? (
-            isMonthlyBillsPreview ? (
-              <DueBillsStatCards className="mb-4" summary={dueSummary} variant="monthly" />
-            ) : (
-              <FinancialYearReportStatCards
-                className="mb-4"
-                fyTotal={preview.totals?.gross}
-                totalEntries={preview.count}
-                peakQuarter={peakQuarter}
-                yoyChange={yoyChange}
-                isDue
-              />
-            )
-          ) : (
-            <ReportSummaryStatCards
-              className="mb-4"
-              summary={{
-                totalNetAmount: preview.totals?.net,
-                totalGST: preview.totals?.gst,
-                totalTDS: preview.totals?.tds,
-                grossAmount: preview.totals?.gross,
-                entryCount: preview.count,
-              }}
-            />
-          )}
 
           <div className="card overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 pt-4">

@@ -13,10 +13,10 @@ export const toPublicUser = (user) => {
   const doc = user.toObject ? user.toObject({ getters: true }) : { ...user };
   const {
     avatarImage,
-    password,
-    refreshToken,
-    resetPasswordToken,
-    resetPasswordExpires,
+    password: _password,
+    refreshToken: _refreshToken,
+    resetPasswordToken: _resetPasswordToken,
+    resetPasswordExpires: _resetPasswordExpires,
     __v,
     ...rest
   } = doc;

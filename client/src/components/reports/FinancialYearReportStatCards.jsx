@@ -1,6 +1,6 @@
 import StatCard from '../common/StatCard';
 import StatCardsSkeleton from '../common/StatCardsSkeleton';
-import { formatCurrency, formatPercent } from '../../utils/format';
+import { formatCount, formatCurrency, formatPercent } from '../../utils/format';
 import { reportStatIconClass as iconClass } from './reportStatIcons';
 import { FY_INFO } from './reportStatCardInfo';
 
@@ -46,7 +46,7 @@ export default function FinancialYearReportStatCards({
       />
       <StatCard
         label={entriesLabel}
-        value={new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number(totalEntries) || 0)}
+        value={formatCount(totalEntries)}
         color="text-blue-700"
         iconBg="bg-blue-100"
         accent="bg-blue-500"

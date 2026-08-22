@@ -11,12 +11,10 @@ import {
   BarChartCard,
 } from '../../components/charts/lazyCharts';
 import RecentMerEntries from '../../components/dashboard/RecentMerEntries';
-import { formatCurrency, formatPercent } from '../../utils/format';
+import { formatCurrency, formatPercent, formatCount } from '../../utils/format';
 import { DASHBOARD_INFO } from '../../components/reports/reportStatCardInfo';
+import { reportStatIconClass as iconClass } from '../../components/reports/reportStatIcons';
 import { getRecentFinancialYearOptions } from '../../utils/financialYear';
-
-const iconClass =
-  'w-5 h-5 sm:w-6 sm:h-6 xl:w-7 xl:h-7 max-[1660px]:w-6 max-[1660px]:h-6 max-[1536px]:w-5 max-[1536px]:h-5 max-[1366px]:w-[18px] max-[1366px]:h-[18px] max-[1280px]:w-4 max-[1280px]:h-4';
 
 const MONTH_CHART_KEYS = new Set(['company', 'expenseTypes', 'paymentMethods', 'head']);
 
@@ -182,28 +180,28 @@ export default function DashboardPage() {
 
       <div className="dashboard-grid-5">
         <StatCard
-          label="This Month Expense"
-          value={formatCurrency(kpis?.thisMonthExpense)}
-          color="text-blue-700"
-          iconBg="bg-blue-100"
-          accent="bg-blue-500"
-          info={DASHBOARD_INFO.thisMonthExpense}
+          label="Monthly Billing Amount"
+          value={formatCurrency(kpis?.monthlyBillingAmount)}
+          color="text-amber-700"
+          iconBg="bg-amber-100"
+          accent="bg-amber-500"
+          info={DASHBOARD_INFO.monthlyBillingAmount}
           icon={
-            <svg className={`${iconClass} text-blue-600`} viewBox="0 0 320 512" fill="currentColor">
-              <path d="M308 96c6.627 0 12-5.373 12-12V44c0-6.627-5.373-12-12-12H12C5.373 32 0 37.373 0 44v44.748c0 6.627 5.373 12 12 12h85.28c27.308 0 48.261 9.958 60.97 27.252H12c-6.627 0-12 5.373-12 12v40c0 6.627 5.373 12 12 12h158.757c-6.217 36.086-36.075 58.952-72.757 58.952H12c-6.627 0-12 5.373-12 12v53.012c0 3.349 1.4 6.546 3.861 8.818l165.052 152.356a12.001 12.001 0 0 0 8.139 3.182h82.562c10.924 0 16.166-13.408 8.139-20.818L116.871 319.906c76.499-2.34 131.144-53.395 138.318-127.906H308c6.627 0 12-5.373 12-12v-40c0-6.627-5.373-12-12-12h-48.19c-3.003-11.891-7.922-23.738-14.932-34H308z" />
+            <svg className={`${iconClass} text-amber-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
           }
         />
         <StatCard
-          label="Paid This Month"
-          value={formatCurrency(kpis?.paidThisMonth)}
-          color="text-teal-700"
-          iconBg="bg-teal-100"
-          accent="bg-teal-500"
-          info={DASHBOARD_INFO.paidThisMonth}
+          label="Monthly Expense Amount"
+          value={formatCurrency(kpis?.thisMonthExpense)}
+          color="text-purple-700"
+          iconBg="bg-purple-100"
+          accent="bg-purple-500"
+          info={DASHBOARD_INFO.monthlyExpenseAmount}
           icon={
-            <svg className={`${iconClass} text-teal-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg className={`${iconClass} text-purple-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           }
         />
@@ -221,10 +219,8 @@ export default function DashboardPage() {
           }
         />
         <StatCard
-          label="Pending Payment"
-          value={new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(
-            Number(kpis?.pendingPayment) || 0,
-          )}
+          label="Pending Payments"
+          value={formatCount(kpis?.pendingPayment)}
           color="text-orange-700"
           iconBg="bg-orange-100"
           accent="bg-orange-500"
@@ -237,9 +233,7 @@ export default function DashboardPage() {
         />
         <StatCard
           label="Pending Approvals"
-          value={new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(
-            Number(kpis?.pendingApprovals ?? kpis?.pendingEntries) || 0,
-          )}
+          value={formatCount(kpis?.pendingApprovals ?? kpis?.pendingEntries)}
           color="text-rose-700"
           iconBg="bg-rose-100"
           accent="bg-rose-500"

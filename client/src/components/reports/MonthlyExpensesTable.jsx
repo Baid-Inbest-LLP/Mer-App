@@ -4,12 +4,8 @@ import FilterSelect from '../common/FilterSelect';
 import EmptyState from '../common/EmptyState';
 import ReportOverviewTableSkeleton from '../common/ReportOverviewTableSkeleton';
 import { formatCurrency, buildMonthlyReportNo, formatMonthFyPeriodLabel } from '../../utils/format';
+import { FY_MONTH_ORDER } from '../../utils/financialYear';
 import { isDueReportScope, reportScopeLabels } from '../../utils/reportScope';
-
-const FY_MONTH_ORDER = [
-  'April', 'May', 'June', 'July', 'August', 'September',
-  'October', 'November', 'December', 'January', 'February', 'March',
-];
 
 const REPORT_TYPES = [
   { key: 'bank', label: 'Bank' },

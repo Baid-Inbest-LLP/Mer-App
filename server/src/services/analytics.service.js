@@ -233,6 +233,7 @@ export const getDashboardKPIs = async () => {
     yearlyExpenseChange: pctChange(fyExpense, prevFyExpense),
     monthlyExpenseChange: pctChange(thisMonthExpense, lastMonthExpense),
     paymentRate,
+    monthlyBillingAmount: monthBillingAmount,
     thisMonthExpense,
     paidThisMonth: paidThisMonthAgg[0]?.paid || 0,
     paidThisFY: paidThisFYAgg[0]?.paid || 0,

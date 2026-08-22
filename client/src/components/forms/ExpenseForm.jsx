@@ -18,8 +18,18 @@ import { normalizeBranchLabel } from '../../utils/locationFormat';
 import { expenseApi } from '../../api/expense.api';
 import FilterSelect from '../common/FilterSelect';
 import FormDateInput from '../common/FormDateInput';
+import ExpenseFormAmountGstSection from './ExpenseFormAmountGstSection';
+import ExpenseFormPaymentSection from './ExpenseFormPaymentSection';
+import ExpenseFormSummaryRow from './ExpenseFormSummaryRow';
+import {
+  RADIO_CLASS_NAMES,
+  RADIO_GROUP_CLASS_NAMES,
+  TEXT_INPUT_CLASS_NAMES,
+  toDateOrNull,
+  toSelectValue,
+} from './expenseFormShared';
 import { buildCompanySelectOptionsFromRecords } from '../../utils/companySelect';
-import { formatAmountInWords, formatMerSerial, formatNumber } from '../../utils/format';
+import { formatAmountInWords, formatMerSerial } from '../../utils/format';
 import {
   MER_ENTRY_TYPE_OPTIONS,
   MER_ENTRY_TYPES,
@@ -30,19 +40,6 @@ import {
   getPaymentMethodRules,
   normalizeExpensePaymentFields,
 } from '../../utils/paymentMethods';
-
-const TEXT_INPUT_CLASS_NAMES = {
-  input: 'cursor-text',
-  error: 'text-red-500 text-xs mt-1',
-};
-const RADIO_GROUP_CLASS_NAMES = {
-  label: 'expense-form-radio-group-label text-sm font-medium',
-  error: 'text-red-500 text-xs mt-1',
-};
-const RADIO_CLASS_NAMES = {
-  radio: 'cursor-pointer',
-  label: 'expense-form-radio-label cursor-pointer text-sm',
-};
 
 // A Fixed bill recurs; a Variable bill is one-time.
 const FIXED_FREQUENCY_OPTIONS = ['Monthly', 'Quarterly', 'Half-yearly', 'Yearly'];
@@ -64,20 +61,6 @@ const MONTH_OPTIONS = [
 const MONTH_NAME_TO_INDEX = Object.fromEntries(
   MONTH_OPTIONS.map((name, index) => [name, index]),
 );
-
-const toDateOrNull = (value) => {
-  if (!value) return null;
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value;
-  }
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value)) {
-    const [year, month, day] = value.slice(0, 10).split('-').map(Number);
-    const date = new Date(year, month - 1, day);
-    return Number.isNaN(date.getTime()) ? null : date;
-  }
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
 
 const startOfLocalDay = (value) => {
   const date = toDateOrNull(value);
@@ -134,25 +117,6 @@ const isDateWithinBillingMonthBounds = (value, monthName, preferredDate = new Da
   const max = startOfLocalDay(maxDate);
   return date >= min && date <= max;
 };
-
-const formatSummaryAmount = (value, decimals = 2) => `₹${formatNumber(value, decimals)}`;
-
-function SummaryRow({ label, value, bold = false, large = false, decimals = 2 }) {
-  return (
-    <div className="flex justify-between items-center text-sm">
-      <span
-        className={`expense-form-summary-row-label ${bold ? 'expense-form-summary-row-label-bold font-bold text-gray-900' : 'text-gray-600'}`}
-      >
-        {label}
-      </span>
-      <span
-        className={`expense-form-summary-row-value ${large ? 'text-xl' : ''} ${bold ? 'expense-form-summary-row-value-bold font-bold text-primary-800' : 'font-medium text-gray-900'}`}
-      >
-        {formatSummaryAmount(value, decimals)}
-      </span>
-    </div>
-  );
-}
 
 const defaultValues = {
   month: null,
@@ -291,8 +255,6 @@ const getDefaultLocationValue = (company) => {
   if (!locations.length) return null;
   return (locations.find((location) => location.isDefault) || locations[0]).value;
 };
-
-const toSelectValue = (value) => (value === '' || value === undefined ? null : value);
 
 export default function ExpenseForm({
   initialData,
@@ -1144,414 +1106,35 @@ export default function ExpenseForm({
       </Paper>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3 items-stretch">
-        <Paper withBorder p="md" className="h-full flex flex-col">
-          <div className="flex items-center min-h-[28px] mb-4">
-            <Text fw={600}>Amount & GST</Text>
-          </div>
-          <div className="flex flex-col gap-4 flex-1 content-start">
-            <SimpleGrid cols={{ base: 1, sm: isFixed ? 2 : 1 }} spacing="md">
-              {isFixed && (
-                <Controller
-                  name="amountType"
-                  control={control}
-                  rules={{ required: isFixed ? 'Amount type is required' : false }}
-                  render={({ field, fieldState }) => (
-                    <Radio.Group
-                      label="Amount Type"
-                      required
-                      value={field.value || 'Fixed'}
-                      onChange={(value) => {
-                        const next = value || 'Fixed';
-                        field.onChange(next);
-                        if (next === 'Usage') {
-                          clearErrors('netAmount');
-                        }
-                      }}
-                      onBlur={field.onBlur}
-                      error={showControllerError('amountType', fieldState)}
-                      classNames={RADIO_GROUP_CLASS_NAMES}
-                    >
-                      <Group mt={6} gap="md" wrap="wrap">
-                        <Radio value="Fixed" label="Fixed amount" classNames={RADIO_CLASS_NAMES} />
-                        <Radio value="Usage" label="Usage-based" classNames={RADIO_CLASS_NAMES} />
-                      </Group>
-                    </Radio.Group>
-                  )}
-                />
-              )}
-              <Controller
-                name="netAmount"
-                control={control}
-                rules={{ validate: requirePositiveAmount }}
-                render={({ field, fieldState }) => (
-                  <NumberInput
-                    label={isUsageAmount ? 'Estimated / Current Amount' : 'Net Amount'}
-                    required={!isUsageAmount}
-                    min={0}
-                    prefix="₹"
-                    decimalScale={isPoExpense ? 2 : undefined}
-                    fixedDecimalScale={false}
-                    hideControls
-                    classNames={TEXT_INPUT_CLASS_NAMES}
-                    value={field.value ?? ''}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                    error={showControllerError('netAmount', fieldState)}
-                  />
-                )}
-              />
-            </SimpleGrid>
-            <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-              {isPoExpense ? (
-                <Controller
-                  name="gstAmount"
-                  control={control}
-                  render={({ field }) => (
-                    <NumberInput
-                      label="GST Amount"
-                      min={0}
-                      prefix="₹"
-                      decimalScale={2}
-                      fixedDecimalScale={false}
-                      hideControls
-                      classNames={TEXT_INPUT_CLASS_NAMES}
-                      value={field.value ?? ''}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                    />
-                  )}
-                />
-              ) : (
-                <Controller
-                  name="gstPercent"
-                  control={control}
-                  render={({ field }) => (
-                    <NumberInput
-                      label="GST %"
-                      min={0}
-                      max={100}
-                      hideControls
-                      classNames={TEXT_INPUT_CLASS_NAMES}
-                      value={field.value ?? ''}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                    />
-                  )}
-                />
-              )}
-              <Controller
-                name="tds"
-                control={control}
-                render={({ field }) => (
-                  <NumberInput
-                    label="TDS"
-                    min={0}
-                    prefix="₹"
-                    hideControls
-                    classNames={TEXT_INPUT_CLASS_NAMES}
-                    value={field.value ?? ''}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  />
-                )}
-              />
-            </SimpleGrid>
-            <Controller
-              name="useIGST"
-              control={control}
-              render={({ field }) => (
-                <Checkbox
-                  label="Use IGST"
-                  classNames={{ root: 'cursor-pointer', label: 'cursor-pointer' }}
-                  checked={Boolean(field.value)}
-                  onChange={(event) => field.onChange(event.currentTarget.checked)}
-                />
-              )}
-            />
-          </div>
-        </Paper>
-
-        <Paper withBorder p="md" className="h-full flex flex-col">
-          <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-            <Text fw={600}>Payment</Text>
-            <Controller
-              name="paymentMode"
-              control={control}
-              render={({ field }) => (
-                <Radio.Group
-                  value={field.value || 'none'}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  classNames={RADIO_GROUP_CLASS_NAMES}
-                >
-                  <Group gap="md" wrap="wrap">
-                    <Radio value="none" label="Unpaid" classNames={RADIO_CLASS_NAMES} />
-                    <Radio value="full" label="Pay Full" classNames={RADIO_CLASS_NAMES} />
-                    <Radio value="partial" label="Pay Other" classNames={RADIO_CLASS_NAMES} />
-                    {isFixed && (
-                      <Radio value="autopay" label="Auto-pay" classNames={RADIO_CLASS_NAMES} />
-                    )}
-                  </Group>
-                </Radio.Group>
-              )}
-            />
-          </div>
-
-          <div className="expense-payment-strip mb-3 grid grid-cols-3 divide-x rounded-md border">
-            <div className="flex min-w-0 items-baseline justify-between gap-1.5 px-2 py-1.5">
-              <span className="expense-payment-strip-label expense-payment-strip-label--gross text-[12px] font-bold uppercase tracking-wide">
-                Gross
-              </span>
-              <span className="expense-payment-strip-value expense-payment-strip-value--gross text-[14px] font-bold tabular-nums">
-                {formatSummaryAmount(grossAmount, 0)}
-              </span>
-            </div>
-            <div className="flex min-w-0 items-baseline justify-between gap-1.5 px-2 py-1.5">
-              <span className="expense-payment-strip-label expense-payment-strip-label--paid text-[12px] font-bold uppercase tracking-wide">
-                Paid
-              </span>
-              <span className="expense-payment-strip-value expense-payment-strip-value--paid text-[14px] font-bold tabular-nums">
-                {formatSummaryAmount(paidNow)}
-              </span>
-            </div>
-            <div className="flex min-w-0 items-baseline justify-between gap-1.5 px-2 py-1.5">
-              <span
-                className={`expense-payment-strip-label text-[12px] font-bold uppercase tracking-wide ${
-                  balanceAfterPayment > 0.009
-                    ? 'expense-payment-strip-label--due'
-                    : 'expense-payment-strip-label--paid'
-                }`}
-              >
-                Balance
-              </span>
-              <span
-                className={`expense-payment-strip-value text-[14px] font-bold tabular-nums ${
-                  balanceAfterPayment > 0.009
-                    ? 'expense-payment-strip-value--due'
-                    : 'expense-payment-strip-value--paid'
-                }`}
-              >
-                {formatSummaryAmount(balanceAfterPayment)}
-              </span>
-            </div>
-          </div>
-
-          {recordPaymentNow ? (
-            <div className="flex flex-col gap-4 flex-1 content-start">
-              {isAutoPayMode && (
-                <Text size="sm" c="dimmed">
-                  Pays the full billed amount by credit card and enables auto-pay for future recurring bills.
-                </Text>
-              )}
-              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-                <Controller
-                  name="initialPaymentAmount"
-                  control={control}
-                  rules={{
-                    validate: (value) => {
-                      if (!recordPaymentNow) return true;
-                      if (paymentMode === 'full' || isAutoPayMode) return true;
-                      const amount = Number(value);
-                      if (value === null || value === undefined || value === '' || Number.isNaN(amount)) {
-                        return 'Payment amount is required';
-                      }
-                      if (amount <= 0) return 'Payment amount must be greater than zero';
-                      const gross = Number(getValues('grossAmount')) || 0;
-                      if (gross > 0 && amount >= gross - 0.009) {
-                        return 'Use Pay Full for the complete amount';
-                      }
-                      if (gross > 0 && amount > gross) {
-                        return 'Payment cannot exceed gross amount';
-                      }
-                      return true;
-                    },
-                  }}
-                  render={({ field, fieldState }) => (
-                    <NumberInput
-                      label={
-                        isAutoPayMode || paymentMode === 'full'
-                          ? 'Payment Amount (Full)'
-                          : 'Payment Amount'
-                      }
-                      required={paymentMode === 'partial'}
-                      readOnly={paymentMode === 'full' || isAutoPayMode}
-                      disabled={paymentMode === 'full' || isAutoPayMode}
-                      min={0}
-                      max={paymentMode === 'partial' ? Math.max(0, Number(grossAmount) || 0) : undefined}
-                      prefix="₹"
-                      decimalScale={2}
-                      hideControls
-                      classNames={TEXT_INPUT_CLASS_NAMES}
-                      value={
-                        (paymentMode === 'full' || isAutoPayMode)
-                          ? (Number(grossAmount) || 0)
-                          : (field.value ?? '')
-                      }
-                      onChange={field.onChange}
-                      error={showControllerError('initialPaymentAmount', fieldState)}
-                    />
-                  )}
-                />
-                <Controller
-                  name="paymentMethod"
-                  control={control}
-                  rules={{
-                    required: recordPaymentNow ? 'Payment method is required' : false,
-                  }}
-                  render={({ field, fieldState }) => (
-                    <FilterSelect
-                      label="Payment Method"
-                      required
-                      clearable={!isAutoPayMode}
-                      placeholder="Select payment method"
-                      data={isAutoPayMode
-                        ? [{ value: 'Card', label: 'Card' }]
-                        : paymentMethodOptions}
-                      {...field}
-                      value={toSelectValue(field.value)}
-                      onChange={(value) => {
-                        if (isAutoPayMode) {
-                          field.onChange('Card');
-                          return;
-                        }
-                        const next = toSelectValue(value);
-                        field.onChange(next);
-                        const rules = getPaymentMethodRules(next);
-                        if (!rules.requiresBankAccount) {
-                          setValue('bankAccountNumber', '');
-                        }
-                        if (!rules.requiresCardNumber) {
-                          setValue('cardNumber', '');
-                        }
-                      }}
-                      disabled={isAutoPayMode}
-                      error={showControllerError('paymentMethod', fieldState)}
-                    />
-                  )}
-                />
-              </SimpleGrid>
-
-              <SimpleGrid
-                cols={{
-                  base: 1,
-                  sm: (paymentRules.requiresBankAccount || paymentRules.requiresCardNumber) ? 3 : 2,
-                }}
-                spacing="md"
-              >
-                {paymentRules.requiresBankAccount ? (
-                  <Controller
-                    name="bankAccountNumber"
-                    control={control}
-                    rules={{
-                      validate: requireIfPaymentRule(
-                        'requiresBankAccount',
-                        paymentRules.bankAccountMessage || 'From account is required',
-                      ),
-                    }}
-                    render={({ field, fieldState }) => (
-                      <FilterSelect
-                        label={paymentRules.bankAccountLabel || 'From Account'}
-                        required
-                        clearable
-                        searchable
-                        placeholder="Select from account"
-                        data={fromAccountOptions}
-                        {...field}
-                        value={toSelectValue(field.value)}
-                        onChange={(value) => field.onChange(toSelectValue(value) || '')}
-                        error={showControllerError('bankAccountNumber', fieldState)}
-                      />
-                    )}
-                  />
-                ) : null}
-                {paymentRules.requiresCardNumber ? (
-                  <Controller
-                    name="cardNumber"
-                    control={control}
-                    rules={{
-                      validate: requireIfPaymentRule(
-                        'requiresCardNumber',
-                        paymentRules.cardNumberMessage || 'Card number is required',
-                      ),
-                    }}
-                    render={({ field, fieldState }) => (
-                      <FilterSelect
-                        label={isAutoPayMode ? 'Credit Card' : (paymentRules.cardNumberLabel || 'Card No')}
-                        required
-                        clearable={!isAutoPayMode}
-                        searchable
-                        placeholder={
-                          isAutoPayMode
-                            ? 'Select credit card'
-                            : (paymentRules.cardNumberPlaceholder || 'Select card')
-                        }
-                        data={cardNumberOptions}
-                        {...field}
-                        value={toSelectValue(field.value)}
-                        onChange={(value) => {
-                          const next = toSelectValue(value) || '';
-                          field.onChange(next);
-                          if (isAutoPayMode) {
-                            setValue('autoPayCardNumber', next);
-                          }
-                        }}
-                        error={showControllerError('cardNumber', fieldState)}
-                      />
-                    )}
-                  />
-                ) : null}
-                <TextInput
-                  label={paymentRules.paymentRefLabel || 'Payment Ref Number'}
-                  required={paymentRules.requiresPaymentRef}
-                  readOnly={isAutoPayMode}
-                  disabled={isAutoPayMode}
-                  classNames={TEXT_INPUT_CLASS_NAMES}
-                  placeholder={paymentRules.paymentRefPlaceholder}
-                  {...register('paymentRefNumber', {
-                    validate: requireIfPaymentRule(
-                      'requiresPaymentRef',
-                      paymentRules.paymentRefMessage || 'Payment reference is required',
-                    ),
-                  })}
-                  error={showRegisterError('paymentRefNumber')}
-                />
-                <Controller
-                  name="paymentDate"
-                  control={control}
-                  rules={{ required: recordPaymentNow ? 'Payment date is required' : false }}
-                  render={({ field, fieldState }) => (
-                    <FormDateInput
-                      label="Payment Date"
-                      required
-                      clearable
-                      popoverProps={{ classNames: { dropdown: 'form-date-dropdown' } }}
-                      value={field.value}
-                      onChange={(value) => field.onChange(toDateOrNull(value))}
-                      onBlur={field.onBlur}
-                      error={showControllerError('paymentDate', fieldState)}
-                    />
-                  )}
-                />
-              </SimpleGrid>
-            </div>
-          ) : (
-            <div className="expense-payment-unpaid-hint flex flex-1 items-center rounded-lg border border-dashed px-4 py-6">
-              <Text size="md" c="dimmed" className="leading-relaxed">
-                {isFixed
-                  ? 'Leave unpaid to track as a due bill. Choose Pay Full, Pay Other, or Auto-pay to settle by credit card.'
-                  : 'Leave unpaid to track as a due bill. Choose Pay Full to settle the gross amount, or Pay Other for a partial payment.'}
-              </Text>
-            </div>
-          )}
-        </Paper>
+        <ExpenseFormAmountGstSection
+          control={control}
+          clearErrors={clearErrors}
+          showControllerError={showControllerError}
+          requirePositiveAmount={requirePositiveAmount}
+          isFixed={isFixed}
+          isPoExpense={isPoExpense}
+          isUsageAmount={isUsageAmount}
+        />
+        <ExpenseFormPaymentSection
+          control={control}
+          register={register}
+          getValues={getValues}
+          setValue={setValue}
+          showControllerError={showControllerError}
+          showRegisterError={showRegisterError}
+          requireIfPaymentRule={requireIfPaymentRule}
+          isFixed={isFixed}
+          isAutoPayMode={isAutoPayMode}
+          recordPaymentNow={recordPaymentNow}
+          paymentMode={paymentMode}
+          paymentRules={paymentRules}
+          grossAmount={grossAmount}
+          paidNow={paidNow}
+          balanceAfterPayment={balanceAfterPayment}
+          paymentMethodOptions={paymentMethodOptions}
+          fromAccountOptions={fromAccountOptions}
+          cardNumberOptions={cardNumberOptions}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3 items-stretch">
@@ -1590,22 +1173,22 @@ export default function ExpenseForm({
             Summary
           </Text>
           <div className="space-y-3 flex-1">
-            <SummaryRow label="Net Amount" value={summaryNetAmount} large />
+            <ExpenseFormSummaryRow label="Net Amount" value={summaryNetAmount} large />
 
             {useIGST ? (
-              <SummaryRow label="IGST" value={summaryIgst} />
+              <ExpenseFormSummaryRow label="IGST" value={summaryIgst} />
             ) : (
               <>
-                <SummaryRow label="CGST" value={cgst} />
-                <SummaryRow label="SGST" value={sgst} />
-                <SummaryRow label="Total GST" value={isPoExpense ? summaryGstAmount : totalGST} />
+                <ExpenseFormSummaryRow label="CGST" value={cgst} />
+                <ExpenseFormSummaryRow label="SGST" value={sgst} />
+                <ExpenseFormSummaryRow label="Total GST" value={isPoExpense ? summaryGstAmount : totalGST} />
               </>
             )}
 
-            <SummaryRow label="TDS" value={tds || 0} />
+            <ExpenseFormSummaryRow label="TDS" value={tds || 0} />
 
             <div className="expense-form-summary-gross-divider border-t border-gray-200 pt-3">
-              <SummaryRow label="Gross" value={grossAmount} bold large decimals={0} />
+              <ExpenseFormSummaryRow label="Gross" value={grossAmount} bold large decimals={0} />
             </div>
 
             <div className="expense-amount-words-box rounded-lg border px-4 py-3 mt-1">

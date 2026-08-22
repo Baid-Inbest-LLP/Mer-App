@@ -100,6 +100,9 @@ export const formatNumber = (value, decimals = 2) => {
   }).format(num);
 };
 
+export const formatCount = (value) =>
+  new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(Number(value) || 0);
+
 export const formatPercent = (value) => {
   const num = Number(value) || 0;
   const sign = num > 0 ? '+' : '';

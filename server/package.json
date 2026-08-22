@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "build": "echo \"Server runs directly with Node\"",
     "lint": "eslint src/",
+    "test": "node --test tests/**/*.test.js",
     "seed:companies": "node src/seed/runCompanies.js",
     "seed:expenses": "node src/seed/seedExpensesAndPaymentInstruments.js",
     "migrate:slno": "node scripts/migrate-expense-slno.js",
@@ -33,7 +34,9 @@
     "puppeteer-core": "^24.43.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.25.1",
     "eslint": "^9.25.1",
+    "globals": "^16.0.0",
     "puppeteer": "^24.43.1"
   }
 }

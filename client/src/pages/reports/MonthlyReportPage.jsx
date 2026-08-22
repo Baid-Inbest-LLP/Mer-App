@@ -11,7 +11,7 @@ import { BarChartCard } from '../../components/charts/lazyCharts';
 import { ChartSkeletonGrid } from '../../components/charts/LazyChartBoundary';
 import { MonthlyExpensesTable } from '../../components/reports/lazyReportTables';
 import { DueBillsStatCards, ReportSummaryStatCards } from '../../components/reports/lazyReportStatCards';
-import { getRecentFinancialYearOptions } from '../../utils/financialYear';
+import { getRecentFinancialYearOptions, FY_MONTH_ORDER } from '../../utils/financialYear';
 import { reportApi } from '../../api/report.api';
 import {
   isDueReportScope,
@@ -21,11 +21,6 @@ import {
 } from '../../utils/reportScope';
 
 const CURRENT_MONTH = new Date().toLocaleString('en-US', { month: 'long' });
-
-const FY_MONTH_ORDER = [
-  'April', 'May', 'June', 'July', 'August', 'September',
-  'October', 'November', 'December', 'January', 'February', 'March',
-];
 
 const mapMonthly = (items = []) => {
   const byMonth = new Map();
@@ -222,7 +217,7 @@ export default function MonthlyReportPage() {
       />
 
       {isDue ? (
-        <DueBillsStatCards className="mb-4" loading={loading || !currentFY} summary={summary} variant="monthly" />
+        <DueBillsStatCards className="mb-4" loading={loading || !currentFY} summary={summary} />
       ) : (
         <ReportSummaryStatCards className="mb-4" loading={loading || !currentFY} summary={summary} showCount cashGross />
       )}

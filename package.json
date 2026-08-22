@@ -9,6 +9,7 @@
     "dev:client": "pnpm --filter client dev",
     "build": "pnpm run --filter client build && pnpm run --filter server build",
     "lint": "pnpm run -r lint",
+    "test": "pnpm run --filter server test",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\""
   },
   "devDependencies": {

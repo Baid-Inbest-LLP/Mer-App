@@ -132,7 +132,8 @@ const panelSplit = () => {
   const rem = DATA_COL_COUNT % 3;
   const leftSpan = third + (rem > 0 ? 1 : 0);
   const centerSpan = third + (rem > 1 ? 1 : 0);
-  const rightSpan = third;
+  const _rightSpan = third;
+  void _rightSpan;
   const leftStart = DATA_FIRST_COL;
   const leftEnd = leftStart + leftSpan - 1;
   const centerStart = leftEnd + 1;
@@ -561,7 +562,7 @@ export const buildMerStyledSheet = (wb, {
   totalsRow,
   totalsLabel = '',
   grandTotal,
-  footerAddress,
+  footerAddress: _footerAddress,
   companyCtx,
   moneyColIndices = [],
   textColIndices = [],

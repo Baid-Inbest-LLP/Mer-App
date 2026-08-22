@@ -19,27 +19,18 @@ import {
   getPaymentStatusLabel,
 } from '../../utils/format';
 import { reportApi } from '../../api/report.api';
-import { downloadBlob, withExtension } from '../../utils/download';
+import { cleanFilterParams } from '../../utils/filters';
+import { runMonthlyReportExport } from '../../utils/reportExport';
 import { isDueReportScope, normalizeReportScope, reportScopeLabels, withReportScope } from '../../utils/reportScope';
 import { FinancialYearReportStatCards } from '../../components/reports/lazyReportStatCards';
 import { EXPENSES_DETAIL_INFO } from '../../components/reports/reportStatCardInfo';
-
-const iconClass =
-  'w-5 h-5 sm:w-6 sm:h-6 xl:w-7 xl:h-7 max-[1660px]:w-6 max-[1660px]:h-6 max-[1536px]:w-5 max-[1536px]:h-5 max-[1366px]:w-[18px] max-[1366px]:h-[18px] max-[1280px]:w-4 max-[1280px]:h-4';
+import { reportStatIconClass as iconClass } from '../../components/reports/reportStatIcons';
 
 const backIcon = (
   <svg className="w-4 h-4 transition-transform duration-150 group-hover:-translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
   </svg>
 );
-
-const cleanParams = (params) => {
-  const out = {};
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') out[key] = value;
-  });
-  return out;
-};
 
 export default function FinancialYearDetailPage() {
   const navigate = useNavigate();
@@ -72,7 +63,7 @@ export default function FinancialYearDetailPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const params = withReportScope(cleanParams({ financialYear, company, merType }), scope);
+        const params = withReportScope(cleanFilterParams({ financialYear, company, merType }), scope);
         const res = await reportApi.monthlyDetailed(params);
         if (active) setData(res.data.data);
       } catch {
@@ -93,12 +84,8 @@ export default function FinancialYearDetailPage() {
   const runExport = async (format) => {
     if (exporting[format]) return;
     setExporting((prev) => ({ ...prev, [format]: true }));
-    const isPdf = format === 'pdf';
     try {
-      const params = withReportScope(cleanParams({ financialYear, company, merType }), scope);
-      const res = isPdf
-        ? await reportApi.exportMonthlyPdf(params)
-        : await reportApi.exportMonthlyExcel(params);
+      const params = withReportScope(cleanFilterParams({ financialYear, company, merType }), scope);
       const filename = company
         ? buildFyReportFilename({
           companyCode: companyCode(company),
@@ -106,10 +93,7 @@ export default function FinancialYearDetailPage() {
           merType,
         })
         : buildCustomizedReportFilename(params, companyCodeByName);
-      downloadBlob(res.data, isPdf ? withExtension(filename, 'pdf') : filename);
-      notifications.show({ message: `${isPdf ? 'PDF' : 'Excel'} download started`, color: 'green' });
-    } catch {
-      notifications.show({ message: `Failed to download ${isPdf ? 'PDF' : 'Excel'}`, color: 'red' });
+      await runMonthlyReportExport({ params, format, filename });
     } finally {
       setExporting((prev) => ({ ...prev, [format]: false }));
     }
