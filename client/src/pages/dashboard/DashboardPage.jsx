@@ -11,7 +11,7 @@ import {
   BarChartCard,
 } from '../../components/charts/lazyCharts';
 import RecentMerEntries from '../../components/dashboard/RecentMerEntries';
-import { formatCurrency, formatPercent, formatCount } from '../../utils/format';
+import { formatCurrency, formatPercent } from '../../utils/format';
 import { DASHBOARD_INFO } from '../../components/reports/reportStatCardInfo';
 import { reportStatIconClass as iconClass } from '../../components/reports/reportStatIcons';
 import { getRecentFinancialYearOptions } from '../../utils/financialYear';
@@ -117,7 +117,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <div className="dashboard-grid-5">
+      <div className="dashboard-grid-4">
         <StatCard
           label="FY Billing Amount"
           value={formatCurrency(kpis?.fyBillingAmount)}
@@ -154,15 +154,6 @@ export default function DashboardPage() {
           icon={trendIcon(`${iconClass} ${yearlyTone.iconColor}`)}
         />
         <StatCard
-          label="Monthly Change"
-          value={formatPercent(kpis?.monthlyExpenseChange)}
-          color={monthlyTone.color}
-          iconBg={monthlyTone.iconBg}
-          accent={monthlyTone.accent}
-          info={DASHBOARD_INFO.monthlyChange}
-          icon={trendIcon(`${iconClass} ${monthlyTone.iconColor}`)}
-        />
-        <StatCard
           label="Payment Rate"
           value={`${Number(kpis?.paymentRate || 0).toFixed(1)}%`}
           color="text-emerald-700"
@@ -178,7 +169,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="dashboard-grid-5">
+      <div className="dashboard-grid-4">
         <StatCard
           label="Monthly Billing Amount"
           value={formatCurrency(kpis?.monthlyBillingAmount)}
@@ -193,7 +184,7 @@ export default function DashboardPage() {
           }
         />
         <StatCard
-          label="Monthly Expense Amount"
+          label="Monthly Expense"
           value={formatCurrency(kpis?.thisMonthExpense)}
           color="text-purple-700"
           iconBg="bg-purple-100"
@@ -206,6 +197,15 @@ export default function DashboardPage() {
           }
         />
         <StatCard
+          label="Monthly Change"
+          value={formatPercent(kpis?.monthlyExpenseChange)}
+          color={monthlyTone.color}
+          iconBg={monthlyTone.iconBg}
+          accent={monthlyTone.accent}
+          info={DASHBOARD_INFO.monthlyChange}
+          icon={trendIcon(`${iconClass} ${monthlyTone.iconColor}`)}
+        />
+        <StatCard
           label="Overdue"
           value={formatCurrency(kpis?.overdue)}
           color="text-red-700"
@@ -215,32 +215,6 @@ export default function DashboardPage() {
           icon={
             <svg className={`${iconClass} text-red-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Pending Payments"
-          value={formatCount(kpis?.pendingPayment)}
-          color="text-orange-700"
-          iconBg="bg-orange-100"
-          accent="bg-orange-500"
-          info={DASHBOARD_INFO.pendingPayment}
-          icon={
-            <svg className={`${iconClass} text-orange-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          }
-        />
-        <StatCard
-          label="Pending Approvals"
-          value={formatCount(kpis?.pendingApprovals ?? kpis?.pendingEntries)}
-          color="text-rose-700"
-          iconBg="bg-rose-100"
-          accent="bg-rose-500"
-          info={DASHBOARD_INFO.pendingApprovals}
-          icon={
-            <svg className={`${iconClass} text-rose-600`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           }
         />

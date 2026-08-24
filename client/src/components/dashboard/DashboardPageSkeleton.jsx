@@ -5,8 +5,8 @@ import StatCardsSkeleton from '../common/StatCardsSkeleton';
 export default function DashboardPageSkeleton() {
   return (
     <div className="space-y-4 sm:space-y-5">
-      <StatCardsSkeleton count={5} gridClass="dashboard-grid-5" />
-      <StatCardsSkeleton count={5} gridClass="dashboard-grid-5" />
+      <StatCardsSkeleton count={4} gridClass="dashboard-grid-4" />
+      <StatCardsSkeleton count={4} gridClass="dashboard-grid-4" />
 
       <div className="dashboard-grid-trend-company">
         <ChartSkeleton />
